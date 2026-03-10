@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:UsersshinaOneDriveDesktopPAREAfrontendsrc -type f \\\\\\(-name *.jsx -o -name *.js -o -name *.tsx -o -name *.ts -o -name *.css \\\\\\))",
+      "Bash(ls -la \"C:\\\\Users\\\\shina\\\\OneDrive\\\\Desktop\\\\parea-app\\\\app\\\\\\(tabs\\)\")",
+      "Bash(find \"C:\\\\Users\\\\shina\\\\OneDrive\\\\Desktop\\\\parea-app\\\\app\\\\\\(tabs\\)\\\\components\" -type f)"
+    ]
+  }
+}

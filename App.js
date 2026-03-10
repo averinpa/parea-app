@@ -36,7 +36,7 @@ const SLIDES = [
     textAccent: '#fff',
   },
   {
-    img: require('./assets/unnamed-removebg-preview.PNG'),
+    img: require('./assets/unnamed-removebg-preview.png'),
     title: 'Match with real\npeople.',
     sub: "Like profiles of people going to the same event. Match — and you're in a group.",
     bg: ['#1a1a35', '#0a0a20', '#050509'],
