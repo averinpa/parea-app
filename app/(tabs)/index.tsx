@@ -217,15 +217,50 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
 
 // ─── REGISTRATION SCREEN ──────────────────────────────────────────────────────
 
+const COUNTRIES = [
+  { flag: '🇨🇾', code: '+357', name: 'Cyprus',      digits: 8,  groups: [2, 3, 3] },
+  { flag: '🇬🇧', code: '+44',  name: 'UK',           digits: 10, groups: [4, 3, 3] },
+  { flag: '🇩🇪', code: '+49',  name: 'Germany',      digits: 10, groups: [3, 3, 4] },
+  { flag: '🇬🇷', code: '+30',  name: 'Greece',       digits: 10, groups: [3, 3, 4] },
+  { flag: '🇫🇷', code: '+33',  name: 'France',       digits: 9,  groups: [1, 2, 2, 2, 2] },
+  { flag: '🇮🇹', code: '+39',  name: 'Italy',        digits: 10, groups: [3, 3, 4] },
+  { flag: '🇪🇸', code: '+34',  name: 'Spain',        digits: 9,  groups: [3, 3, 3] },
+  { flag: '🇳🇱', code: '+31',  name: 'Netherlands',  digits: 9,  groups: [2, 3, 4] },
+  { flag: '🇵🇱', code: '+48',  name: 'Poland',       digits: 9,  groups: [3, 3, 3] },
+  { flag: '🇨🇿', code: '+420', name: 'Czech Rep.',   digits: 9,  groups: [3, 3, 3] },
+  { flag: '🇷🇴', code: '+40',  name: 'Romania',      digits: 9,  groups: [3, 3, 3] },
+  { flag: '🇮🇱', code: '+972', name: 'Israel',       digits: 9,  groups: [2, 3, 4] },
+  { flag: '🇺🇦', code: '+380', name: 'Ukraine',      digits: 9,  groups: [2, 3, 2, 2] },
+  { flag: '🇷🇺', code: '+7',   name: 'Russia',       digits: 10, groups: [3, 3, 2, 2] },
+]
+
+function formatLocal(digits: string, groups: number[]) {
+  let result = ''; let pos = 0
+  for (const g of groups) {
+    if (pos >= digits.length) break
+    if (pos > 0) result += ' '
+    result += digits.slice(pos, pos + g)
+    pos += g
+  }
+  return result
+}
+
 function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onContinue: () => void }) {
   const [tab, setTab] = useState<'email' | 'phone'>('email')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [localPhone, setLocalPhone] = useState('')
+  const [country, setCountry] = useState(COUNTRIES[0])
+  const [countryModal, setCountryModal] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
-  const isPhoneValid = phone.replace(/\D/g, '').length >= 7
+  const isPhoneValid = localPhone.replace(/\D/g, '').length >= country.digits
   const isValid = tab === 'email' ? isEmailValid : isPhoneValid
+
+  const handlePhoneChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, country.digits)
+    setLocalPhone(formatLocal(digits, country.groups))
+  }
 
   const handleContinue = () => {
     if (!isValid || isChecking) return
@@ -267,23 +302,52 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
               </View>
 
               {/* Input */}
-              <View style={s.glassInput}>
-                <Text style={{ fontSize: 17, marginRight: 10 }}>{tab === 'email' ? '✉️' : '📱'}</Text>
-                {tab === 'email' ? (
+              {tab === 'email' ? (
+                <View style={s.glassInput}>
+                  <Text style={{ fontSize: 17, marginRight: 10 }}>✉️</Text>
                   <TextInput
                     style={s.glassInputText} value={email}
                     onChangeText={t => setEmail(t.replace(/\s/g, ''))}
                     placeholder="your@email.com" placeholderTextColor="#94A3B8"
                     keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
-                ) : (
+                  {isValid && <Ionicons name="checkmark-circle" size={22} color="#22c55e" />}
+                </View>
+              ) : (
+                <View style={s.glassInput}>
+                  <TouchableOpacity onPress={() => setCountryModal(true)} style={s.countryBtn}>
+                    <Text style={{ fontSize: 20 }}>{country.flag}</Text>
+                    <Text style={s.countryCode}>{country.code}</Text>
+                    <Ionicons name="chevron-down" size={13} color="#94A3B8" />
+                  </TouchableOpacity>
+                  <View style={s.countryDivider} />
                   <TextInput
-                    style={s.glassInputText} value={phone}
-                    onChangeText={t => setPhone(t.replace(/[^\d\s\-+()\s]/g, ''))}
-                    placeholder="+357 99 000 000" placeholderTextColor="#94A3B8"
+                    style={[s.glassInputText, { flex: 1 }]} value={localPhone}
+                    onChangeText={handlePhoneChange}
+                    placeholder="99 123 456" placeholderTextColor="#94A3B8"
                     keyboardType="phone-pad" />
-                )}
-                {isValid && <Ionicons name="checkmark-circle" size={22} color="#22c55e" />}
-              </View>
+                  {isPhoneValid && <Ionicons name="checkmark-circle" size={22} color="#22c55e" />}
+                </View>
+              )}
+
+              {/* Country picker modal */}
+              <Modal visible={countryModal} transparent animationType="slide" onRequestClose={() => setCountryModal(false)}>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)' }} activeOpacity={1} onPress={() => setCountryModal(false)} />
+                <View style={s.countryModal}>
+                  <View style={s.countryModalHandle} />
+                  <Text style={s.countryModalTitle}>Select country</Text>
+                  <ScrollView>
+                    {COUNTRIES.map(c => (
+                      <TouchableOpacity key={c.code + c.name} style={[s.countryRow, country.name === c.name && { backgroundColor: 'rgba(99,102,241,0.07)' }]}
+                        onPress={() => { setCountry(c); setLocalPhone(''); setCountryModal(false) }}>
+                        <Text style={{ fontSize: 24 }}>{c.flag}</Text>
+                        <Text style={s.countryRowName}>{c.name}</Text>
+                        <Text style={s.countryRowCode}>{c.code}</Text>
+                        {country.name === c.name && <Ionicons name="checkmark" size={18} color="#6366F1" />}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </Modal>
 
               {/* Continue button */}
               <TouchableOpacity
@@ -316,10 +380,10 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
               </View>
 
               <Text style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 28, lineHeight: 18 }}>
-                By continuing you agree to our{' '}
-                <Text style={{ color: '#6366F1', fontWeight: '600' }}>Terms</Text>
-                {' '}and{' '}
-                <Text style={{ color: '#6366F1', fontWeight: '600' }}>Privacy Policy</Text>
+                {'By tapping "Continue" you agree to our '}
+                <Text style={{ color: '#6366F1', fontWeight: '600' }} onPress={() => Alert.alert('Terms of Service', 'Link will be added soon.')}>Terms of Service</Text>
+                {' and '}
+                <Text style={{ color: '#6366F1', fontWeight: '600' }} onPress={() => Alert.alert('Privacy Policy', 'Link will be added soon.')}>Privacy Policy</Text>
               </Text>
 
             </View>
@@ -334,9 +398,12 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
 
 function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => void }) {
   const [digits, setDigits] = useState(['', '', '', ''])
-  const [seconds, setSeconds] = useState(55)
+  const [seconds, setSeconds] = useState(59)
   const [canResend, setCanResend] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [error, setError] = useState('')
   const refs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)]
+  const shakeAnim = useRef(new Animated.Value(0)).current
   const isFull = digits.every(d => d !== '')
 
   useEffect(() => {
@@ -347,11 +414,48 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
     return () => clearInterval(id)
   }, [])
 
+  const shake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start()
+  }
+
   const handleDigit = (i: number, val: string) => {
+    setError('')
     const v = val.replace(/\D/g, '').slice(-1)
     const next = [...digits]; next[i] = v; setDigits(next)
     if (v && i < 3) refs[i + 1].current?.focus()
     if (!v && i > 0) refs[i - 1].current?.focus()
+    if (v && i === 3) {
+      const code = [...next.slice(0, 3), v].join('')
+      if (code.length === 4) setTimeout(() => handleVerify([...next.slice(0, 3), v]), 100)
+    }
+  }
+
+  const handleVerify = (d = digits) => {
+    if (!d.every(x => x !== '') || isVerifying) return
+    setIsVerifying(true)
+    setTimeout(() => {
+      setIsVerifying(false)
+      if (d.join('') === '1234') {
+        onVerify()
+      } else {
+        setError('Wrong code. Please try again.')
+        shake()
+        setDigits(['', '', '', ''])
+        setTimeout(() => refs[0].current?.focus(), 50)
+      }
+    }, 800)
+  }
+
+  const handleResend = () => {
+    setSeconds(59); setCanResend(false)
+    setDigits(['', '', '', '']); setError('')
+    refs[0].current?.focus()
   }
 
   return (
@@ -367,22 +471,32 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
         </View>
 
         <View style={[s.authContent, { alignItems: 'center' }]}>
-          <Text style={[s.authTitle, { marginBottom: 12 }]}>Verify your account</Text>
-          <Text style={[s.authSub, { marginBottom: 48 }]}>Enter the code sent to your{'\n'}email or phone number.</Text>
+          <Text style={[s.authTitle, { marginBottom: 12 }]}>Verify your number</Text>
+          <Text style={[s.authSub, { marginBottom: 48 }]}>Enter the code sent to{'\n'}your phone number.</Text>
 
-          <View style={{ flexDirection: 'row', gap: 14, marginBottom: 24 }}>
+          <Animated.View style={{ flexDirection: 'row', gap: 16, marginBottom: 16, transform: [{ translateX: shakeAnim }] }}>
             {digits.map((d, i) => (
-              <TextInput
-                key={i} ref={refs[i]}
-                style={[s.otpBox, d ? s.otpBoxFilled : {}]}
-                value={d} onChangeText={v => handleDigit(i, v)}
-                keyboardType="number-pad" maxLength={1}
-                autoFocus={i === 0} textAlign="center" />
+              <View key={i} style={[s.otpCell, d && s.otpCellFilled, error ? { borderBottomColor: '#EF4444' } : {}]}>
+                <TextInput
+                  ref={refs[i]}
+                  style={s.otpInput}
+                  value={d} onChangeText={v => handleDigit(i, v)}
+                  keyboardType="number-pad" maxLength={1}
+                  autoFocus={i === 0} textAlign="center"
+                  caretHidden={true}
+                  underlineColorAndroid="transparent" />
+              </View>
             ))}
-          </View>
+          </Animated.View>
+
+          {error ? (
+            <Text style={{ fontSize: 13, color: '#EF4444', marginBottom: 16, fontWeight: '500' }}>{error}</Text>
+          ) : (
+            <View style={{ height: 29 }} />
+          )}
 
           {canResend ? (
-            <TouchableOpacity onPress={() => { setSeconds(55); setCanResend(false); setDigits(['', '', '', '']); refs[0].current?.focus() }}>
+            <TouchableOpacity onPress={handleResend}>
               <Text style={{ fontSize: 14, color: '#818CF8', fontWeight: '600' }}>Resend code</Text>
             </TouchableOpacity>
           ) : (
@@ -390,9 +504,9 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
           )}
 
           <TouchableOpacity
-            style={[s.btnPrimary, { width: '100%', marginTop: 48, backgroundColor: isFull ? '#818CF8' : 'rgba(129,140,248,0.4)', shadowColor: '#818CF8', shadowOpacity: isFull ? 0.38 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: isFull ? 6 : 0 }]}
-            onPress={() => isFull && onVerify()} disabled={!isFull}>
-            <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Verify</Text>
+            style={[s.btnPrimary, { width: '100%', marginTop: 40, backgroundColor: isFull && !isVerifying ? '#6366F1' : 'rgba(99,102,241,0.35)', shadowColor: '#6366F1', shadowOpacity: isFull ? 0.45 : 0, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: isFull ? 8 : 0 }]}
+            onPress={() => handleVerify()} disabled={!isFull || isVerifying}>
+            {isVerifying ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Verify</Text>}
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1150,9 +1264,21 @@ const s = StyleSheet.create({
   googleG: { width: 24, height: 24, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
   iconSocialBtn: { flex: 1, height: 60, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: 'rgba(255,255,255,0.75)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
 
+  // Country picker
+  countryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 4 },
+  countryCode: { fontSize: 14, fontWeight: '600', color: '#334155' },
+  countryDivider: { width: 1, height: 22, backgroundColor: 'rgba(100,116,139,0.2)', marginHorizontal: 10 },
+  countryModal: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40, maxHeight: '70%' },
+  countryModalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginTop: 12, marginBottom: 4 },
+  countryModalTitle: { fontSize: 16, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', paddingVertical: 14 },
+  countryRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 14 },
+  countryRowName: { flex: 1, fontSize: 15, color: '#334155', fontWeight: '500' },
+  countryRowCode: { fontSize: 14, color: '#94A3B8', fontWeight: '500' },
+
   // OTP
-  otpBox: { width: 68, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', fontSize: 26, fontWeight: '700', color: '#334155', textAlign: 'center' },
-  otpBoxFilled: { borderColor: 'rgba(129,140,248,0.7)', borderWidth: 2, shadowColor: '#818CF8', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  otpCell: { width: 64, height: 72, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2.5, borderBottomColor: 'rgba(99,102,241,0.25)' },
+  otpCellFilled: { borderBottomColor: '#6366F1' },
+  otpInput: { width: 64, height: 72, fontSize: 32, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', backgroundColor: 'transparent' },
 
   // Onboarding
   onbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 6 },
