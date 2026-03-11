@@ -1436,10 +1436,10 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck }: {
-  chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number) => void;
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans }: {
+  chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
-  onVibeCheck?: (ev: any) => void;
+  onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>('going')
   const hasNew = chatList.some(c => c.isNew)
@@ -1532,11 +1532,31 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           <Text style={{ fontSize: 12, color: '#64748B' }}>⏰ {ev.time}  ·  📍 {ev.distance}</Text>
                         </View>
                       </View>
-                      <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99,
-                        backgroundColor: isPending ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: isPending ? '#d97706' : '#16a34a' }}>
-                          {isPending ? 'Pending' : 'Going ✓'}
-                        </Text>
+                      {/* Status + menu */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99,
+                          backgroundColor: isPending ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: isPending ? '#d97706' : '#16a34a' }}>
+                            {isPending ? 'Pending' : 'Going ✓'}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                            Alert.alert(ev.title, 'What do you want to do?', [
+                              { text: '✏️  Update my plans', onPress: () => onUpdatePlans?.(ev) },
+                              { text: '😔  Can\'t make it', style: 'destructive', onPress: () => {
+                                Alert.alert('Leave event?', `Your spot will be freed and${ev.type === 'community' ? ' the group will be notified' : ' your details will be removed'}.`, [
+                                  { text: 'Yes, leave', style: 'destructive', onPress: () => onLeaveEvent?.(ev) },
+                                  { text: 'Cancel', style: 'cancel' },
+                                ])
+                              }},
+                              { text: 'Cancel', style: 'cancel' },
+                            ])
+                          }}
+                          style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(100,116,139,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="more-horizontal" size={16} color="#64748B" />
+                        </TouchableOpacity>
                       </View>
                     </View>
 
@@ -1612,11 +1632,14 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               onPress={() => onOpenChat(chat)}
               onLongPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                const msg = chat.type === 'duo'
+                  ? `${chat.name} will see that your plans changed 📅`
+                  : `The group will see you've left. Your spot will be freed.`
                 Alert.alert(
-                  chat.type === 'duo' ? `Chat with ${chat.name}` : chat.event,
-                  'What do you want to do?',
+                  chat.type === 'duo' ? `Leave chat with ${chat.name}?` : `Leave "${chat.event}"?`,
+                  msg,
                   [
-                    { text: 'Leave chat', style: 'destructive', onPress: () => onLeaveChat?.(chat.id) },
+                    { text: 'Leave', style: 'destructive', onPress: () => onLeaveChat?.(chat.id, true) },
                     { text: 'Cancel', style: 'cancel' },
                   ]
                 )
@@ -1848,7 +1871,39 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Coming soon</Text>
             </View>
           )}
-          {activeTab === 'messages' && <MessagesTab chatList={chatList} onOpenChat={setOpenChat} onLeaveChat={id => setChatList(prev => prev.filter(c => c.id !== id))} joinedEvents={joinedEvents} userEventFormat={userEventFormat} userEventTransport={userEventTransport} onVibeCheck={ev => { setEventDetail(ev); setActiveTab('home') }} />}
+          {activeTab === 'messages' && <MessagesTab
+            chatList={chatList}
+            onOpenChat={setOpenChat}
+            onLeaveChat={(id, addSystemMsg) => {
+              if (addSystemMsg) {
+                setChatMessages(prev => ({
+                  ...prev,
+                  [id]: [...(prev[id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
+                }))
+              }
+              setChatList(prev => prev.filter(c => c.id !== id))
+              showToast("We let them know your plans changed 📅")
+            }}
+            joinedEvents={joinedEvents}
+            userEventFormat={userEventFormat}
+            userEventTransport={userEventTransport}
+            onVibeCheck={ev => { setEventDetail(ev); setActiveTab('home') }}
+            onLeaveEvent={ev => {
+              setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              // Remove any group chats linked to this event
+              setChatList(prev => prev.map(c =>
+                c.event === ev.title
+                  ? { ...c, lastMsg: 'You left this event 📅' }
+                  : c
+              ))
+              showToast("Spot freed. Others can join now 🎟️")
+            }}
+            onUpdatePlans={ev => {
+              // Re-open join sheet for this event
+              setActiveTab('home')
+              setTimeout(() => setEventDetail(ev), 100)
+            }}
+          />}
           {activeTab === 'profile' && <ProfileTab userData={userData} />}
         </View>
 
@@ -2120,11 +2175,22 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                 </View>
                 <TouchableOpacity onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  const msg = openChat.type === 'duo'
+                    ? `${openChat.name} will see that your plans changed 📅`
+                    : `The group will see you've left. Your spot will be freed.`
                   Alert.alert(
-                    openChat.type === 'duo' ? `Chat with ${openChat.name}` : openChat.event,
-                    'What do you want to do?',
+                    openChat.type === 'duo' ? `Leave chat with ${openChat.name}?` : `Leave "${openChat.event}"?`,
+                    msg,
                     [
-                      { text: 'Leave chat', style: 'destructive', onPress: () => { setChatList(prev => prev.filter(c => c.id !== openChat.id)); setOpenChat(null) } },
+                      { text: 'Leave', style: 'destructive', onPress: () => {
+                        setChatMessages(prev => ({
+                          ...prev,
+                          [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
+                        }))
+                        setChatList(prev => prev.filter(c => c.id !== openChat.id))
+                        setOpenChat(null)
+                        showToast("We let them know your plans changed 📅")
+                      }},
                       { text: 'Cancel', style: 'cancel' },
                     ]
                   )
@@ -2136,7 +2202,13 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                 onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                 {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
-                  <View key={i} style={{ marginBottom: 10, alignItems: msg.from === 'me' ? 'flex-end' : 'flex-start' }}>
+                  <View key={i} style={{ marginBottom: 10, alignItems: msg.from === 'system' ? 'center' : msg.from === 'me' ? 'flex-end' : 'flex-start' }}>
+                    {msg.from === 'system' && (
+                      <View style={{ paddingHorizontal: 14, paddingVertical: 5, backgroundColor: 'rgba(100,116,139,0.1)', borderRadius: 99 }}>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>{msg.text}</Text>
+                      </View>
+                    )}
+
                     {msg.from === 'them' && openChat.type === 'group' && (
                       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
                         <Image source={{ uri: msg.senderPhoto }} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: msg.senderColor }} />
