@@ -7,7 +7,7 @@ import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator, Alert, Animated, Dimensions, Image,
-  KeyboardAvoidingView, Modal, Platform, SafeAreaView,
+  KeyboardAvoidingView, LayoutAnimation, Modal, Platform, SafeAreaView,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
 
@@ -529,6 +529,22 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [langs, setLangs] = useState<string[]>([])
   const [hasCar, setHasCar] = useState(false)
   const slideAnim = useRef(new Animated.Value(0)).current
+  const ageRef = useRef<TextInput>(null)
+
+  const ageNum = parseInt(age, 10)
+  const ageError = age.length === 2 && (ageNum < 18 || ageNum > 99)
+  const ageValid = age.length >= 2 && ageNum >= 18 && ageNum <= 99
+
+  const handleAgeChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 2)
+    setAge(digits)
+    if (digits.length === 2) ageRef.current?.blur()
+  }
+
+  const handleGender = (g: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setGender(g)
+  }
 
   const animSlide = (dir = 1) => {
     slideAnim.setValue(dir * 40)
@@ -536,7 +552,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   }
 
   const canNext = () => {
-    if (step === 1) return name.trim().length >= 2 && age.length > 0 && !!gender
+    if (step === 1) return name.trim().length >= 2 && ageValid && !!gender
     if (step === 2) return photos.some(Boolean)
     if (step === 3) return bio.trim().length >= 10
     if (step === 4) return interests.length > 0
@@ -593,14 +609,28 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                 <View>
                   <Text style={s.stepTitle}>Tell us about yourself</Text>
                   <Text style={s.stepSub}>This info will be visible on your profile</Text>
+
                   <Text style={s.label}>Your name</Text>
-                  <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Name" placeholderTextColor="#94A3B8" maxLength={30} />
+                  <TextInput style={s.input} value={name} onChangeText={t => setName(t.replace(/[^a-zA-ZА-Яа-яЁёÀ-ÿ\s\-']/g, ''))} placeholder="Name" placeholderTextColor="#94A3B8" maxLength={30} autoCapitalize="words" />
+
                   <Text style={s.label}>Age</Text>
-                  <TextInput style={[s.input, { width: 110 }]} value={age} onChangeText={t => setAge(t.replace(/\D/g, ''))} placeholder="18" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={2} />
+                  <TextInput
+                    ref={ageRef}
+                    style={[s.input, { width: 110 }, ageError && { borderColor: '#EF4444', borderWidth: 1.5 }]}
+                    value={age} onChangeText={handleAgeChange}
+                    placeholder="18" placeholderTextColor="#94A3B8"
+                    keyboardType="number-pad" maxLength={2} />
+                  {ageError && (
+                    <Text style={{ fontSize: 12, color: '#EF4444', marginTop: -12, marginBottom: 16 }}>
+                      You must be 18 or older to use Parea
+                    </Text>
+                  )}
+
                   <Text style={s.label}>Gender</Text>
                   <View style={s.row}>
                     {['Male', 'Female', 'Non-binary'].map(g => (
-                      <TouchableOpacity key={g} onPress={() => setGender(g)} style={[s.chip, gender === g && s.chipOn]}>
+                      <TouchableOpacity key={g} onPress={() => handleGender(g)}
+                        style={[s.chip, gender === g && s.chipOn]}>
                         <Text style={[s.chipTxt, gender === g && s.chipTxtOn]}>{g}</Text>
                       </TouchableOpacity>
                     ))}
