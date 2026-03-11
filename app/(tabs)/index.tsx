@@ -1,6 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import Svg, { Circle, Path } from 'react-native-svg'
+import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -524,6 +525,9 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [gender, setGender] = useState<string | null>(null)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null])
   const [photoLoading, setPhotoLoading] = useState([false, false, false])
+  const [photoStatus, setPhotoStatus] = useState<('idle' | 'verified' | 'error')[]>(['idle', 'idle', 'idle'])
+  const [photoError, setPhotoError] = useState<(string | null)[]>([null, null, null])
+  const [photoBadge, setPhotoBadge] = useState([false, false, false])
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
   const [langs, setLangs] = useState<string[]>([])
@@ -553,7 +557,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
   const canNext = () => {
     if (step === 1) return name.trim().length >= 2 && ageValid && !!gender
-    if (step === 2) return photos.some(Boolean)
+    if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return bio.trim().length >= 10
     if (step === 4) return interests.length > 0
     if (step === 5) return langs.length > 0
@@ -570,17 +574,59 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     else onBack()
   }
 
+  const removePhoto = (idx: number) => {
+    setPhotos(p => { const n = [...p]; n[idx] = null; return n })
+    setPhotoStatus(s => { const n = [...s]; n[idx] = 'idle'; return n })
+    setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
+  }
+
   const pickPhoto = async (idx: number) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, allowsEditing: true, aspect: [3, 4] })
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
+
+    // Clear previous state
+    setPhotos(p => { const n = [...p]; n[idx] = null; return n })
+    setPhotoStatus(s => { const n = [...s]; n[idx] = 'idle'; return n })
+    setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
     setPhotoLoading(l => { const n = [...l]; n[idx] = true; return n })
-    const safe = await isImageSafe(asset.base64 ?? '')
-    setPhotoLoading(l => { const n = [...l]; n[idx] = false; return n })
-    if (!safe) { Alert.alert('Photo not allowed ❌', 'This photo was flagged. Please use an appropriate profile photo.'); return }
-    setPhotos(p => { const n = [...p]; n[idx] = asset.uri; return n })
+
+    // Simulate face verification 2.5s
+    setTimeout(async () => {
+      setPhotoLoading(l => { const n = [...l]; n[idx] = false; return n })
+
+      const isTestFail = asset.uri.toLowerCase().includes('test_fail')
+      const safe = await isImageSafe(asset.base64 ?? '')
+
+      if (isTestFail || !safe) {
+        setPhotoStatus(s => { const n = [...s]; n[idx] = 'error'; return n })
+        setPhotoError(e => { const n = [...e]; n[idx] = 'Face not detected. Try another photo.'; return n })
+        return
+      }
+
+      setPhotos(p => { const n = [...p]; n[idx] = asset.uri; return n })
+      setPhotoStatus(s => { const n = [...s]; n[idx] = 'verified'; return n })
+      setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
+
+      // Success badge for 1 second
+      setPhotoBadge(b => { const n = [...b]; n[idx] = true; return n })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setTimeout(() => setPhotoBadge(b => { const n = [...b]; n[idx] = false; return n }), 1500)
+    }, 2500)
+  }
+
+  const onPhotoPress = (idx: number) => {
+    if (photos[idx]) {
+      Alert.alert('Photo options', '', [
+        { text: 'Replace photo', onPress: () => pickPhoto(idx) },
+        { text: 'Delete', style: 'destructive', onPress: () => removePhoto(idx) },
+        { text: 'Cancel', style: 'cancel' },
+      ])
+    } else if (!photoLoading[idx]) {
+      pickPhoto(idx)
+    }
   }
 
   const progress = (step / TOTAL) * 100
@@ -642,28 +688,51 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                 <View>
                   <Text style={s.stepTitle}>Add your photos</Text>
                   <Text style={s.stepSub}>First photo required · All photos are automatically checked</Text>
+
+                  {/* Tips */}
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                    {['✅ Clear face', '✅ Good lighting', '❌ No sunglasses'].map(tip => (
+                      <View key={tip} style={{ backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' }}>
+                        <Text style={{ fontSize: 12, color: '#334155', fontWeight: '500' }}>{tip}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Photo slots */}
                   <View style={s.photosRow}>
                     {photos.map((uri, idx) => (
-                      <TouchableOpacity key={idx} style={[s.photoSlot, idx === 0 && s.photoSlotMain]} onPress={() => !uri && pickPhoto(idx)} activeOpacity={0.85}>
-                        {photoLoading[idx] ? (
-                          <View style={s.photoCenter}><ActivityIndicator color="#818CF8" /><Text style={s.photoCheckTxt}>Checking...</Text></View>
-                        ) : uri ? (
-                          <>
-                            <Image source={{ uri }} style={s.photoImg} />
-                            <TouchableOpacity style={s.photoRemoveBtn} onPress={() => setPhotos(p => { const n = [...p]; n[idx] = null; return n })}>
-                              <Ionicons name="close" size={13} color="#fff" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={s.photoEditBtn} onPress={() => pickPhoto(idx)}>
-                              <Feather name="edit-2" size={12} color="#818CF8" />
-                            </TouchableOpacity>
-                          </>
-                        ) : (
-                          <View style={s.photoCenter}>
-                            <Ionicons name="add" size={30} color="rgba(99,102,241,0.45)" />
-                            {idx === 0 && <Text style={s.photoMainTxt}>main</Text>}
-                          </View>
+                      <View key={idx} style={{ flex: idx === 0 ? 1.4 : 1 }}>
+                        <TouchableOpacity
+                          style={[s.photoSlot, idx === 0 && s.photoSlotMain, photoStatus[idx] === 'verified' && { borderColor: '#22c55e', borderWidth: 2 }, photoStatus[idx] === 'error' && { borderColor: '#EF4444', borderWidth: 2 }]}
+                          onPress={() => onPhotoPress(idx)} activeOpacity={0.85}>
+                          {photoLoading[idx] ? (
+                            <View style={s.photoCenter}>
+                              <ActivityIndicator color="#6366F1" size="large" />
+                              <Text style={s.photoCheckTxt}>Analyzing photo...</Text>
+                            </View>
+                          ) : uri ? (
+                            <>
+                              <Image source={{ uri }} style={s.photoImg} />
+                              <TouchableOpacity style={s.photoRemoveBtn} onPress={() => removePhoto(idx)}>
+                                <Ionicons name="close" size={13} color="#fff" />
+                              </TouchableOpacity>
+                              {photoBadge[idx] && (
+                                <View style={s.verifiedBadge}>
+                                  <Text style={{ fontSize: 11, color: '#fff', fontWeight: '700' }}>Face verified ✅</Text>
+                                </View>
+                              )}
+                            </>
+                          ) : (
+                            <View style={s.photoCenter}>
+                              <Ionicons name="add" size={30} color="rgba(99,102,241,0.45)" />
+                              {idx === 0 && <Text style={s.photoMainTxt}>MAIN</Text>}
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                        {photoError[idx] && (
+                          <Text style={{ fontSize: 11, color: '#EF4444', marginTop: 5, textAlign: 'center', fontWeight: '500' }}>{photoError[idx]}</Text>
                         )}
-                      </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 </View>
@@ -1335,6 +1404,7 @@ const s = StyleSheet.create({
   photoCheckTxt: { fontSize: 11, color: '#818CF8', fontWeight: '600' },
   photoMainTxt: { fontSize: 10, fontWeight: '700', color: '#6366F1', opacity: 0.7, textTransform: 'uppercase', letterSpacing: 1 },
   photoRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  verifiedBadge: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#22c55e', paddingVertical: 6, alignItems: 'center' },
   photoEditBtn: { position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center' },
   carRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', borderRadius: 16, padding: 16, marginTop: 4 },
   checkbox: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: 'rgba(99,102,241,0.45)', alignItems: 'center', justifyContent: 'center' },
