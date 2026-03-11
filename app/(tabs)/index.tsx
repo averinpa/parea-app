@@ -76,7 +76,7 @@ const MOCK_EVENTS = [
 
 const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻' }
 
-const BENTO_SONGS = ['Flowers — Miley Cyrus 🌸', 'Midnight Rain — Taylor Swift 🌧️', 'Blinding Lights — The Weeknd 🌆', 'Levitating — Dua Lipa 🪩', 'Cruel Summer — Taylor Swift ☀️', 'Espresso — Sabrina Carpenter ☕', 'Die With A Smile — Lady Gaga 💜', 'APT. — Rose & Bruno Mars 🌹']
+const BENTO_SONGS = ['Pop 🎤', 'Hip-Hop 🎧', 'R&B / Soul 🎶', 'Electronic / House 🎛️', 'Indie / Alternative 🎸', 'Jazz / Blues 🎷', 'Classical 🎻', 'Rock / Metal 🤘', 'Reggaeton / Latin 💃', 'Afrobeats 🥁', 'K-Pop 🌸', 'Lo-fi / Chillhop 🌙', 'Country 🤠', 'Funk / Disco 🕺']
 const BENTO_FLAGS = ['Spontaneous plans 🟢', 'Great listener 🟢', 'Dog lover 🟢', 'Always on time 🟢', 'Foodie 🟢', 'Late replies 🚩', "Cancels last minute 🚩", 'No sense of humour 🚩', "Can't make plans 🚩"]
 const BENTO_MOODS = ['Rooftop bar 🍸', 'Beach sunset 🌊', 'Cozy café ☕', 'Hiking adventure 🥾', 'Art gallery 🎨', 'House party 🎉', 'Chill picnic 🧺', 'Live concert 🎶']
 const MAGIC_BIOS = [
@@ -750,7 +750,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   }
   const bentoModalOptions = bentoModal.type === 'song' ? BENTO_SONGS : bentoModal.type === 'flags' ? BENTO_FLAGS : BENTO_MOODS
   const bentoModalValue = bentoModal.type === 'song' ? bentoSong : bentoModal.type === 'flags' ? bentoFlags : bentoMood
-  const bentoModalTitle = bentoModal.type === 'song' ? '🎧  Current Song' : bentoModal.type === 'flags' ? '🚩🟢  My Flag' : '⚡  Weekend Mood'
+  const bentoModalTitle = bentoModal.type === 'song' ? '🎧  Music Taste' : bentoModal.type === 'flags' ? '🚩🟢  My Flag' : '⚡  Weekend Mood'
 
   const step5BgColors = (): [string, string, string] => {
     if (step !== 5) return ['#EDE9FE', '#E0E7FF', '#DBEAFE']
@@ -944,7 +944,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                       <LinearGradient colors={bentoSong ? ['#4c1d95', '#312e81'] : ['rgba(124,58,237,0.18)', 'rgba(99,102,241,0.10)']}
                         style={[s.bentoCard, { borderColor: bentoSong ? 'rgba(139,92,246,0.6)' : 'rgba(139,92,246,0.25)' }]}>
                         <Text style={{ fontSize: 26, marginBottom: 6 }}>🎧</Text>
-                        <Text style={[s.bentoLabel, { color: bentoSong ? 'rgba(196,181,253,0.8)' : '#94A3B8' }]}>CURRENT SONG</Text>
+                        <Text style={[s.bentoLabel, { color: bentoSong ? 'rgba(196,181,253,0.8)' : '#94A3B8' }]}>MUSIC TASTE</Text>
                         <Text style={{ fontSize: 12, color: bentoSong ? '#e9d5ff' : 'rgba(148,163,184,0.6)', fontWeight: bentoSong ? '700' : '400', lineHeight: 17, marginTop: 2, flex: 1 }} numberOfLines={4}>
                           {bentoSong || '+ add'}
                         </Text>
