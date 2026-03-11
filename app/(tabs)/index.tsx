@@ -1436,40 +1436,173 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat }: { chatList: any[]; onOpenChat: (c: any) => void }) {
-  const [subTab, setSubTab] = useState<'messages' | 'vibecheck'>('messages')
+function MessagesTab({ chatList, onOpenChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck }: {
+  chatList: any[]; onOpenChat: (c: any) => void;
+  joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
+  onVibeCheck?: (ev: any) => void;
+}) {
+  const [subTab, setSubTab] = useState<'going' | 'messages'>('going')
   const hasNew = chatList.some(c => c.isNew)
+
+  const myEvents = MOCK_EVENTS.filter(ev => joinedEvents[ev.id] === 'joined' || joinedEvents[ev.id] === 'pending')
+
+  const FORMAT_CHIP: Record<string, { emoji: string; label: string; color: string }> = {
+    '1+1':   { emoji: '👥', label: 'Duo',   color: '#f472b6' },
+    'squad': { emoji: '🫂', label: 'Squad', color: '#818CF8' },
+    'party': { emoji: '🎉', label: 'Party', color: '#fb923c' },
+  }
+  const TRANSPORT_CHIP: Record<string, { emoji: string; label: string }> = {
+    car:  { emoji: '🚗', label: 'Driving' },
+    lift: { emoji: '🙋', label: 'Need a ride' },
+    meet: { emoji: '📍', label: 'Meeting there' },
+  }
+
+  const isToday = (t: string) => t.startsWith('Today')
+  const isTomorrow = (t: string) => t.startsWith('Tomorrow')
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Header */}
       <View style={{ paddingTop: 52, paddingHorizontal: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
           <View>
             <Text style={{ fontSize: 12, fontWeight: '600', color: '#818CF8', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Parea</Text>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8 }}>My Chats</Text>
+            <Text style={{ fontSize: 28, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8 }}>
+              {subTab === 'going' ? 'My Plans' : 'Chats'}
+            </Text>
           </View>
-          {hasNew && (
+          {hasNew && subTab === 'messages' && (
             <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99, backgroundColor: '#6366F1' }}>
               <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>✨ New match!</Text>
             </View>
           )}
         </View>
-        <View style={s.subTabRow}>
-          {[{ id: 'messages', label: '💬 Messages' }, { id: 'vibecheck', label: '🔥 Vibe Check' }].map(t => (
-            <TouchableOpacity key={t.id} style={[s.subTab, subTab === t.id && s.subTabOn]} onPress={() => setSubTab(t.id as any)}>
-              <Text style={[s.subTabTxt, subTab === t.id && s.subTabTxtOn]}>{t.label}</Text>
+
+        {/* Pill switcher */}
+        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 99, padding: 4, marginBottom: 16 }}>
+          {([
+            { id: 'going',    label: `🎪 Going${myEvents.length > 0 ? ` (${myEvents.length})` : ''}` },
+            { id: 'messages', label: `💬 Chats${chatList.length > 0 ? ` (${chatList.length})` : ''}` },
+          ] as const).map(t => (
+            <TouchableOpacity key={t.id} activeOpacity={0.8}
+              onPress={() => { setSubTab(t.id); Haptics.selectionAsync() }}
+              style={{ flex: 1, paddingVertical: 9, borderRadius: 99, alignItems: 'center',
+                backgroundColor: subTab === t.id ? '#6366F1' : 'transparent' }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: subTab === t.id ? '#fff' : '#64748B' }}>{t.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      {subTab === 'messages' ? (
+      {/* Going tab */}
+      {subTab === 'going' && (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 14 }}>
+          {myEvents.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 }}>
+              <Text style={{ fontSize: 44, marginBottom: 14 }}>🎪</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 8 }}>No plans yet</Text>
+              <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22 }}>
+                Go join something 👀{'\n'}Your events will show up here
+              </Text>
+            </View>
+          ) : (
+            myEvents.map(ev => {
+              const fmt  = FORMAT_CHIP[userEventFormat[ev.id]]
+              const trsp = TRANSPORT_CHIP[userEventTransport[ev.id]]
+              const isPending = joinedEvents[ev.id] === 'pending'
+              const isLive = isToday(ev.time)
+
+              return (
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.08)' }}>
+                  {/* Gradient top strip */}
+                  <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
+
+                  <View style={{ padding: 16 }}>
+                    {/* Title row */}
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3, marginBottom: 4 }} numberOfLines={2}>{ev.title}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          {isLive && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444' }} />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#ef4444' }}>TODAY</Text>
+                            </View>
+                          )}
+                          <Text style={{ fontSize: 12, color: '#64748B' }}>⏰ {ev.time}  ·  📍 {ev.distance}</Text>
+                        </View>
+                      </View>
+                      <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99,
+                        backgroundColor: isPending ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: isPending ? '#d97706' : '#16a34a' }}>
+                          {isPending ? 'Pending' : 'Going ✓'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Format + transport chips */}
+                    {(fmt || trsp) && (
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                        {fmt && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
+                            backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                            <Text style={{ fontSize: 13 }}>{fmt.emoji}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: fmt.color }}>{fmt.label}</Text>
+                          </View>
+                        )}
+                        {trsp && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
+                            backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                            <Text style={{ fontSize: 13 }}>{trsp.emoji}</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{trsp.label}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Divider */}
+                    <View style={{ height: 1, backgroundColor: 'rgba(99,102,241,0.08)', marginBottom: 14 }} />
+
+                    {/* Avatar stack + Who's going button */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flexDirection: 'row' }}>
+                          {(ev.seekerColors || []).slice(0, 4).map((col: string, i: number) => (
+                            <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: col,
+                              borderWidth: 2, borderColor: '#fff', marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i,
+                              alignItems: 'center', justifyContent: 'center' }}>
+                              <Text style={{ fontSize: 12 }}>😊</Text>
+                            </View>
+                          ))}
+                        </View>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
+                          {ev.participantsCount} going
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity activeOpacity={0.8}
+                        onPress={() => { onVibeCheck?.(ev); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6,
+                          backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Who's going? →</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )
+            })
+          )}
+        </ScrollView>
+      )}
+
+      {/* Chats tab */}
+      {subTab === 'messages' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 24 }}>
           {chatList.length === 0 && (
             <View style={{ alignItems: 'center', paddingTop: 60 }}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>💬</Text>
               <Text style={{ fontSize: 15, fontWeight: '600', color: '#334155' }}>No chats yet</Text>
-              <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Go explore events and find your Parea!</Text>
+              <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Join an event to find your crew!</Text>
             </View>
           )}
           {chatList.map(chat => (
@@ -1507,14 +1640,6 @@ function MessagesTab({ chatList, onOpenChat }: { chatList: any[]; onOpenChat: (c
             </TouchableOpacity>
           ))}
         </ScrollView>
-      ) : (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 40, marginBottom: 12 }}>🔥</Text>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: '#334155' }}>Vibe Check</Text>
-          <Text style={{ fontSize: 13, color: '#64748B', marginTop: 8, textAlign: 'center', paddingHorizontal: 48 }}>
-            Join an event to see who's interested in the same activities
-          </Text>
-        </View>
       )}
     </View>
   )
@@ -1522,22 +1647,9 @@ function MessagesTab({ chatList, onOpenChat }: { chatList: any[]; onOpenChat: (c
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
-function ProfileTab({ userData, joinedEvents = {}, userEventFormat = {}, userEventTransport = {} }: { userData: any; joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string> }) {
+function ProfileTab({ userData }: { userData: any }) {
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
-
-  const myEvents = MOCK_EVENTS.filter(ev => joinedEvents[ev.id] === 'joined' || joinedEvents[ev.id] === 'pending')
-
-  const FORMAT_CHIP: Record<string, { emoji: string; label: string; color: string }> = {
-    '1+1':   { emoji: '👥', label: 'Duo',   color: '#f472b6' },
-    'squad': { emoji: '🫂', label: 'Squad', color: '#818CF8' },
-    'party': { emoji: '🎉', label: 'Party', color: '#fb923c' },
-  }
-  const TRANSPORT_CHIP: Record<string, { emoji: string; label: string }> = {
-    car:  { emoji: '🚗', label: 'Driving' },
-    lift: { emoji: '🙋', label: 'Need ride' },
-    meet: { emoji: '📍', label: 'Meet there' },
-  }
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 48 }}>
@@ -1581,57 +1693,6 @@ function ProfileTab({ userData, joinedEvents = {}, userEventFormat = {}, userEve
           </View>
         </View>
       )}
-
-      {/* My Events section */}
-      <View style={{ marginBottom: 28 }}>
-        <Text style={s.profileSectionTitle}>My Events</Text>
-        {myEvents.length === 0 ? (
-          <View style={{ marginTop: 12, backgroundColor: 'rgba(99,102,241,0.06)', borderRadius: 18, padding: 20, alignItems: 'center' }}>
-            <Text style={{ fontSize: 28, marginBottom: 8 }}>🎟️</Text>
-            <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center' }}>No events joined yet.{'\n'}Explore the feed and hit Join!</Text>
-          </View>
-        ) : (
-          <View style={{ gap: 10, marginTop: 10 }}>
-            {myEvents.map(ev => {
-              const fmt  = FORMAT_CHIP[userEventFormat[ev.id]]
-              const trsp = TRANSPORT_CHIP[userEventTransport[ev.id]]
-              const isPending = joinedEvents[ev.id] === 'pending'
-              return (
-                <View key={ev.id} style={{ backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#6366F1', shadowOpacity: 0.07, shadowRadius: 12, elevation: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <LinearGradient colors={ev.gradient as any} style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 18 }}>{CATEGORY_EMOJI[ev.category] || '🎪'}</Text>
-                    </LinearGradient>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B' }} numberOfLines={1}>{ev.title}</Text>
-                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>{ev.time} · {ev.distance}</Text>
-                    </View>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: isPending ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: isPending ? '#d97706' : '#16a34a' }}>
-                        {isPending ? 'Pending' : 'Joined ✓'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {fmt && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13 }}>{fmt.emoji}</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: fmt.color }}>{fmt.label}</Text>
-                      </View>
-                    )}
-                    {trsp && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13 }}>{trsp.emoji}</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{trsp.label}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )
-            })}
-          </View>
-        )}
-      </View>
 
       {[
         { icon: 'settings', label: 'Settings' },
@@ -1780,8 +1841,8 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Coming soon</Text>
             </View>
           )}
-          {activeTab === 'messages' && <MessagesTab chatList={chatList} onOpenChat={setOpenChat} />}
-          {activeTab === 'profile' && <ProfileTab userData={userData} joinedEvents={joinedEvents} userEventFormat={userEventFormat} userEventTransport={userEventTransport} />}
+          {activeTab === 'messages' && <MessagesTab chatList={chatList} onOpenChat={setOpenChat} joinedEvents={joinedEvents} userEventFormat={userEventFormat} userEventTransport={userEventTransport} onVibeCheck={ev => { setEventDetail(ev); setActiveTab('home') }} />}
+          {activeTab === 'profile' && <ProfileTab userData={userData} />}
         </View>
 
         {/* Bottom nav */}
