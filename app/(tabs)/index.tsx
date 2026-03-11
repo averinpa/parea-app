@@ -1436,8 +1436,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck }: {
-  chatList: any[]; onOpenChat: (c: any) => void;
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck }: {
+  chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
   onVibeCheck?: (ev: any) => void;
 }) {
@@ -1609,7 +1609,19 @@ function MessagesTab({ chatList, onOpenChat, joinedEvents = {}, userEventFormat 
             <TouchableOpacity
               key={chat.id}
               style={[s.chatCard, chat.isNew && { borderColor: 'rgba(99,102,241,0.4)', borderWidth: 2, shadowColor: '#6366F1', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 }]}
-              onPress={() => onOpenChat(chat)} activeOpacity={0.8}>
+              onPress={() => onOpenChat(chat)}
+              onLongPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                Alert.alert(
+                  chat.type === 'duo' ? `Chat with ${chat.name}` : chat.event,
+                  'What do you want to do?',
+                  [
+                    { text: 'Leave chat', style: 'destructive', onPress: () => onLeaveChat?.(chat.id) },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]
+                )
+              }}
+              activeOpacity={0.8}>
               {chat.expiresIn <= 6 && <View style={{ height: 3, backgroundColor: '#EF4444', borderRadius: 99 }} />}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13 }}>
                 {chat.type === 'duo' ? (
@@ -1740,7 +1752,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const [openChat, setOpenChat] = useState<any>(null)
   const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
   const [chatInput, setChatInput] = useState('')
-  const [chatList] = useState(MOCK_CHATS)
+  const [chatList, setChatList] = useState(MOCK_CHATS)
   const scrollRef = useRef<ScrollView>(null)
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined'>>({})
@@ -1773,13 +1785,8 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const matchRightX  = useRef(new Animated.Value(80)).current
   const matchScale   = useRef(new Animated.Value(0.7)).current
 
-  // checkMatch: seeker vibes back if id is odd (simulation)
-  const checkMatch = (seeker: any, eventId?: number) => {
-    const seekerVibesBack = seeker.id % 2 !== 0
-    const userFmt = eventId ? userEventFormat[eventId] : null
-    const formatMatch = !userFmt || userFmt === seeker.format
-    return seekerVibesBack && formatMatch
-  }
+  // checkMatch: always match when user vibes (demo — every vibe is mutual)
+  const checkMatch = (_seeker: any, _eventId?: number) => true
 
   const handleJoinEvent = (ev: any) => {
     const isFull = ev.participantsCount >= ev.maxParticipants
@@ -1841,7 +1848,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Coming soon</Text>
             </View>
           )}
-          {activeTab === 'messages' && <MessagesTab chatList={chatList} onOpenChat={setOpenChat} joinedEvents={joinedEvents} userEventFormat={userEventFormat} userEventTransport={userEventTransport} onVibeCheck={ev => { setEventDetail(ev); setActiveTab('home') }} />}
+          {activeTab === 'messages' && <MessagesTab chatList={chatList} onOpenChat={setOpenChat} onLeaveChat={id => setChatList(prev => prev.filter(c => c.id !== id))} joinedEvents={joinedEvents} userEventFormat={userEventFormat} userEventTransport={userEventTransport} onVibeCheck={ev => { setEventDetail(ev); setActiveTab('home') }} />}
           {activeTab === 'profile' && <ProfileTab userData={userData} />}
         </View>
 
@@ -2111,7 +2118,17 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                     {openChat.eventEmoji} {openChat.type === 'duo' ? openChat.event : `${openChat.members} members`}
                   </Text>
                 </View>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  Alert.alert(
+                    openChat.type === 'duo' ? `Chat with ${openChat.name}` : openChat.event,
+                    'What do you want to do?',
+                    [
+                      { text: 'Leave chat', style: 'destructive', onPress: () => { setChatList(prev => prev.filter(c => c.id !== openChat.id)); setOpenChat(null) } },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]
+                  )
+                }}>
                   <Feather name="more-horizontal" size={22} color="#334155" />
                 </TouchableOpacity>
               </View>
