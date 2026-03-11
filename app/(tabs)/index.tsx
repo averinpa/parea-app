@@ -103,12 +103,18 @@ const FLAG_MAP: Record<string, string> = { en: '🇬🇧', ru: '🇷🇺', el: '
 const TRANSPORT_LABEL: Record<string, string> = { car: '🚗 Can give a lift', lift: '🙋 Needs a lift', meet: '📍 Meeting there' }
 
 const MOCK_SEEKERS = [
-  { id: 1, name: 'Elena', age: 27, langs: ['en', 'el'], transport: 'car', color: '#818CF8', photo: 'https://i.pravatar.cc/300?img=47', bio: 'Love exploring local spots 🌿 Cyprus local, always up for something new' },
-  { id: 2, name: 'Dmitri', age: 31, langs: ['ru', 'en'], transport: 'lift', color: '#4CAF50', photo: 'https://i.pravatar.cc/300?img=12', bio: 'IT engineer, moved here from Moscow 🇷🇺 Looking for people to explore the island' },
-  { id: 3, name: 'Sarah', age: 24, langs: ['en', 'de'], transport: 'meet', color: '#2196F3', photo: 'https://i.pravatar.cc/300?img=32', bio: 'Expat from Berlin 🌊 Obsessed with sunsets and good coffee' },
-  { id: 4, name: 'Yael', age: 29, langs: ['he', 'en'], transport: 'car', color: '#9C27B0', photo: 'https://i.pravatar.cc/300?img=25', bio: 'Tel Aviv → Limassol 🌞 Digital nomad, loves big groups and good vibes' },
-  { id: 5, name: 'Marcus', age: 34, langs: ['de', 'en'], transport: 'lift', color: '#FF9800', photo: 'https://i.pravatar.cc/300?img=8', bio: 'Freelance designer from Hamburg 🎨 Here for the winter, looking for adventure' },
+  { id: 1, name: 'Elena',  age: 27, langs: ['en', 'el'], transport: 'car',  format: '1+1',   color: '#818CF8', photo: 'https://i.pravatar.cc/300?img=47', bio: 'Love exploring local spots 🌿 Cyprus local, always up for something new' },
+  { id: 2, name: 'Dmitri', age: 31, langs: ['ru', 'en'], transport: 'lift', format: 'squad', color: '#4CAF50', photo: 'https://i.pravatar.cc/300?img=12', bio: 'IT engineer, moved here from Moscow 🇷🇺 Looking for people to explore the island' },
+  { id: 3, name: 'Sarah',  age: 24, langs: ['en', 'de'], transport: 'meet', format: '1+1',   color: '#2196F3', photo: 'https://i.pravatar.cc/300?img=32', bio: 'Expat from Berlin 🌊 Obsessed with sunsets and good coffee' },
+  { id: 4, name: 'Yael',   age: 29, langs: ['he', 'en'], transport: 'car',  format: 'party', color: '#9C27B0', photo: 'https://i.pravatar.cc/300?img=25', bio: 'Tel Aviv → Limassol 🌞 Digital nomad, loves big groups and good vibes' },
+  { id: 5, name: 'Marcus', age: 34, langs: ['de', 'en'], transport: 'lift', format: 'squad', color: '#FF9800', photo: 'https://i.pravatar.cc/300?img=8',  bio: 'Freelance designer from Hamburg 🎨 Here for the winter, looking for adventure' },
 ]
+
+const FORMAT_BADGE: Record<string, { color: string; label: string }> = {
+  '1+1':   { color: '#f472b6', label: '1+1' },
+  'squad': { color: '#818CF8', label: 'Squad' },
+  'party': { color: '#fb923c', label: 'Party' },
+}
 
 const MOCK_CHATS = [
   { id: 1, type: 'duo', name: 'Elena', age: 27, transport: 'car', color: '#818CF8', photo: 'https://i.pravatar.cc/150?img=47', lastMsg: 'See you at the event! 🎾', time: '2m', isNew: true, expiresIn: 18, event: 'Tennis @ Marina', eventEmoji: '🎾' },
@@ -1078,7 +1084,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat }: any) {
   const allCityEvents = MOCK_EVENTS.filter(e => e.city === city)
 
   // Data Matching: events whose category matches user interests float to top
@@ -1125,6 +1131,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   const confirmJoin = () => {
     onJoin(joinSheet.ev)
+    if (joinSheet.format && joinSheet.ev?.id) {
+      setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.format }))
+    }
     closeJoinSheet()
   }
 
@@ -1608,6 +1617,22 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const scrollRef = useRef<ScrollView>(null)
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined'>>({})
+  const [vibes, setVibes] = useState<number[]>([])
+  const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
+
+  // Match animation refs
+  const matchFlash   = useRef(new Animated.Value(0)).current
+  const matchLeftX   = useRef(new Animated.Value(-80)).current
+  const matchRightX  = useRef(new Animated.Value(80)).current
+  const matchScale   = useRef(new Animated.Value(0.7)).current
+
+  // checkMatch: seeker vibes back if id is odd (simulation)
+  const checkMatch = (seeker: any, eventId?: number) => {
+    const seekerVibesBack = seeker.id % 2 !== 0
+    const userFmt = eventId ? userEventFormat[eventId] : null
+    const formatMatch = !userFmt || userFmt === seeker.format
+    return seekerVibesBack && formatMatch
+  }
 
   const handleJoinEvent = (ev: any) => {
     const isFull = ev.participantsCount >= ev.maxParticipants
@@ -1625,7 +1650,25 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
 
   const handleLike = (seeker: any) => {
     setVibeResults(prev => ({ ...prev, [seeker.id]: 'vibe' }))
-    if (seeker.id === 1) setTimeout(() => setMatchedWith(seeker), 300)
+    setVibes(prev => [...prev, seeker.id])
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    const evId = eventDetail?.id
+    if (checkMatch(seeker, evId)) {
+      setTimeout(() => {
+        setMatchedWith(seeker)
+        // Flash + slide-in animation
+        matchFlash.setValue(0); matchLeftX.setValue(-80); matchRightX.setValue(80); matchScale.setValue(0.7)
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(matchFlash,  { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.timing(matchFlash,  { toValue: 0.92, duration: 200, useNativeDriver: true }),
+          ]),
+          Animated.spring(matchLeftX,  { toValue: 0, friction: 7, useNativeDriver: true }),
+          Animated.spring(matchRightX, { toValue: 0, friction: 7, useNativeDriver: true }),
+          Animated.spring(matchScale,  { toValue: 1, friction: 6, useNativeDriver: true }),
+        ]).start()
+      }, 350)
+    }
   }
 
   const handlePass = (id: number) => setVibeResults(prev => ({ ...prev, [id]: 'pass' }))
@@ -1643,7 +1686,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} />}
           {activeTab === 'search' && (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>🗺️</Text>
@@ -1802,11 +1845,19 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                   const result = vibeResults[sk.id]
                   return (
                     <View key={sk.id} style={[s.seekerCard, result === 'vibe' && { borderColor: '#818CF8', borderWidth: 2 }, result === 'pass' && { opacity: 0.35 }]}>
-                      <Image source={{ uri: sk.photo }} style={s.seekerPhoto} />
+                      <View>
+                        <Image source={{ uri: sk.photo }} style={s.seekerPhoto} />
+                        {/* Format badge on avatar */}
+                        {FORMAT_BADGE[sk.format] && (
+                          <View style={[s.formatBadge, { backgroundColor: FORMAT_BADGE[sk.format].color }]}>
+                            <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>{FORMAT_BADGE[sk.format].label}</Text>
+                          </View>
+                        )}
+                      </View>
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                           <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>{sk.name}, {sk.age}</Text>
-                          {sk.langs.map(l => <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌍'}</Text>)}
+                          {sk.langs.map((l: string) => <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌍'}</Text>)}
                         </View>
                         <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }} numberOfLines={2}>{sk.bio}</Text>
                         <Text style={{ fontSize: 11, color: '#818CF8', marginTop: 4, fontWeight: '600' }}>{TRANSPORT_LABEL[sk.transport]}</Text>
@@ -1817,7 +1868,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                             <Ionicons name="close" size={20} color="#94A3B8" />
                           </TouchableOpacity>
                           <TouchableOpacity style={s.vibeBtn} onPress={() => handleLike(sk)}>
-                            <Ionicons name="heart" size={20} color="#818CF8" />
+                            <Text style={{ fontSize: 18 }}>⭐</Text>
                           </TouchableOpacity>
                         </View>
                       ) : (
@@ -1836,25 +1887,51 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
 
       {/* Match modal */}
       {matchedWith && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setMatchedWith(null)}>
-          <View style={s.matchOverlay}>
-            <View style={s.matchCard}>
-              <Text style={{ fontSize: 40, marginBottom: 8 }}>✨</Text>
-              <Text style={{ fontSize: 26, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.6, marginBottom: 8 }}>It's a Vibe!</Text>
-              <Text style={{ fontSize: 15, color: '#64748B', marginBottom: 28 }}>You and {matchedWith.name} are both going!</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 28 }}>
-                <Image source={{ uri: 'https://i.pravatar.cc/100?img=1' }} style={[s.matchAvatar, { zIndex: 2 }]} />
-                <Image source={{ uri: matchedWith.photo }} style={[s.matchAvatar, { marginLeft: -18, zIndex: 1 }]} />
-              </View>
-              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: '#818CF8', shadowColor: '#818CF8', shadowOpacity: 0.38, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 }]}
+        <Modal visible transparent animationType="none" onRequestClose={() => setMatchedWith(null)}>
+          <Animated.View style={{ flex: 1, opacity: matchFlash }}>
+            <LinearGradient colors={['#0f0c29', '#1a1040', '#6d28d9']} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+              {/* Stars */}
+              {['✨','⭐','💫','✨','⭐','💫'].map((s2, i) => (
+                <Text key={i} style={{ position: 'absolute', fontSize: 22, opacity: 0.5,
+                  top: `${10 + i * 12}%` as any, left: i % 2 === 0 ? `${8 + i * 5}%` as any : undefined,
+                  right: i % 2 !== 0 ? `${8 + i * 5}%` as any : undefined }}>{s2}</Text>
+              ))}
+
+              <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(167,139,250,0.8)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+                The Vibe is Mutual
+              </Text>
+
+              {/* Animated avatars */}
+              <Animated.View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 28, transform: [{ scale: matchScale }] }}>
+                <Animated.Image
+                  source={{ uri: 'https://i.pravatar.cc/120?img=1' }}
+                  style={[s.matchAvatar, { transform: [{ translateX: matchLeftX }] }]} />
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#6d28d9', alignItems: 'center', justifyContent: 'center', zIndex: 5, marginHorizontal: -8 }}>
+                  <Text style={{ fontSize: 18 }}>💜</Text>
+                </View>
+                <Animated.Image
+                  source={{ uri: matchedWith.photo }}
+                  style={[s.matchAvatar, { transform: [{ translateX: matchRightX }] }]} />
+              </Animated.View>
+
+              <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -0.8, marginBottom: 10, textAlign: 'center' }}>
+                It's a Vibe! 🔥
+              </Text>
+              <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', marginBottom: 36, textAlign: 'center', lineHeight: 22 }}>
+                Say hi in your new{'\n'}Parea chat 🚀
+              </Text>
+
+              <TouchableOpacity
+                style={{ backgroundColor: '#6d28d9', borderRadius: 18, paddingVertical: 16, paddingHorizontal: 48, borderWidth: 1, borderColor: 'rgba(167,139,250,0.4)', shadowColor: '#6d28d9', shadowOpacity: 0.6, shadowRadius: 20, elevation: 10 }}
                 onPress={() => { setMatchedWith(null); setEventDetail(null); setVibeResults({}); setActiveTab('messages') }}>
-                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Send a message 💬</Text>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>Open Chat 💬</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setMatchedWith(null)} style={{ marginTop: 14, alignItems: 'center' }}>
-                <Text style={{ color: '#94A3B8', fontSize: 14 }}>Maybe later</Text>
+
+              <TouchableOpacity onPress={() => setMatchedWith(null)} style={{ marginTop: 18 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>Maybe later</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </LinearGradient>
+          </Animated.View>
         </Modal>
       )}
 
@@ -2158,6 +2235,7 @@ const s = StyleSheet.create({
   // Seekers
   seekerCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   seekerPhoto: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#E2E8F0' },
+  formatBadge: { position: 'absolute', bottom: -2, right: -4, borderRadius: 99, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1.5, borderColor: '#fff' },
   passBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   vibeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(129,140,248,0.12)', alignItems: 'center', justifyContent: 'center' },
 
