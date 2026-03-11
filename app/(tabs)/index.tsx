@@ -1112,6 +1112,22 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const featured = visibleEvents[0]
   const rest = visibleEvents.slice(1)
 
+  // ── Join Bottom Sheet state ──────────────────────────────────────────────
+  const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2; format: string; transport: string }>(
+    { visible: false, ev: null, step: 1, format: '', transport: '' }
+  )
+
+  const openJoinSheet = (ev: any) => {
+    setJoinSheet({ visible: true, ev, step: 1, format: '', transport: '' })
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  }
+  const closeJoinSheet = () => setJoinSheet(prev => ({ ...prev, visible: false }))
+
+  const confirmJoin = () => {
+    onJoin(joinSheet.ev)
+    closeJoinSheet()
+  }
+
   const getJoinState = (ev: any) => {
     if (ev.participantsCount >= ev.maxParticipants) return 'full'
     return joinedEvents?.[ev.id] || 'none'
@@ -1125,13 +1141,25 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     const bg = isFull ? 'rgba(255,255,255,0.10)' : state !== 'none' ? 'rgba(99,255,180,0.22)' : 'rgba(255,255,255,0.22)'
     return (
       <TouchableOpacity
-        onPress={() => !isFull && onJoin(ev)}
+        onPress={() => { if (!isFull && state === 'none') openJoinSheet(ev); else if (!isFull) onJoin(ev) }}
         activeOpacity={isFull ? 1 : 0.75}
         style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1 }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
         <Text style={{ fontSize: large ? 14 : 13, fontWeight: '800', color: '#fff' }}>{label}</Text>
       </TouchableOpacity>
     )
   }
+
+  // ── Format & Transport options ────────────────────────────────────────────
+  const FORMAT_OPTIONS = [
+    { id: '1+1',   emoji: '💑', label: 'Duo',   sub: 'Just the two of us' },
+    { id: 'squad', emoji: '🫂', label: 'Squad',  sub: 'Up to 5 people' },
+    { id: 'party', emoji: '🎉', label: 'Party',  sub: 'The more the merrier' },
+  ]
+  const TRANSPORT_OPTIONS = [
+    { id: 'car',  emoji: '🚗', label: "I'm driving",    sub: 'Can give a lift' },
+    { id: 'lift', emoji: '🙋', label: 'Need a ride',    sub: "I'll hop in with someone" },
+    { id: 'meet', emoji: '📍', label: 'Meet you there', sub: 'Getting there solo' },
+  ]
   const todayEvents = rest.filter(e => e.time.toLowerCase().includes('today'))
   const upcoming = rest.filter(e => !e.time.toLowerCase().includes('today'))
 
@@ -1296,6 +1324,101 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           </View>
         )}
       </ScrollView>
+
+      {/* ── Join Bottom Sheet ──────────────────────────────────────── */}
+      <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(10,8,30,0.55)' }} activeOpacity={1} onPress={closeJoinSheet} />
+        <View style={s.joinSheetWrap}>
+          <View style={s.joinSheetHandle} />
+
+          {/* Step indicator */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[1, 2].map(n => (
+                <View key={n} style={{ width: joinSheet.step === n ? 20 : 6, height: 6, borderRadius: 3,
+                  backgroundColor: joinSheet.step >= n ? '#6366F1' : 'rgba(99,102,241,0.2)' }} />
+              ))}
+            </View>
+            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 2</Text>
+          </View>
+
+          {joinSheet.step === 1 ? (
+            <>
+              <Text style={s.joinSheetTitle}>How many people are{'\n'}you looking for? 👥</Text>
+              <View style={{ gap: 10, marginTop: 4 }}>
+                {FORMAT_OPTIONS.map(opt => {
+                  const active = joinSheet.format === opt.id
+                  return (
+                    <TouchableOpacity key={opt.id} activeOpacity={0.8}
+                      onPress={() => {
+                        setJoinSheet(prev => ({ ...prev, format: opt.id }))
+                        Haptics.selectionAsync()
+                      }}
+                      style={[s.joinSheetCard, active && s.joinSheetCardOn]}>
+                      <View style={[s.joinSheetIconWrap, active && { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
+                        <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}
+                          <Text style={{ color: '#94A3B8', fontWeight: '400', fontSize: 12 }}>  {opt.id === '1+1' ? '1+1' : opt.id === 'squad' ? '≤5' : '≤20'}</Text>
+                        </Text>
+                        <Text style={s.joinSheetCardSub}>{opt.sub}</Text>
+                      </View>
+                      {active && <Ionicons name="checkmark-circle" size={22} color="#6366F1" />}
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+              <TouchableOpacity
+                style={[s.joinSheetNext, !joinSheet.format && { opacity: 0.4 }]}
+                disabled={!joinSheet.format}
+                onPress={() => setJoinSheet(prev => ({ ...prev, step: 2 }))}>
+                <Text style={s.joinSheetNextTxt}>Next →</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity onPress={() => setJoinSheet(prev => ({ ...prev, step: 1 }))}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                <Ionicons name="chevron-back" size={14} color="#6366F1" />
+                <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>Back</Text>
+              </TouchableOpacity>
+              <Text style={s.joinSheetTitle}>How are you getting{'\n'}there? 🗺️</Text>
+              <View style={{ gap: 10, marginTop: 4 }}>
+                {TRANSPORT_OPTIONS.map(opt => {
+                  const active = joinSheet.transport === opt.id
+                  return (
+                    <TouchableOpacity key={opt.id} activeOpacity={0.8}
+                      onPress={() => {
+                        setJoinSheet(prev => ({ ...prev, transport: opt.id }))
+                        Haptics.selectionAsync()
+                      }}
+                      style={[s.joinSheetCard, active && s.joinSheetCardOn]}>
+                      <View style={[s.joinSheetIconWrap, active && { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
+                        <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}</Text>
+                        <Text style={s.joinSheetCardSub}>{opt.sub}</Text>
+                      </View>
+                      {active && <Ionicons name="checkmark-circle" size={22} color="#6366F1" />}
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+              <TouchableOpacity
+                style={[s.joinSheetNext, !joinSheet.transport && { opacity: 0.4 }, joinSheet.transport && { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 }]}
+                disabled={!joinSheet.transport}
+                onPress={confirmJoin}>
+                <Text style={s.joinSheetNextTxt}>
+                  {joinSheet.ev?.type === 'official' ? "I'm Going 🎉" : "Join Event →"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </Modal>
+
     </View>
   )
 }
@@ -1932,6 +2055,18 @@ const s = StyleSheet.create({
   bentoFinishBlur: { borderRadius: 20, overflow: 'hidden' },
   bentoFinishGrad: { paddingVertical: 18, alignItems: 'center', borderRadius: 20 },
   bentoSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, maxHeight: '72%', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 20, elevation: 20 },
+
+  // Join bottom sheet
+  joinSheetWrap: { backgroundColor: '#0f0c1e', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 36, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 32, elevation: 24 },
+  joinSheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 18 },
+  joinSheetTitle: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 30, marginBottom: 18 },
+  joinSheetCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 18, padding: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' },
+  joinSheetCardOn: { backgroundColor: 'rgba(99,102,241,0.12)', borderColor: 'rgba(99,102,241,0.5)' },
+  joinSheetIconWrap: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' },
+  joinSheetCardLabel: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 2 },
+  joinSheetCardSub: { fontSize: 12, color: 'rgba(255,255,255,0.45)' },
+  joinSheetNext: { marginTop: 20, borderRadius: 16, backgroundColor: '#6366F1', paddingVertical: 15, alignItems: 'center' },
+  joinSheetNextTxt: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
   bentoSheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 16 },
   bentoSheetTitle: { fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 16, letterSpacing: -0.3 },
   bentoSheetItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, marginBottom: 6, backgroundColor: '#F8FAFC' },
