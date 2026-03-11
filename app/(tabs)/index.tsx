@@ -72,9 +72,13 @@ const MOCK_EVENTS = [
   { id: 6, city: 'Nicosia', type: 'community', title: 'Specialty Coffee Tour', time: 'Sun, 11:00', distance: '1km', category: 'coffee', gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'], slots: '3 spots left', seekingCount: 2 },
   { id: 7, city: 'Larnaca', type: 'community', title: 'Beach Volleyball', time: 'Today, 17:00', distance: '4km', category: 'sports', gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'], slots: '4 spots left', seekingCount: 3 },
   { id: 8, city: 'Larnaca', type: 'community', title: 'Wine & Jazz Evening', time: 'Sat, 20:00', distance: '2km', category: 'wine', gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'], slots: '6 spots left', seekingCount: 5 },
+  { id: 10, city: 'Limassol', type: 'community', title: 'Sunset Picnic at Dasoudi Beach', time: 'Today, 17:30', distance: '1.5km', category: 'outdoors', gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'], slots: '5 spots left', seekingCount: 6 },
+  { id: 11, city: 'Limassol', type: 'official', title: 'Mediterranean Food Festival', time: 'Tomorrow, 12:00', distance: '0.8km', category: 'food', gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'], slots: 'Open event', seekingCount: 19 },
+  { id: 12, city: 'Limassol', type: 'community', title: 'Photography Walk — Old Port', time: 'Sun, 09:00', distance: '1km', category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'], slots: '4 spots left', seekingCount: 3 },
+  { id: 13, city: 'Nicosia', type: 'official', title: 'Open Air Cinema Night', time: 'Sat, 21:00', distance: '2km', category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'], slots: '6 spots left', seekingCount: 11 },
 ]
 
-const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻' }
+const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵' }
 
 const BENTO_SONGS = ['Pop 🎤', 'Hip-Hop 🎧', 'R&B / Soul 🎶', 'Electronic / House 🎛️', 'Indie / Alternative 🎸', 'Jazz / Blues 🎷', 'Classical 🎻', 'Rock / Metal 🤘', 'Reggaeton / Latin 💃', 'Afrobeats 🥁', 'K-Pop 🌸', 'Lo-fi / Chillhop 🌙', 'Country 🤠', 'Funk / Disco 🕺']
 const BENTO_FLAGS = ['Spontaneous plans 🟢', 'Great listener 🟢', 'Dog lover 🟢', 'Always on time 🟢', 'Foodie 🟢', 'Late replies 🚩', "Cancels last minute 🚩", 'No sense of humour 🚩', "Can't make plans 🚩"]
@@ -1056,78 +1060,170 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
 function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }: any) {
-  const cityEvents = MOCK_EVENTS.filter(e => e.city === city)
-  const officialEvents = cityEvents.filter(e => e.type === 'official')
-  const communityEvents = cityEvents.filter(e => e.type === 'community')
-  const showOfficial = feedFilter === 'all' || feedFilter === 'official'
-  const showCommunity = feedFilter === 'all' || feedFilter === 'community'
+  const allCityEvents = MOCK_EVENTS.filter(e => e.city === city)
+
+  const FILTERS = [
+    { id: 'all', label: '✦ All' },
+    { id: 'official', label: '🌟 Events' },
+    { id: 'outdoors', label: '🌿 Outdoors' },
+    { id: 'coffee', label: '☕ Social' },
+    { id: 'food', label: '🍕 Food' },
+    { id: 'culture', label: '🎨 Culture' },
+    { id: 'sports', label: '🎾 Sports' },
+  ]
+
+  const visibleEvents = allCityEvents.filter(ev => {
+    if (feedFilter === 'all') return true
+    if (feedFilter === 'official') return ev.type === 'official'
+    return ev.category === feedFilter
+  })
+
+  const featured = visibleEvents[0]
+  const rest = visibleEvents.slice(1)
+  const todayEvents = rest.filter(e => e.time.toLowerCase().includes('today'))
+  const upcoming = rest.filter(e => !e.time.toLowerCase().includes('today'))
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#F8F7FF' }}>
+      {/* Header */}
       <View style={s.feedHeader}>
-        <Image source={require('../../assets/images/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" />
+        <Image source={require('../../assets/images/logo.png')} style={{ width: 72, height: 22 }} resizeMode="contain" />
         <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
+          <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
           <Text style={s.cityBtnTxt}>{city}</Text>
-          <Ionicons name="chevron-down" size={14} color="#6366F1" />
+          <Ionicons name="chevron-down" size={13} color="#4338CA" />
         </TouchableOpacity>
         <TouchableOpacity style={s.bellBtn}>
-          <Ionicons name="notifications-outline" size={22} color="#334155" />
+          <Ionicons name="notifications-outline" size={22} color="#1E1B4B" />
+          <View style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
         </TouchableOpacity>
       </View>
 
+      {/* Filter chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroll} contentContainerStyle={s.filterContent}>
-        {[{ id: 'all', label: 'Everything' }, { id: 'official', label: '🌟 Big Events' }, { id: 'community', label: '☕ Social' }].map(f => (
-          <TouchableOpacity key={f.id} style={[s.filterTab, feedFilter === f.id && s.filterTabOn]} onPress={() => setFeedFilter(f.id)}>
+        {FILTERS.map(f => (
+          <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
+            style={[s.filterTab, feedFilter === f.id && s.filterTabOn]}>
             <Text style={[s.filterTabTxt, feedFilter === f.id && s.filterTabTxtOn]}>{f.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        {showOfficial && officialEvents.length > 0 && (
-          <>
-            <Text style={s.sectionHeader}>🌟 Big Events</Text>
-            {officialEvents.map(ev => (
-              <TouchableOpacity key={ev.id} style={s.officialCard} onPress={() => onEventPress(ev)} activeOpacity={0.9}>
-                <LinearGradient colors={ev.gradient as any} style={s.officialCardInner}>
-                  <Text style={s.officialCardCat}>{CATEGORY_EMOJI[ev.category] || '📍'} {ev.category?.toUpperCase()}  ·  {ev.distance}</Text>
-                  <Text style={s.officialCardTitle}>{ev.title}</Text>
-                  <Text style={s.officialCardTime}>🕐 {ev.time}</Text>
-                  <View style={s.officialCardFooter}>
-                    <View style={{ flexDirection: 'row' }}>
-                      {ev.seekerColors.slice(0, 4).map((c, i) => (
-                        <View key={i} style={[s.seekerDot, { backgroundColor: c, marginLeft: i > 0 ? -7 : 0, zIndex: 10 - i }]} />
-                      ))}
-                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginLeft: 10, alignSelf: 'center' }}>{ev.seekingCount} seekers</Text>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+
+        {/* Featured card */}
+        {featured && (
+          <TouchableOpacity onPress={() => onEventPress(featured)} activeOpacity={0.92} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 6 }}>
+            <LinearGradient colors={featured.gradient as any} style={s.featuredCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {featured.type === 'official' && (
+                    <View style={s.officialBadge}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.5 }}>OFFICIAL</Text>
                     </View>
-                    <View style={s.slotBadge}>
-                      <Text style={s.slotBadgeTxt}>{ev.slots}</Text>
+                  )}
+                  {featured.time.toLowerCase().includes('today') && (
+                    <View style={[s.officialBadge, { backgroundColor: 'rgba(239,68,68,0.75)' }]}>
+                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff', marginRight: 4 }} />
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>TODAY</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={s.categoryCircle}>
+                  <Text style={{ fontSize: 20 }}>{CATEGORY_EMOJI[featured.category] || '📍'}</Text>
+                </View>
+              </View>
+              <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <Text style={s.featuredTitle} numberOfLines={2}>{featured.title}</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 14 }}>
+                  <View style={s.infoPill}><Text style={s.infoPillTxt}>🕐 {featured.time.split(', ')[1] || featured.time}</Text></View>
+                  <View style={s.infoPill}><Text style={s.infoPillTxt}>📍 {featured.distance}</Text></View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {featured.seekerColors.slice(0, 4).map((c, i) => (
+                      <View key={i} style={[s.avatarDot, { backgroundColor: c, marginLeft: i > 0 ? -8 : 0, zIndex: 10 - i }]}>
+                        <Ionicons name="person" size={11} color="rgba(255,255,255,0.9)" />
+                      </View>
+                    ))}
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginLeft: 10, fontWeight: '600' }}>
+                      {featured.seekingCount} looking for company
+                    </Text>
+                  </View>
+                  <TouchableOpacity style={s.joinBtn} activeOpacity={0.8}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Join →</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {/* Today section - horizontal scroll */}
+        {todayEvents.length > 0 && (
+          <>
+            <View style={s.sectionRow}>
+              <Text style={s.sectionHeader}>🔥 Happening Today</Text>
+              <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '700' }}>{todayEvents.length} events</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 4 }}>
+              {todayEvents.map(ev => (
+                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.85} style={s.compactCard}>
+                  <LinearGradient colors={ev.gradient as any} style={s.compactCardGrad}>
+                    <Text style={{ fontSize: 26 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
+                    {ev.type === 'official' && (
+                      <View style={[s.officialBadge, { position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2 }]}>
+                        <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>★</Text>
+                      </View>
+                    )}
+                  </LinearGradient>
+                  <View style={s.compactCardBody}>
+                    <Text style={s.compactCardTitle} numberOfLines={2}>{ev.title}</Text>
+                    <Text style={s.compactCardTime}>{ev.time.split(', ')[1] || ev.time}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                      {ev.seekerColors.slice(0, 3).map((c, i) => (
+                        <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
+                      ))}
+                      <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} in</Text>
                     </View>
                   </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </>
         )}
 
-        {showCommunity && communityEvents.length > 0 && (
+        {/* Upcoming - vertical list */}
+        {upcoming.length > 0 && (
           <>
-            <Text style={s.sectionHeader}>☕ Social</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {communityEvents.map(ev => (
-                <TouchableOpacity key={ev.id} style={s.communityCard} onPress={() => onEventPress(ev)} activeOpacity={0.9}>
-                  <LinearGradient colors={ev.gradient as any} style={s.communityCardTop}>
-                    <Text style={{ fontSize: 26 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
+            <View style={s.sectionRow}>
+              <Text style={s.sectionHeader}>📅 Coming Up</Text>
+            </View>
+            <View style={{ paddingHorizontal: 16, gap: 10 }}>
+              {upcoming.map(ev => (
+                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88} style={s.listCard}>
+                  <LinearGradient colors={ev.gradient as any} style={s.listCardLeft}>
+                    <Text style={{ fontSize: 24 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
                   </LinearGradient>
-                  <View style={s.communityCardBody}>
-                    <Text style={s.communityCardTitle} numberOfLines={2}>{ev.title}</Text>
-                    <Text style={s.communityCardTime}>{ev.time}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                      {ev.seekerColors.slice(0, 3).map((c, i) => (
-                        <View key={i} style={[s.seekerDotSm, { backgroundColor: c, marginLeft: i > 0 ? -6 : 0, zIndex: 5 - i }]} />
-                      ))}
-                      <Text style={{ fontSize: 11, color: '#64748B', marginLeft: 4 }}>{ev.seekingCount}</Text>
+                  <View style={s.listCardBody}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      {ev.type === 'official' && (
+                        <View style={[s.officialBadge, { paddingHorizontal: 7, paddingVertical: 2 }]}>
+                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>OFFICIAL</Text>
+                        </View>
+                      )}
+                      <Text style={{ fontSize: 11, color: '#94A3B8' }}>{ev.distance}</Text>
                     </View>
+                    <Text style={s.listCardTitle} numberOfLines={1}>{ev.title}</Text>
+                    <Text style={s.listCardTime}>{ev.time}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 6, paddingRight: 14 }}>
+                    <View style={{ flexDirection: 'row' }}>
+                      {ev.seekerColors.slice(0, 3).map((c, i) => (
+                        <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
+                      ))}
+                    </View>
+                    <Text style={{ fontSize: 10, color: '#6366F1', fontWeight: '700' }}>{ev.slots}</Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1135,11 +1231,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
           </>
         )}
 
-        {officialEvents.length === 0 && communityEvents.length === 0 && (
-          <View style={{ alignItems: 'center', paddingTop: 60 }}>
-            <Text style={{ fontSize: 40, marginBottom: 12 }}>🏙️</Text>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#334155' }}>No events in {city} yet</Text>
-            <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Try a different city or filter</Text>
+        {visibleEvents.length === 0 && (
+          <View style={{ alignItems: 'center', paddingTop: 80 }}>
+            <Text style={{ fontSize: 48, marginBottom: 14 }}>🌴</Text>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: '#1E1B4B' }}>Nothing here yet</Text>
+            <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6 }}>Try another vibe or check back later</Text>
           </View>
         )}
       </ScrollView>
@@ -1679,17 +1775,37 @@ const s = StyleSheet.create({
   navLabel: { fontSize: 10, fontWeight: '600', color: '#94A3B8' },
 
   // Feed header
-  feedHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 12, gap: 8 },
-  cityBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99,102,241,0.08)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99 },
-  cityBtnTxt: { fontSize: 14, fontWeight: '700', color: '#6366F1' },
-  bellBtn: { marginLeft: 'auto' as any },
-  filterScroll: { maxHeight: 48 },
-  filterContent: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
-  filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.65)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
+  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 52, paddingBottom: 12, backgroundColor: '#F8F7FF' },
+  cityBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99,102,241,0.08)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, borderWidth: 1, borderColor: 'rgba(99,102,241,0.18)' },
+  cityBtnTxt: { fontSize: 13, fontWeight: '700', color: '#4338CA' },
+  bellBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.08)', alignItems: 'center', justifyContent: 'center' },
+  filterScroll: { backgroundColor: '#F8F7FF' },
+  filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  filterTab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(226,232,240,0.8)' },
   filterTabOn: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
-  filterTabTxt: { fontSize: 14, fontWeight: '600', color: '#64748B' },
-  filterTabTxtOn: { color: '#fff' },
-  sectionHeader: { fontSize: 18, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3, marginTop: 4, marginBottom: 4 },
+  filterTabTxt: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+  filterTabTxtOn: { color: '#fff', fontWeight: '700' },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 20, marginBottom: 12 },
+  sectionHeader: { fontSize: 17, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 },
+  featuredCard: { borderRadius: 24, padding: 16, height: 240, overflow: 'hidden' },
+  officialBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
+  categoryCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+  featuredTitle: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 30 },
+  infoPill: { backgroundColor: 'rgba(0,0,0,0.28)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 },
+  infoPillTxt: { fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
+  avatarDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
+  avatarDotSm: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#fff' },
+  joinBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 99, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
+  compactCard: { width: 152, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  compactCardGrad: { height: 88, alignItems: 'center', justifyContent: 'center' },
+  compactCardBody: { padding: 10 },
+  compactCardTitle: { fontSize: 12, fontWeight: '700', color: '#1E1B4B', lineHeight: 17 },
+  compactCardTime: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
+  listCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  listCardLeft: { width: 72, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  listCardBody: { flex: 1, paddingVertical: 14, paddingLeft: 4 },
+  listCardTitle: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.2 },
+  listCardTime: { fontSize: 12, color: '#64748B', marginTop: 2 },
 
   // Event cards
   officialCard: { borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
