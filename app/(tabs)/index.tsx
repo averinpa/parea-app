@@ -1085,30 +1085,38 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8F7FF' }}>
-      {/* Header */}
-      <View style={s.feedHeader}>
-        <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
-          <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
-          <Text style={s.cityBtnTxt}>{city}</Text>
-          <Ionicons name="chevron-down" size={13} color="#4338CA" />
-        </TouchableOpacity>
-        <TouchableOpacity style={s.bellBtn}>
-          <Ionicons name="notifications-outline" size={22} color="#1E1B4B" />
-          <View style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
-        </TouchableOpacity>
-      </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        stickyHeaderIndices={[0]}>
 
-      {/* Filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroll} contentContainerStyle={s.filterContent}>
-        {FILTERS.map(f => (
-          <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
-            style={[s.filterTab, feedFilter === f.id && s.filterTabOn]}>
-            <Text style={[s.filterTabTxt, feedFilter === f.id && s.filterTabTxtOn]}>{f.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+        {/* ── STICKY: Header + Filter chips ── */}
+        <View style={{ backgroundColor: '#F8F7FF' }}>
+          <View style={s.feedHeader}>
+            <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
+              <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
+              <Text style={s.cityBtnTxt}>{city}</Text>
+              <Ionicons name="chevron-down" size={13} color="#4338CA" />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.bellBtn}>
+              <Ionicons name="notifications-outline" size={22} color="#1E1B4B" />
+              <View style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+            </TouchableOpacity>
+          </View>
+          <View style={{ height: 52 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterContent}>
+              {FILTERS.map(f => (
+                <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
+                  style={[s.filterTab, feedFilter === f.id && s.filterTabOn]}>
+                  <Text style={[s.filterTabTxt, feedFilter === f.id && s.filterTabTxtOn]}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+        {/* ── SCROLLABLE CONTENT ── */}
 
         {/* Featured card */}
         {featured && (
