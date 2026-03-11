@@ -1087,7 +1087,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
     <View style={{ flex: 1, backgroundColor: '#F8F7FF' }}>
       {/* Header */}
       <View style={s.feedHeader}>
-        <Image source={require('../../assets/images/logo.png')} style={{ width: 72, height: 22 }} resizeMode="contain" />
         <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
           <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
           <Text style={s.cityBtnTxt}>{city}</Text>
@@ -1113,7 +1112,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
 
         {/* Featured card */}
         {featured && (
-          <TouchableOpacity onPress={() => onEventPress(featured)} activeOpacity={0.92} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 6 }}>
+          <TouchableOpacity onPress={() => onEventPress(featured)} activeOpacity={0.92} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 6, height: 240, borderRadius: 24, overflow: 'hidden' }}>
             <LinearGradient colors={featured.gradient as any} style={s.featuredCard}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -1850,7 +1849,7 @@ const s = StyleSheet.create({
   createTypeLabel: { fontSize: 11, color: '#64748B', fontWeight: '500', textAlign: 'center' },
 
   // Feed header
-  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 52, paddingBottom: 12, backgroundColor: '#F8F7FF' },
+  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 12, backgroundColor: '#F8F7FF' },
   cityBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99,102,241,0.08)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, borderWidth: 1, borderColor: 'rgba(99,102,241,0.18)' },
   cityBtnTxt: { fontSize: 13, fontWeight: '700', color: '#4338CA' },
   bellBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.08)', alignItems: 'center', justifyContent: 'center' },
@@ -1862,7 +1861,7 @@ const s = StyleSheet.create({
   filterTabTxtOn: { color: '#fff', fontWeight: '700' },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 20, marginBottom: 12 },
   sectionHeader: { fontSize: 17, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 },
-  featuredCard: { borderRadius: 24, padding: 16, height: 240, overflow: 'hidden' },
+  featuredCard: { flex: 1, padding: 16 },
   officialBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
   categoryCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   featuredTitle: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 30 },
