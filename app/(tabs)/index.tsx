@@ -1,5 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
+import Svg, { Circle, Path } from 'react-native-svg'
 import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -24,7 +25,7 @@ const LANDING_SLIDES = [
     accent: '#6366F1', titleColor: '#1E1B4B', subColor: '#475569',
   },
   {
-    img: require('../../assets/images/unnamed-removebg-preview.png'),
+    img: require('../../assets/images/Gemini_Generated_Image_55nnbe55nnbe55nn-removebg-preview.png'),
     title: 'Match with real\npeople.',
     sub: "Like profiles of people going to the same event. Match — and you're in a group.",
     bg: ['#FFF0F9', '#FCE7F3', '#FBCFE8'],
@@ -181,7 +182,7 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
         <View style={s.dotsRow}>
           {LANDING_SLIDES.map((_, i) => (
             <TouchableOpacity key={i} onPress={() => goTo(i)}>
-              <View style={[s.dot, { backgroundColor: i === slide ? cur.accent : 'rgba(0,0,0,0.15)' }, i === slide && { width: 24 }]} />
+              <View style={[s.dot, { backgroundColor: i === slide ? cur.accent : 'rgba(0,0,0,0.12)' }, i === slide && { width: 28, borderRadius: 4 }]} />
             </TouchableOpacity>
           ))}
         </View>
@@ -189,8 +190,8 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
         <View style={s.landingBtns}>
           {isLast ? (
             <>
-              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 }]} onPress={onCreateAccount}>
-                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Account</Text>
+              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 10 }]} onPress={onCreateAccount}>
+                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Account ✦</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.btnSecondary, { borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'rgba(99,102,241,0.06)' }]} onPress={onLogin}>
                 <Text style={[s.btnSecondaryText, { color: '#6366F1' }]}>Log In</Text>
@@ -198,12 +199,12 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
             </>
           ) : (
             <>
-              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: cur.accent }]} onPress={() => goTo(slide + 1)}>
-                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Next</Text>
+              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: cur.accent, shadowColor: cur.accent, shadowOpacity: 0.45, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 10 }]} onPress={() => goTo(slide + 1)}>
+                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Next  →</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={onLogin} style={{ alignItems: 'center', paddingVertical: 4 }}>
-                <Text style={{ fontSize: 14, color: '#94A3B8' }}>
-                  Already have an account? <Text style={{ color: '#6366F1', fontWeight: '600' }}>Log in</Text>
+              <TouchableOpacity onPress={onLogin} style={{ alignItems: 'center', paddingVertical: 6 }}>
+                <Text style={{ fontSize: 14, color: '#94A3B8', letterSpacing: 0.1 }}>
+                  Already have an account? <Text style={{ color: '#6366F1', fontWeight: '700' }}>Log in</Text>
                 </Text>
               </TouchableOpacity>
             </>
@@ -238,6 +239,8 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
       <SafeAreaView style={s.fill}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+
+            {/* Top bar */}
             <View style={s.authTopBar}>
               <TouchableOpacity onPress={onBack} style={s.authBackBtn}>
                 <Ionicons name="chevron-back" size={22} color="rgba(51,65,85,0.7)" />
@@ -247,11 +250,14 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
             </View>
 
             <View style={s.authContent}>
-              <View style={{ alignItems: 'center', marginBottom: 32 }}>
-                <Text style={s.authTitle}>Find your people</Text>
-                <Text style={s.authSub}>Discover companions for coffee,{'\n'}concerts, and everything in between.</Text>
+
+              {/* Heading */}
+              <View style={{ alignItems: 'center', marginBottom: 36 }}>
+                <Text style={[s.authTitle, { fontSize: 32, textAlign: 'center' }]}>Find your people</Text>
+                <Text style={[s.authSub, { marginTop: 8 }]}>Join companions going to the same{'\n'}events in your city.</Text>
               </View>
 
+              {/* Tab toggle */}
               <View style={s.tabToggle}>
                 {(['email', 'phone'] as const).map(t => (
                   <TouchableOpacity key={t} onPress={() => setTab(t)} style={[s.tabBtn, tab === t && s.tabBtnOn]}>
@@ -260,6 +266,7 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
                 ))}
               </View>
 
+              {/* Input */}
               <View style={s.glassInput}>
                 <Text style={{ fontSize: 17, marginRight: 10 }}>{tab === 'email' ? '✉️' : '📱'}</Text>
                 {tab === 'email' ? (
@@ -275,29 +282,46 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
                     placeholder="+357 99 000 000" placeholderTextColor="#94A3B8"
                     keyboardType="phone-pad" />
                 )}
-                {isValid && <Text style={{ color: '#22c55e', fontSize: 18 }}>✓</Text>}
+                {isValid && <Ionicons name="checkmark-circle" size={22} color="#22c55e" />}
               </View>
 
+              {/* Continue button */}
               <TouchableOpacity
-                style={[s.btnPrimary, { backgroundColor: isValid ? '#818CF8' : 'rgba(129,140,248,0.4)', marginTop: 16, shadowColor: '#818CF8', shadowOpacity: isValid ? 0.38 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: isValid ? 6 : 0 }]}
+                style={[s.btnPrimary, { backgroundColor: isValid ? '#6366F1' : 'rgba(99,102,241,0.35)', marginTop: 14, shadowColor: '#6366F1', shadowOpacity: isValid ? 0.45 : 0, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: isValid ? 8 : 0 }]}
                 onPress={handleContinue} disabled={!isValid || isChecking}>
                 {isChecking ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue</Text>}
               </TouchableOpacity>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(100,116,139,0.2)' }} />
-                <Text style={{ fontSize: 13, color: '#94A3B8' }}>or continue with</Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(100,116,139,0.2)' }} />
+              {/* Divider */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 28 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(100,116,139,0.18)' }} />
+                <Text style={{ fontSize: 13, color: '#94A3B8', letterSpacing: 0.3 }}>or continue with</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(100,116,139,0.18)' }} />
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity style={s.socialBtn}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#334155' }}>G</Text>
+              {/* Social buttons */}
+              <View style={{ flexDirection: 'row', gap: 14 }}>
+                <TouchableOpacity style={[s.iconSocialBtn, { backgroundColor: '#fff' }]}>
+                  <Svg width={28} height={28} viewBox="0 0 48 48">
+                    <Path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                    <Path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                    <Path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                    <Path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                  </Svg>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.socialBtn}>
-                  <Text style={{ fontSize: 20 }}>🍎</Text>
+
+                <TouchableOpacity style={[s.iconSocialBtn, { backgroundColor: '#111', borderColor: '#111' }]}>
+                  <Ionicons name="logo-apple" size={28} color="#fff" />
                 </TouchableOpacity>
               </View>
+
+              <Text style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 28, lineHeight: 18 }}>
+                By continuing you agree to our{' '}
+                <Text style={{ color: '#6366F1', fontWeight: '600' }}>Terms</Text>
+                {' '}and{' '}
+                <Text style={{ color: '#6366F1', fontWeight: '600' }}>Privacy Policy</Text>
+              </Text>
+
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1089,28 +1113,28 @@ const s = StyleSheet.create({
   fill: { flex: 1 },
 
   // Landing
-  logoRow: { alignItems: 'center', paddingTop: 20, paddingBottom: 4 },
-  logo: { width: 140, height: 44 },
-  slideImgWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  slideImg: { width: W * 0.72, height: W * 0.72, maxHeight: 300 },
-  slideTextWrap: { paddingHorizontal: 32, marginBottom: 16 },
-  slideTitle: { fontSize: 30, fontWeight: '800', letterSpacing: -0.5, marginBottom: 10, lineHeight: 36 },
-  slideSub: { fontSize: 15, lineHeight: 22 },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 7, marginBottom: 24 },
+  logoRow: { alignItems: 'center', paddingTop: 36, paddingBottom: 8 },
+  logo: { width: 200, height: 64 },
+  slideImgWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  slideImg: { width: W * 0.88, height: W * 0.88 },
+  slideTextWrap: { paddingHorizontal: 28, marginBottom: 20, alignItems: 'center' },
+  slideTitle: { fontSize: 34, fontWeight: '800', letterSpacing: -0.8, marginBottom: 12, lineHeight: 44, textAlign: 'center' },
+  slideSub: { fontSize: 16, lineHeight: 26, textAlign: 'center' },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 28 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  landingBtns: { paddingHorizontal: 28, paddingBottom: 44, gap: 10 },
+  landingBtns: { paddingHorizontal: 24, paddingBottom: 48, gap: 12 },
 
   // Buttons
-  btnPrimary: { height: 54, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: '#818CF8' },
-  btnPrimaryText: { fontSize: 16, fontWeight: '700' },
-  btnSecondary: { height: 48, borderRadius: 28, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  btnPrimary: { height: 58, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#818CF8', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  btnPrimaryText: { fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
+  btnSecondary: { height: 52, borderRadius: 32, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   btnSecondaryText: { fontSize: 15, fontWeight: '600' },
 
   // Auth
   authTopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 4 },
   authBackBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center' },
-  authLogo: { width: 100, height: 32 },
-  authContent: { flex: 1, paddingHorizontal: 26, paddingTop: 20, paddingBottom: 44 },
+  authLogo: { width: 150, height: 48 },
+  authContent: { flex: 1, paddingHorizontal: 26, paddingTop: 12, paddingBottom: 44 },
   authTitle: { fontSize: 30, fontWeight: '800', color: '#334155', letterSpacing: -0.5, marginBottom: 10 },
   authSub: { fontSize: 15, color: '#64748B', lineHeight: 22, textAlign: 'center' },
   tabToggle: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.35)', borderRadius: 14, padding: 4, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)' },
@@ -1121,6 +1145,10 @@ const s = StyleSheet.create({
   glassInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 18, height: 58, marginBottom: 4 },
   glassInputText: { flex: 1, fontSize: 16, color: '#334155' },
   socialBtn: { flex: 1, height: 56, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.75)', backgroundColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center' },
+  socialBtnFull: { height: 56, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(255,255,255,0.7)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  socialBtnTxt: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
+  googleG: { width: 24, height: 24, borderRadius: 6, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
+  iconSocialBtn: { flex: 1, height: 60, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: 'rgba(255,255,255,0.75)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
 
   // OTP
   otpBox: { width: 68, height: 72, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', fontSize: 26, fontWeight: '700', color: '#334155', textAlign: 'center' },
