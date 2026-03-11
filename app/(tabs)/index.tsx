@@ -64,20 +64,27 @@ const LANGUAGES_LIST = [
 const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
 
 const MOCK_EVENTS = [
-  { id: 1, city: 'Limassol', type: 'official', title: 'Tennis Tournament at Aphrodite Hills', time: 'Today, 18:00', distance: '2km', category: 'sports', gradient: ['#667eea', '#764ba2'], seekerColors: ['#818CF8', '#4CAF50', '#2196F3'], slots: '2 spots left', seekingCount: 12 },
-  { id: 2, city: 'Limassol', type: 'official', title: 'Limassol Wine Festival 2025', time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine', gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'], slots: '4 spots left', seekingCount: 28 },
-  { id: 9, city: 'Limassol', type: 'official', title: 'CyprusTech Conference 2025', time: 'Sat, 10:00', distance: '3km', category: 'tech', gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], slots: 'Open event', seekingCount: 7 },
-  { id: 5, city: 'Paphos', type: 'official', title: 'Sunset Hike to Troodos', time: 'Sat, 07:00', distance: '8km', category: 'sports', gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'], slots: '6 spots left', seekingCount: 9 },
-  { id: 3, city: 'Limassol', type: 'community', title: 'Morning Coffee & Chat', time: 'Today, 09:30', distance: '0.5km', category: 'coffee', gradient: ['#4facfe', '#00c6fb'], seekerColors: ['#FF9800', '#03A9F4', '#8BC34A', '#FF5722'], slots: '3 spots left', seekingCount: 4 },
-  { id: 4, city: 'Nicosia', type: 'community', title: 'Board Games Night', time: 'Fri, 19:00', distance: '3km', category: 'gaming', gradient: ['#43e97b', '#38f9d7'], seekerColors: ['#FF5722', '#9C27B0'], slots: '5 spots left', seekingCount: 2 },
-  { id: 6, city: 'Nicosia', type: 'community', title: 'Specialty Coffee Tour', time: 'Sun, 11:00', distance: '1km', category: 'coffee', gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'], slots: '3 spots left', seekingCount: 2 },
-  { id: 7, city: 'Larnaca', type: 'community', title: 'Beach Volleyball', time: 'Today, 17:00', distance: '4km', category: 'sports', gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'], slots: '4 spots left', seekingCount: 3 },
-  { id: 8, city: 'Larnaca', type: 'community', title: 'Wine & Jazz Evening', time: 'Sat, 20:00', distance: '2km', category: 'wine', gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'], slots: '6 spots left', seekingCount: 5 },
-  { id: 10, city: 'Limassol', type: 'community', title: 'Sunset Picnic at Dasoudi Beach', time: 'Today, 17:30', distance: '1.5km', category: 'outdoors', gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'], slots: '5 spots left', seekingCount: 6 },
-  { id: 11, city: 'Limassol', type: 'official', title: 'Mediterranean Food Festival', time: 'Tomorrow, 12:00', distance: '0.8km', category: 'food', gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'], slots: 'Open event', seekingCount: 19 },
-  { id: 12, city: 'Limassol', type: 'community', title: 'Photography Walk — Old Port', time: 'Sun, 09:00', distance: '1km', category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'], slots: '4 spots left', seekingCount: 3 },
-  { id: 13, city: 'Nicosia', type: 'official', title: 'Open Air Cinema Night', time: 'Sat, 21:00', distance: '2km', category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'], slots: '6 spots left', seekingCount: 11 },
+  { id: 1,  city: 'Limassol', type: 'official',   title: 'Tennis Tournament at Aphrodite Hills', time: 'Today, 18:00',    distance: '2km',   category: 'sports',  gradient: ['#667eea', '#764ba2'], seekerColors: ['#818CF8', '#4CAF50', '#2196F3'],          seekingCount: 12, participantsCount: 22, maxParticipants: 24 },
+  { id: 2,  city: 'Limassol', type: 'official',   title: 'Limassol Wine Festival 2025',          time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine',    gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'],                     seekingCount: 28, participantsCount: 40, maxParticipants: 200 },
+  { id: 9,  city: 'Limassol', type: 'official',   title: 'CyprusTech Conference 2025',           time: 'Sat, 10:00',     distance: '3km',   category: 'tech',    gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], seekingCount: 7,  participantsCount: 80, maxParticipants: 150 },
+  { id: 5,  city: 'Paphos',   type: 'official',   title: 'Sunset Hike to Troodos',               time: 'Sat, 07:00',     distance: '8km',   category: 'sports',  gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'],          seekingCount: 9,  participantsCount: 14, maxParticipants: 20 },
+  { id: 3,  city: 'Limassol', type: 'community',  title: 'Morning Coffee & Chat',               time: 'Today, 09:30',   distance: '0.5km', category: 'coffee',  gradient: ['#4facfe', '#00c6fb'], seekerColors: ['#FF9800', '#03A9F4', '#8BC34A', '#FF5722'], seekingCount: 4,  participantsCount: 8,  maxParticipants: 8 },
+  { id: 4,  city: 'Nicosia',  type: 'community',  title: 'Board Games Night',                   time: 'Fri, 19:00',     distance: '3km',   category: 'gaming',  gradient: ['#43e97b', '#38f9d7'], seekerColors: ['#FF5722', '#9C27B0'],                     seekingCount: 2,  participantsCount: 3,  maxParticipants: 10 },
+  { id: 6,  city: 'Nicosia',  type: 'community',  title: 'Specialty Coffee Tour',               time: 'Sun, 11:00',     distance: '1km',   category: 'coffee',  gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 2,  participantsCount: 6,  maxParticipants: 6 },
+  { id: 7,  city: 'Larnaca',  type: 'community',  title: 'Beach Volleyball',                    time: 'Today, 17:00',   distance: '4km',   category: 'sports',  gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'],          seekingCount: 3,  participantsCount: 12, maxParticipants: 12 },
+  { id: 8,  city: 'Larnaca',  type: 'community',  title: 'Wine & Jazz Evening',                 time: 'Sat, 20:00',     distance: '2km',   category: 'wine',    gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'],                     seekingCount: 5,  participantsCount: 8,  maxParticipants: 20 },
+  { id: 10, city: 'Limassol', type: 'community',  title: 'Sunset Picnic at Dasoudi Beach',      time: 'Today, 17:30',   distance: '1.5km', category: 'outdoors',gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'],          seekingCount: 6,  participantsCount: 9,  maxParticipants: 15 },
+  { id: 11, city: 'Limassol', type: 'official',   title: 'Mediterranean Food Festival',         time: 'Tomorrow, 12:00',distance: '0.8km', category: 'food',    gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'],          seekingCount: 19, participantsCount: 55, maxParticipants: 500 },
+  { id: 12, city: 'Limassol', type: 'community',  title: 'Photography Walk — Old Port',         time: 'Sun, 09:00',     distance: '1km',   category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 3,  participantsCount: 7,  maxParticipants: 10 },
+  { id: 13, city: 'Nicosia',  type: 'official',   title: 'Open Air Cinema Night',               time: 'Sat, 21:00',     distance: '2km',   category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'],          seekingCount: 11, participantsCount: 30, maxParticipants: 50 },
 ]
+
+// Maps INTERESTS_LIST labels → event categories for Data Matching
+const INTEREST_TO_CATEGORY: Record<string, string> = {
+  '☕ Coffee': 'coffee', '🍷 Wine': 'wine', '🎾 Tennis': 'sports', '🎬 Movies': 'culture',
+  '🥾 Hiking': 'outdoors', '🍕 Foodie': 'food', '🧘 Yoga': 'sports', '🎨 Art': 'culture',
+  '🎸 Music': 'music', '✈️ Travel': 'outdoors',
+}
 
 const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵' }
 
@@ -1060,8 +1067,11 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests }: any) {
   const allCityEvents = MOCK_EVENTS.filter(e => e.city === city)
+
+  // Data Matching: events whose category matches user interests float to top
+  const userCategories = (userInterests as string[]).map((i: string) => INTEREST_TO_CATEGORY[i]).filter(Boolean)
 
   const FILTERS = [
     { id: 'all', label: '✦ All' },
@@ -1073,14 +1083,43 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
     { id: 'sports', label: '🎾 Sports' },
   ]
 
-  const visibleEvents = allCityEvents.filter(ev => {
+  const filteredEvents = allCityEvents.filter(ev => {
     if (feedFilter === 'all') return true
     if (feedFilter === 'official') return ev.type === 'official'
     return ev.category === feedFilter
   })
 
+  // Sort: matching interests first, then rest
+  const visibleEvents = userCategories.length > 0
+    ? [...filteredEvents].sort((a, b) => {
+        const aMatch = userCategories.includes(a.category) ? 1 : 0
+        const bMatch = userCategories.includes(b.category) ? 1 : 0
+        return bMatch - aMatch
+      })
+    : filteredEvents
+
   const featured = visibleEvents[0]
   const rest = visibleEvents.slice(1)
+
+  const getJoinState = (ev: any) => {
+    if (ev.participantsCount >= ev.maxParticipants) return 'full'
+    return joinedEvents?.[ev.id] || 'none'
+  }
+
+  const JoinButton = ({ ev, large }: { ev: any; large?: boolean }) => {
+    const state = getJoinState(ev)
+    const isFull = state === 'full'
+    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Pending…' : 'Join →'
+    const bg = isFull ? 'rgba(255,255,255,0.10)' : state !== 'none' ? 'rgba(99,255,180,0.22)' : 'rgba(255,255,255,0.22)'
+    return (
+      <TouchableOpacity
+        onPress={() => !isFull && onJoin(ev)}
+        activeOpacity={isFull ? 1 : 0.75}
+        style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1 }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
+        <Text style={{ fontSize: large ? 14 : 13, fontWeight: '800', color: '#fff' }}>{label}</Text>
+      </TouchableOpacity>
+    )
+  }
   const todayEvents = rest.filter(e => e.time.toLowerCase().includes('today'))
   const upcoming = rest.filter(e => !e.time.toLowerCase().includes('today'))
 
@@ -1158,9 +1197,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
                       {featured.seekingCount} looking for company
                     </Text>
                   </View>
-                  <TouchableOpacity style={s.joinBtn} activeOpacity={0.8}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Join →</Text>
-                  </TouchableOpacity>
+                  <JoinButton ev={featured} />
                 </View>
               </View>
             </LinearGradient>
@@ -1227,11 +1264,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 6, paddingRight: 14 }}>
                     <View style={{ flexDirection: 'row' }}>
-                      {ev.seekerColors.slice(0, 3).map((c, i) => (
+                      {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
                         <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
                       ))}
                     </View>
-                    <Text style={{ fontSize: 10, color: '#6366F1', fontWeight: '700' }}>{ev.slots}</Text>
+                    <JoinButton ev={ev} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1435,6 +1472,22 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const [chatList] = useState(MOCK_CHATS)
   const scrollRef = useRef<ScrollView>(null)
 
+  const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined'>>({})
+
+  const handleJoinEvent = (ev: any) => {
+    const isFull = ev.participantsCount >= ev.maxParticipants
+    if (isFull) return
+    setJoinedEvents(prev => {
+      if (!prev[ev.id]) return { ...prev, [ev.id]: 'pending' }
+      if (prev[ev.id] === 'pending') return { ...prev, [ev.id]: 'joined' }
+      // joined → unjoin
+      const next = { ...prev }
+      delete next[ev.id]
+      return next
+    })
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+  }
+
   const handleLike = (seeker: any) => {
     setVibeResults(prev => ({ ...prev, [seeker.id]: 'vibe' }))
     if (seeker.id === 1) setTimeout(() => setMatchedWith(seeker), 300)
@@ -1455,7 +1508,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} />}
           {activeTab === 'search' && (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>🗺️</Text>
