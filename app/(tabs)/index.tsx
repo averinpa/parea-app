@@ -799,8 +799,10 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
           <TouchableOpacity onPress={back} style={s.authBackBtn}>
             <Ionicons name="chevron-back" size={22} color="rgba(51,65,85,0.7)" />
           </TouchableOpacity>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#64748B' }}>Step {step} of {TOTAL}</Text>
-          <View style={{ width: 40 }} />
+          <Image source={require('../../assets/images/logo.png')} style={{ width: 110, height: 36 }} resizeMode="contain" />
+          <View style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: 99 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>{step}/{TOTAL}</Text>
+          </View>
         </View>
 
         <View style={s.progressTrack}>
@@ -1084,7 +1086,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed }: any) {
   const allCityEvents = MOCK_EVENTS.filter(e => e.city === city)
 
   // Data Matching: events whose category matches user interests float to top
@@ -1127,6 +1129,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     setJoinSheet({ visible: true, ev, step: 1, format: '', transport: '' })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
+
+  // When FeedScreen asks to re-open join sheet (from "Update my plans")
+  useEffect(() => {
+    if (pendingJoinEv) {
+      openJoinSheet(pendingJoinEv)
+      onPendingJoinConsumed?.()
+    }
+  }, [pendingJoinEv])
   const closeJoinSheet = () => setJoinSheet(prev => ({ ...prev, visible: false }))
 
   const confirmJoin = () => {
@@ -1782,6 +1792,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const [vibes, setVibes] = useState<number[]>([])
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
+  const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
   const [toast, setToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
   const toastAnim = useRef(new Animated.Value(0)).current
 
@@ -1863,7 +1874,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} />}
           {activeTab === 'search' && (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>🗺️</Text>
@@ -1899,9 +1910,8 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               showToast("Spot freed. Others can join now 🎟️")
             }}
             onUpdatePlans={ev => {
-              // Re-open join sheet for this event
               setActiveTab('home')
-              setTimeout(() => setEventDetail(ev), 100)
+              setTimeout(() => setPendingJoinEv(ev), 150)
             }}
           />}
           {activeTab === 'profile' && <ProfileTab userData={userData} />}
@@ -2315,9 +2325,9 @@ const s = StyleSheet.create({
   btnSecondaryText: { fontSize: 15, fontWeight: '600' },
 
   // Auth
-  authTopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 4 },
+  authTopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
   authBackBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center' },
-  authLogo: { width: 150, height: 48 },
+  authLogo: { width: 180, height: 56 },
   authContent: { flex: 1, paddingHorizontal: 26, paddingTop: 12, paddingBottom: 44 },
   authTitle: { fontSize: 30, fontWeight: '800', color: '#334155', letterSpacing: -0.5, marginBottom: 10 },
   authSub: { fontSize: 15, color: '#64748B', lineHeight: 22, textAlign: 'center' },
@@ -2351,7 +2361,7 @@ const s = StyleSheet.create({
   otpInput: { width: 64, height: 72, fontSize: 32, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', backgroundColor: 'transparent' },
 
   // Onboarding
-  onbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 6 },
+  onbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 6 },
   progressTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.5)', marginHorizontal: 20, borderRadius: 99, marginBottom: 6 },
   progressFill: { height: 4, backgroundColor: '#818CF8', borderRadius: 99 },
   stepScroll: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 },
@@ -2408,7 +2418,7 @@ const s = StyleSheet.create({
   checkboxOn: { backgroundColor: '#818CF8', borderColor: '#818CF8' },
   carLabel: { fontSize: 15, fontWeight: '700', color: '#334155', marginBottom: 2 },
   carSub: { fontSize: 12, color: '#64748B' },
-  bottomBar: { paddingHorizontal: 24, paddingBottom: 36, paddingTop: 8, gap: 10 },
+  bottomBar: { paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 16, paddingTop: 8, gap: 10 },
 
   // Feed bottom nav
   bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 0, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 12, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 24 : 10, alignItems: 'center' },
