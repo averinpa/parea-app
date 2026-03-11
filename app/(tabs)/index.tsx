@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView, LayoutAnimation, Modal, Platform,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 
 const { width: W } = Dimensions.get('window')
@@ -550,6 +550,7 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
 // ─── ONBOARDING SCREEN ────────────────────────────────────────────────────────
 
 function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: (data: any) => void }) {
+  const insets = useSafeAreaInsets()
   const TOTAL = 5
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
@@ -1064,7 +1065,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={s.bottomBar}>
+        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
           {step === TOTAL ? (
             <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
               <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
@@ -1172,7 +1173,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // ── Format & Transport options ────────────────────────────────────────────
   const FORMAT_OPTIONS = [
-    { id: '1+1',   emoji: '💑', label: 'Duo',   sub: 'Just the two of us' },
+    { id: '1+1',   emoji: '🧑‍🤝‍🧑', label: 'Duo',   sub: 'Just the two of us' },
     { id: 'squad', emoji: '🫂', label: 'Squad',  sub: 'Up to 5 people' },
     { id: 'party', emoji: '🎉', label: 'Party',  sub: 'The more the merrier' },
   ]
@@ -2418,7 +2419,7 @@ const s = StyleSheet.create({
   checkboxOn: { backgroundColor: '#818CF8', borderColor: '#818CF8' },
   carLabel: { fontSize: 15, fontWeight: '700', color: '#334155', marginBottom: 2 },
   carSub: { fontSize: 12, color: '#64748B' },
-  bottomBar: { paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 16, paddingTop: 8, gap: 10 },
+  bottomBar: { paddingHorizontal: 24, paddingTop: 8, gap: 10 },
 
   // Feed bottom nav
   bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 0, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 12, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 24 : 10, alignItems: 'center' },
