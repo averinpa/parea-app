@@ -1084,7 +1084,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed }: any) {
   const allCityEvents = MOCK_EVENTS.filter(e => e.city === city)
 
   // Data Matching: events whose category matches user interests float to top
@@ -1131,9 +1131,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   const confirmJoin = () => {
     onJoin(joinSheet.ev)
-    if (joinSheet.format && joinSheet.ev?.id) {
-      setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.format }))
+    if (joinSheet.ev?.id) {
+      if (joinSheet.format)    setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.format }))
+      if (joinSheet.transport) setUserEventTransport?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.transport }))
     }
+    onJoinConfirmed?.(joinSheet.ev, joinSheet.format, joinSheet.transport)
     closeJoinSheet()
   }
 
@@ -1520,9 +1522,22 @@ function MessagesTab({ chatList, onOpenChat }: { chatList: any[]; onOpenChat: (c
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
-function ProfileTab({ userData }: { userData: any }) {
+function ProfileTab({ userData, joinedEvents = {}, userEventFormat = {}, userEventTransport = {} }: { userData: any; joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string> }) {
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
+
+  const myEvents = MOCK_EVENTS.filter(ev => joinedEvents[ev.id] === 'joined' || joinedEvents[ev.id] === 'pending')
+
+  const FORMAT_CHIP: Record<string, { emoji: string; label: string; color: string }> = {
+    '1+1':   { emoji: '👥', label: 'Duo',   color: '#f472b6' },
+    'squad': { emoji: '🫂', label: 'Squad', color: '#818CF8' },
+    'party': { emoji: '🎉', label: 'Party', color: '#fb923c' },
+  }
+  const TRANSPORT_CHIP: Record<string, { emoji: string; label: string }> = {
+    car:  { emoji: '🚗', label: 'Driving' },
+    lift: { emoji: '🙋', label: 'Need ride' },
+    meet: { emoji: '📍', label: 'Meet there' },
+  }
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 48 }}>
@@ -1566,6 +1581,57 @@ function ProfileTab({ userData }: { userData: any }) {
           </View>
         </View>
       )}
+
+      {/* My Events section */}
+      <View style={{ marginBottom: 28 }}>
+        <Text style={s.profileSectionTitle}>My Events</Text>
+        {myEvents.length === 0 ? (
+          <View style={{ marginTop: 12, backgroundColor: 'rgba(99,102,241,0.06)', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+            <Text style={{ fontSize: 28, marginBottom: 8 }}>🎟️</Text>
+            <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center' }}>No events joined yet.{'\n'}Explore the feed and hit Join!</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 10, marginTop: 10 }}>
+            {myEvents.map(ev => {
+              const fmt  = FORMAT_CHIP[userEventFormat[ev.id]]
+              const trsp = TRANSPORT_CHIP[userEventTransport[ev.id]]
+              const isPending = joinedEvents[ev.id] === 'pending'
+              return (
+                <View key={ev.id} style={{ backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#6366F1', shadowOpacity: 0.07, shadowRadius: 12, elevation: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <LinearGradient colors={ev.gradient as any} style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 18 }}>{CATEGORY_EMOJI[ev.category] || '🎪'}</Text>
+                    </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B' }} numberOfLines={1}>{ev.title}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>{ev.time} · {ev.distance}</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: isPending ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: isPending ? '#d97706' : '#16a34a' }}>
+                        {isPending ? 'Pending' : 'Joined ✓'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {fmt && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 13 }}>{fmt.emoji}</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: fmt.color }}>{fmt.label}</Text>
+                      </View>
+                    )}
+                    {trsp && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 13 }}>{trsp.emoji}</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{trsp.label}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )
+            })}
+          </View>
+        )}
+      </View>
 
       {[
         { icon: 'settings', label: 'Settings' },
@@ -1619,6 +1685,26 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined'>>({})
   const [vibes, setVibes] = useState<number[]>([])
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
+  const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
+  const [toast, setToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
+  const toastAnim = useRef(new Animated.Value(0)).current
+
+  const showToast = (text: string) => {
+    setToast({ visible: true, text })
+    toastAnim.setValue(0)
+    Animated.sequence([
+      Animated.spring(toastAnim, { toValue: 1, friction: 8, useNativeDriver: true }),
+      Animated.delay(2200),
+      Animated.timing(toastAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+    ]).start(() => setToast({ visible: false, text: '' }))
+  }
+
+  const handleJoinConfirmed = (ev: any, format: string, transport: string) => {
+    const FORMAT_EMOJI: Record<string, string> = { '1+1': '👥', squad: '🫂', party: '🎉' }
+    const TRANSPORT_EMOJI: Record<string, string> = { car: '🚗', lift: '🙋', meet: '📍' }
+    const parts = [FORMAT_EMOJI[format] || '👥', TRANSPORT_EMOJI[transport] || '📍'].filter(Boolean)
+    showToast(`You're going! ${parts.join(' · ')}`)
+  }
 
   // Match animation refs
   const matchFlash   = useRef(new Animated.Value(0)).current
@@ -1686,7 +1772,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} />}
           {activeTab === 'search' && (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>🗺️</Text>
@@ -1695,7 +1781,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
             </View>
           )}
           {activeTab === 'messages' && <MessagesTab chatList={chatList} onOpenChat={setOpenChat} />}
-          {activeTab === 'profile' && <ProfileTab userData={userData} />}
+          {activeTab === 'profile' && <ProfileTab userData={userData} joinedEvents={joinedEvents} userEventFormat={userEventFormat} userEventTransport={userEventTransport} />}
         </View>
 
         {/* Bottom nav */}
@@ -2020,6 +2106,23 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
             </SafeAreaView>
           </LinearGradient>
         </Modal>
+      )}
+
+      {/* Toast notification */}
+      {toast.visible && (
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute', bottom: 110, left: 24, right: 24, zIndex: 9999,
+          opacity: toastAnim,
+          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+        }}>
+          <View style={{ backgroundColor: '#1E1B4B', borderRadius: 20, paddingHorizontal: 22, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20, elevation: 16 }}>
+            <Text style={{ fontSize: 22 }}>🎉</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>All set!</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{toast.text}</Text>
+            </View>
+          </View>
+        </Animated.View>
       )}
     </LinearGradient>
   )
