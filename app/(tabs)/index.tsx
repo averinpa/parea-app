@@ -560,9 +560,9 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const canNext = () => {
     if (step === 1) return name.trim().length >= 2 && ageValid && !!gender
     if (step === 2) return photoStatus[0] === 'verified'
-    if (step === 3) return bio.trim().length >= 10
-    if (step === 4) return interests.length > 0
-    if (step === 5) return langs.length > 0
+    if (step === 3) return interests.length > 0
+    if (step === 4) return langs.length > 0
+    if (step === 5) return bio.trim().length >= 10
     return true
   }
 
@@ -774,19 +774,6 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
               {step === 3 && (
                 <View>
-                  <Text style={s.stepTitle}>About you</Text>
-                  <Text style={s.stepSub}>A few words so people know who they're meeting</Text>
-                  <TextInput
-                    style={[s.input, s.bioInput]} value={bio}
-                    onChangeText={t => setBio(t.slice(0, 150))}
-                    placeholder={'e.g. Love jazz, good coffee\nand spontaneous adventures 🎷'}
-                    placeholderTextColor="#94A3B8" multiline maxLength={150} textAlignVertical="top" />
-                  <Text style={s.charCount}>{bio.length} / 150</Text>
-                </View>
-              )}
-
-              {step === 4 && (
-                <View>
                   <Text style={s.stepTitle}>What are you into?</Text>
                   <Text style={s.stepSub}>Select at least 1 interest to help us find your people</Text>
                   <View style={s.chipsWrap}>
@@ -802,11 +789,10 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                 </View>
               )}
 
-              {step === 5 && (
+              {step === 4 && (
                 <View>
-                  <Text style={s.stepTitle}>Languages & extras</Text>
+                  <Text style={s.stepTitle}>Languages</Text>
                   <Text style={s.stepSub}>Pick at least 1 language</Text>
-                  <Text style={s.label}>Languages I speak</Text>
                   <View style={s.chipsWrap}>
                     {LANGUAGES_LIST.map(l => (
                       <TouchableOpacity key={l.code} onPress={() => setLangs(prev => prev.includes(l.code) ? prev.filter(x => x !== l.code) : [...prev, l.code])} style={[s.chip, langs.includes(l.code) && s.chipOn]}>
@@ -814,15 +800,19 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                       </TouchableOpacity>
                     ))}
                   </View>
-                  <TouchableOpacity style={s.carRow} onPress={() => setHasCar(v => !v)} activeOpacity={0.85}>
-                    <View style={[s.checkbox, hasCar && s.checkboxOn]}>
-                      {hasCar && <Ionicons name="checkmark" size={15} color="#fff" />}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.carLabel}>🚗  I have a car</Text>
-                      <Text style={s.carSub}>You can offer rides to fellow event-goers</Text>
-                    </View>
-                  </TouchableOpacity>
+                </View>
+              )}
+
+              {step === 5 && (
+                <View>
+                  <Text style={s.stepTitle}>About you</Text>
+                  <Text style={s.stepSub}>A few words so people know who they're meeting</Text>
+                  <TextInput
+                    style={[s.input, s.bioInput]} value={bio}
+                    onChangeText={t => setBio(t.slice(0, 150))}
+                    placeholder={'e.g. Love jazz, good coffee\nand spontaneous adventures 🎷'}
+                    placeholderTextColor="#94A3B8" multiline maxLength={150} textAlignVertical="top" />
+                  <Text style={s.charCount}>{bio.length} / 150</Text>
                 </View>
               )}
 
@@ -832,7 +822,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
         <View style={s.bottomBar}>
           <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext()}>
-            <Text style={[s.btnPrimaryText, { color: '#fff' }]}>{step === TOTAL ? 'Finish 🎉' : 'Continue'}</Text>
+            <Text style={[s.btnPrimaryText, { color: '#fff' }]}>{step === TOTAL ? 'Finish! 🚀' : 'Continue'}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
