@@ -550,6 +550,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [bentoSong, setBentoSong] = useState('')
   const [bentoFlags, setBentoFlags] = useState('')
   const [bentoMood, setBentoMood] = useState('')
+  const [bentoModal, setBentoModal] = useState<{ visible: boolean; type: 'song' | 'flags' | 'mood' | null }>({ visible: false, type: null })
   const [vibeCheckPassed, setVibeCheckPassed] = useState(false)
   const [magicLoading, setMagicLoading] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
@@ -738,22 +739,18 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     }, 1500)
   }
 
-  const pickBento = (type: 'song' | 'flags' | 'mood') => {
-    const options = type === 'song' ? BENTO_SONGS : type === 'flags' ? BENTO_FLAGS : BENTO_MOODS
-    Alert.alert(
-      type === 'song' ? '🎧 Current Song' : type === 'flags' ? '🚩🟢 My Flag' : '⚡ Weekend Mood',
-      '',
-      [
-        ...options.map(o => ({ text: o, onPress: () => {
-          if (type === 'song') setBentoSong(o)
-          else if (type === 'flags') setBentoFlags(o)
-          else setBentoMood(o)
-          Haptics.selectionAsync()
-        }})),
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    )
+  const openBento = (type: 'song' | 'flags' | 'mood') => setBentoModal({ visible: true, type })
+  const closeBento = () => setBentoModal({ visible: false, type: null })
+  const selectBentoOption = (value: string) => {
+    if (bentoModal.type === 'song') setBentoSong(value)
+    else if (bentoModal.type === 'flags') setBentoFlags(value)
+    else if (bentoModal.type === 'mood') setBentoMood(value)
+    Haptics.selectionAsync()
+    closeBento()
   }
+  const bentoModalOptions = bentoModal.type === 'song' ? BENTO_SONGS : bentoModal.type === 'flags' ? BENTO_FLAGS : BENTO_MOODS
+  const bentoModalValue = bentoModal.type === 'song' ? bentoSong : bentoModal.type === 'flags' ? bentoFlags : bentoMood
+  const bentoModalTitle = bentoModal.type === 'song' ? '🎧  Current Song' : bentoModal.type === 'flags' ? '🚩🟢  My Flag' : '⚡  Weekend Mood'
 
   const step5BgColors = (): [string, string, string] => {
     if (step !== 5) return ['#EDE9FE', '#E0E7FF', '#DBEAFE']
@@ -940,78 +937,97 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                   <Text style={s.stepSub}>Make your profile unforgettable</Text>
 
                   {/* Bento grid */}
-                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12, height: 200 }}>
-                    {/* Song card — tall left */}
-                    <TouchableOpacity onPress={() => pickBento('song')} activeOpacity={0.8} style={[s.bentoCard, { flex: 1.1 }]}>
-                      <BlurView intensity={60} tint="light" style={s.bentoBlur}>
-                        <Text style={s.bentoIcon}>🎧</Text>
-                        <Text style={s.bentoLabel}>Current song</Text>
-                        <Text style={[s.bentoValue, !!bentoSong && s.bentoValueFilled]} numberOfLines={3}>
-                          {bentoSong || 'Tap to add'}
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14, height: 210 }}>
+
+                    {/* Song card */}
+                    <TouchableOpacity onPress={() => openBento('song')} activeOpacity={0.75} style={{ flex: 1.1 }}>
+                      <LinearGradient colors={bentoSong ? ['#4c1d95', '#312e81'] : ['rgba(124,58,237,0.18)', 'rgba(99,102,241,0.10)']}
+                        style={[s.bentoCard, { borderColor: bentoSong ? 'rgba(139,92,246,0.6)' : 'rgba(139,92,246,0.25)' }]}>
+                        <Text style={{ fontSize: 26, marginBottom: 6 }}>🎧</Text>
+                        <Text style={[s.bentoLabel, { color: bentoSong ? 'rgba(196,181,253,0.8)' : '#94A3B8' }]}>CURRENT SONG</Text>
+                        <Text style={{ fontSize: 12, color: bentoSong ? '#e9d5ff' : 'rgba(148,163,184,0.6)', fontWeight: bentoSong ? '700' : '400', lineHeight: 17, marginTop: 2, flex: 1 }} numberOfLines={4}>
+                          {bentoSong || '+ add'}
                         </Text>
-                        {!!bentoSong ? (
-                          <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 18, marginTop: 8 }}>
+                        {!!bentoSong && (
+                          <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 18, marginTop: 6 }}>
                             {barAnims.map((anim, i) => (
-                              <Animated.View key={i} style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', height: 18, transform: [{ scaleY: anim }] }} />
+                              <Animated.View key={i} style={{ width: 3, borderRadius: 2, backgroundColor: '#a78bfa', height: 18, transform: [{ scaleY: anim }] }} />
                             ))}
                           </View>
-                        ) : null}
-                      </BlurView>
+                        )}
+                      </LinearGradient>
                     </TouchableOpacity>
 
                     {/* Right column */}
                     <View style={{ flex: 1, gap: 10 }}>
-                      <TouchableOpacity onPress={() => pickBento('flags')} activeOpacity={0.8} style={[s.bentoCard, { flex: 1 }]}>
-                        <BlurView intensity={60} tint="light" style={s.bentoBlur}>
-                          <Text style={s.bentoIcon}>🚩🟢</Text>
-                          <Text style={s.bentoLabel}>My flag</Text>
-                          <Text style={[s.bentoValue, !!bentoFlags && s.bentoValueFilled]} numberOfLines={2}>
-                            {bentoFlags || 'Tap to add'}
+                      <TouchableOpacity onPress={() => openBento('flags')} activeOpacity={0.75} style={{ flex: 1 }}>
+                        <LinearGradient colors={bentoFlags ? ['#064e3b', '#065f46'] : ['rgba(16,185,129,0.18)', 'rgba(52,211,153,0.10)']}
+                          style={[s.bentoCard, { borderColor: bentoFlags ? 'rgba(52,211,153,0.6)' : 'rgba(16,185,129,0.25)' }]}>
+                          <Text style={{ fontSize: 18, marginBottom: 4 }}>🚩🟢</Text>
+                          <Text style={[s.bentoLabel, { color: bentoFlags ? 'rgba(110,231,183,0.8)' : '#94A3B8' }]}>MY FLAG</Text>
+                          <Text style={{ fontSize: 11, color: bentoFlags ? '#a7f3d0' : 'rgba(148,163,184,0.6)', fontWeight: bentoFlags ? '700' : '400', flex: 1 }} numberOfLines={2}>
+                            {bentoFlags || '+ add'}
                           </Text>
-                          {!!bentoFlags && <View style={s.bentoDot} />}
-                        </BlurView>
+                        </LinearGradient>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => pickBento('mood')} activeOpacity={0.8} style={[s.bentoCard, { flex: 1 }]}>
-                        <BlurView intensity={60} tint="light" style={s.bentoBlur}>
-                          <Text style={s.bentoIcon}>⚡</Text>
-                          <Text style={s.bentoLabel}>Weekend mood</Text>
-                          <Text style={[s.bentoValue, !!bentoMood && s.bentoValueFilled]} numberOfLines={2}>
-                            {bentoMood || 'Tap to add'}
+
+                      <TouchableOpacity onPress={() => openBento('mood')} activeOpacity={0.75} style={{ flex: 1 }}>
+                        <LinearGradient colors={bentoMood ? ['#7c2d12', '#92400e'] : ['rgba(251,146,60,0.18)', 'rgba(245,158,11,0.10)']}
+                          style={[s.bentoCard, { borderColor: bentoMood ? 'rgba(251,146,60,0.6)' : 'rgba(245,158,11,0.25)' }]}>
+                          <Text style={{ fontSize: 18, marginBottom: 4 }}>⚡</Text>
+                          <Text style={[s.bentoLabel, { color: bentoMood ? 'rgba(253,186,116,0.8)' : '#94A3B8' }]}>WEEKEND MOOD</Text>
+                          <Text style={{ fontSize: 11, color: bentoMood ? '#fed7aa' : 'rgba(148,163,184,0.6)', fontWeight: bentoMood ? '700' : '400', flex: 1 }} numberOfLines={2}>
+                            {bentoMood || '+ add'}
                           </Text>
-                          {!!bentoMood && <View style={s.bentoDot} />}
-                        </BlurView>
+                        </LinearGradient>
                       </TouchableOpacity>
                     </View>
                   </View>
 
                   {/* About me (compact) */}
                   <TextInput
-                    style={[s.input, { height: 90, textAlignVertical: 'top', paddingTop: 12 }]}
-                    value={bio}
-                    onChangeText={handleBioChange}
-                    placeholder={'Add a short note about yourself...'}
+                    style={[s.input, { height: 80, textAlignVertical: 'top', paddingTop: 12 }]}
+                    value={bio} onChangeText={handleBioChange}
+                    placeholder="Add a short note about yourself..."
                     placeholderTextColor="#94A3B8" multiline maxLength={150} />
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, marginBottom: 14 }}>
-                    <Animated.Text style={[s.charCount, { transform: [{ scale: counterBounceAnim }] }]}>
-                      {bio.length} / 150
-                    </Animated.Text>
-                    {vibeCheckPassed && (
-                      <Text style={{ fontSize: 12, color: '#16a34a', fontWeight: '700' }}>Vibe Check Passed! ✅</Text>
-                    )}
+                    <Animated.Text style={[s.charCount, { transform: [{ scale: counterBounceAnim }] }]}>{bio.length} / 150</Animated.Text>
+                    {vibeCheckPassed && <Text style={{ fontSize: 12, color: '#16a34a', fontWeight: '700' }}>Vibe Check Passed! ✅</Text>}
                   </View>
 
-                  {/* Magic Rewrite button */}
+                  {/* Magic Rewrite */}
                   <TouchableOpacity onPress={magicRewrite} disabled={magicLoading} activeOpacity={0.85}>
-                    <LinearGradient colors={['#a78bfa', '#6366F1', '#3b82f6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                      style={{ borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-                      {magicLoading
-                        ? <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Vibing... ✨</Text>
-                        : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Magic Rewrite ✨</Text>}
+                    <LinearGradient colors={['#7c3aed', '#4f46e5', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                      style={{ borderRadius: 16, paddingVertical: 13, alignItems: 'center', shadowColor: '#6366F1', shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 6 }}>
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 }}>
+                        {magicLoading ? 'Vibing... ✨' : 'Magic Rewrite ✨'}
+                      </Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
               )}
+
+              {/* Bento picker bottom sheet */}
+              <Modal visible={bentoModal.visible} transparent animationType="slide" onRequestClose={closeBento}>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={closeBento} />
+                <View style={s.bentoSheet}>
+                  <View style={s.bentoSheetHandle} />
+                  <Text style={s.bentoSheetTitle}>{bentoModalTitle}</Text>
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+                    {bentoModalOptions.map(opt => {
+                      const selected = bentoModalValue === opt
+                      return (
+                        <TouchableOpacity key={opt} onPress={() => selectBentoOption(opt)} activeOpacity={0.75}
+                          style={[s.bentoSheetItem, selected && s.bentoSheetItemOn]}>
+                          <Text style={[s.bentoSheetItemTxt, selected && { color: '#6366F1', fontWeight: '700' }]}>{opt}</Text>
+                          {selected && <Ionicons name="checkmark-circle" size={20} color="#6366F1" />}
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </ScrollView>
+                </View>
+              </Modal>
 
             </Animated.View>
           </ScrollView>
@@ -1637,16 +1653,18 @@ const s = StyleSheet.create({
   photoRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   verifiedBadge: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#22c55e', paddingVertical: 6, alignItems: 'center' },
   mainBadge: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(99,102,241,0.88)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  bentoCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.22)', shadowColor: '#6366F1', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  bentoBlur: { flex: 1, padding: 14, justifyContent: 'flex-end' },
-  bentoIcon: { fontSize: 22, marginBottom: 4 },
-  bentoLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  bentoValue: { fontSize: 13, color: '#94A3B8', fontWeight: '500', lineHeight: 18 },
-  bentoValueFilled: { color: '#1E1B4B', fontWeight: '700' },
+  bentoCard: { flex: 1, borderRadius: 22, borderWidth: 1.5, padding: 14, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  bentoLabel: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
   bentoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#6366F1', marginTop: 6 },
   bentoFinishBtn: { borderRadius: 20, overflow: 'hidden', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   bentoFinishBlur: { borderRadius: 20, overflow: 'hidden' },
   bentoFinishGrad: { paddingVertical: 18, alignItems: 'center', borderRadius: 20 },
+  bentoSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, maxHeight: '72%', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 20, elevation: 20 },
+  bentoSheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 16 },
+  bentoSheetTitle: { fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 16, letterSpacing: -0.3 },
+  bentoSheetItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, marginBottom: 6, backgroundColor: '#F8FAFC' },
+  bentoSheetItemOn: { backgroundColor: 'rgba(99,102,241,0.08)', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.25)' },
+  bentoSheetItemTxt: { fontSize: 15, color: '#334155', fontWeight: '500', flex: 1 },
   photoEditBtn: { position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center' },
   carRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', borderRadius: 16, padding: 16, marginTop: 4 },
   checkbox: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: 'rgba(99,102,241,0.45)', alignItems: 'center', justifyContent: 'center' },
