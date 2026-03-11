@@ -555,8 +555,23 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [showConfetti, setShowConfetti] = useState(false)
   const vibeFlashAnim = useRef(new Animated.Value(0)).current
   const counterBounceAnim = useRef(new Animated.Value(1)).current
+  const barAnims = useRef([new Animated.Value(0.3), new Animated.Value(0.6), new Animated.Value(0.45), new Animated.Value(0.75)]).current
+  const [emojiParticles, setEmojiParticles] = useState<Array<{ id: number; x: Animated.Value; y: Animated.Value; opacity: Animated.Value; rotate: Animated.Value }>>([])
   const slideAnim = useRef(new Animated.Value(0)).current
   const ageRef = useRef<TextInput>(null)
+
+  // Music visualizer animation
+  useEffect(() => {
+    if (!bentoSong) { barAnims.forEach(a => a.setValue(0.2)); return }
+    const loops = barAnims.map((anim, i) =>
+      Animated.loop(Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 250 + i * 90, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.15, duration: 250 + i * 90, useNativeDriver: true }),
+      ]))
+    )
+    loops.forEach(l => l.start())
+    return () => loops.forEach(l => l.stop())
+  }, [bentoSong])
 
   const ageNum = parseInt(age, 10)
   const ageError = age.length === 2 && (ageNum < 18 || ageNum > 99)
@@ -583,13 +598,39 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return interests.length > 0
     if (step === 4) return langs.length > 0
-    if (step === 5) return bio.trim().length >= 10 || (!!bentoSong && !!bentoMood)
+    if (step === 5) return bio.trim().length >= 20 || [bentoSong, bentoFlags, bentoMood].filter(Boolean).length >= 2
     return true
+  }
+
+  const fireEmojiBurst = () => {
+    const raw = bentoMood || bentoFlags || '🎉'
+    const emoji = raw.match(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u)?.[0] ?? '🎉'
+    const particles = Array.from({ length: 22 }, (_, i) => ({
+      id: i,
+      x: new Animated.Value(W / 2),
+      y: new Animated.Value(700),
+      opacity: new Animated.Value(1),
+      rotate: new Animated.Value(0),
+    }))
+    setEmojiParticles(particles)
+    particles.forEach(p => {
+      const angle = Math.random() * Math.PI * 2
+      const dist = 120 + Math.random() * 220
+      const dur = 700 + Math.random() * 500
+      Animated.parallel([
+        Animated.timing(p.x, { toValue: W / 2 + Math.cos(angle) * dist, duration: dur, useNativeDriver: true }),
+        Animated.timing(p.y, { toValue: 150 + Math.random() * 450, duration: dur, useNativeDriver: true }),
+        Animated.timing(p.rotate, { toValue: (Math.random() - 0.5) * 6, duration: dur, useNativeDriver: true }),
+        Animated.sequence([Animated.delay(dur * 0.6), Animated.timing(p.opacity, { toValue: 0, duration: dur * 0.4, useNativeDriver: true })]),
+      ]).start()
+    })
+    setTimeout(() => setEmojiParticles([]), 1400)
   }
 
   const next = () => {
     if (step < TOTAL) { animSlide(1); setStep(p => p + 1) }
     else {
+      fireEmojiBurst()
       setShowConfetti(true)
       setTimeout(() => {
         setShowConfetti(false)
@@ -688,7 +729,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   }
 
   const magicRewrite = () => {
-    if (!bio.trim() || magicLoading) return
+    if (magicLoading) return
     setMagicLoading(true)
     setTimeout(() => {
       setBio(MAGIC_BIOS[Math.floor(Math.random() * MAGIC_BIOS.length)])
@@ -732,6 +773,12 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', opacity: vibeFlashAnim, zIndex: 99 }} />
       {/* Confetti */}
       {showConfetti && <ConfettiCannon count={180} origin={{ x: W / 2, y: -20 }} fadeOut autoStart />}
+      {/* Emoji burst particles */}
+      {emojiParticles.map(p => (
+        <Animated.Text key={p.id} style={{ position: 'absolute', fontSize: 28, zIndex: 101, transform: [{ translateX: p.x }, { translateY: p.y }, { rotate: p.rotate.interpolate({ inputRange: [-6, 6], outputRange: ['-360deg', '360deg'] }) }], opacity: p.opacity, pointerEvents: 'none' }}>
+          {(bentoMood || bentoFlags || '🎉').match(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u)?.[0] ?? '🎉'}
+        </Animated.Text>
+      ))}
       <SafeAreaView style={s.fill}>
         <View style={s.onbHeader}>
           <TouchableOpacity onPress={back} style={s.authBackBtn}>
@@ -902,7 +949,13 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                         <Text style={[s.bentoValue, !!bentoSong && s.bentoValueFilled]} numberOfLines={3}>
                           {bentoSong || 'Tap to add'}
                         </Text>
-                        {!!bentoSong && <View style={s.bentoDot} />}
+                        {!!bentoSong ? (
+                          <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 18, marginTop: 8 }}>
+                            {barAnims.map((anim, i) => (
+                              <Animated.View key={i} style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', height: 18, transform: [{ scaleY: anim }] }} />
+                            ))}
+                          </View>
+                        ) : null}
                       </BlurView>
                     </TouchableOpacity>
 
@@ -949,9 +1002,9 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                   </View>
 
                   {/* Magic Rewrite button */}
-                  <TouchableOpacity onPress={magicRewrite} disabled={!bio.trim() || magicLoading} activeOpacity={0.85}>
+                  <TouchableOpacity onPress={magicRewrite} disabled={magicLoading} activeOpacity={0.85}>
                     <LinearGradient colors={['#a78bfa', '#6366F1', '#3b82f6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                      style={{ borderRadius: 14, paddingVertical: 12, alignItems: 'center', opacity: bio.trim() ? 1 : 0.45 }}>
+                      style={{ borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
                       {magicLoading
                         ? <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Vibing... ✨</Text>
                         : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Magic Rewrite ✨</Text>}
@@ -966,7 +1019,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
         <View style={s.bottomBar}>
           {step === TOTAL ? (
-            <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
+            <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
               <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
                 <LinearGradient colors={['#a78bfa', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bentoFinishGrad}>
                   <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>Let's slay! 🚀</Text>
