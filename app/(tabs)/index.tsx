@@ -1112,7 +1112,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress }:
 
         {/* Featured card */}
         {featured && (
-          <TouchableOpacity onPress={() => onEventPress(featured)} activeOpacity={0.92} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 6, height: 240, borderRadius: 24, overflow: 'hidden' }}>
+          <TouchableOpacity onPress={() => onEventPress(featured)} activeOpacity={0.92} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 6 }}>
             <LinearGradient colors={featured.gradient as any} style={s.featuredCard}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -1838,7 +1838,7 @@ const s = StyleSheet.create({
   bottomBar: { paddingHorizontal: 24, paddingBottom: 36, paddingTop: 8, gap: 10 },
 
   // Feed bottom nav
-  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 8, paddingBottom: 8, alignItems: 'center' },
+  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 24 : 10, alignItems: 'center' },
   navItem: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 4 },
   navLabel: { fontSize: 10, fontWeight: '600', color: '#94A3B8' },
   navCreateBtn: { width: 58, height: 58, borderRadius: 29, marginTop: -20, shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
@@ -1849,19 +1849,19 @@ const s = StyleSheet.create({
   createTypeLabel: { fontSize: 11, color: '#64748B', fontWeight: '500', textAlign: 'center' },
 
   // Feed header
-  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 12, backgroundColor: '#F8F7FF' },
+  feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 10, paddingBottom: 10, backgroundColor: '#F8F7FF' },
   cityBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(99,102,241,0.08)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, borderWidth: 1, borderColor: 'rgba(99,102,241,0.18)' },
   cityBtnTxt: { fontSize: 13, fontWeight: '700', color: '#4338CA' },
   bellBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.08)', alignItems: 'center', justifyContent: 'center' },
-  filterScroll: { backgroundColor: '#F8F7FF' },
-  filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, alignItems: 'center' },
+  filterScroll: { backgroundColor: '#F8F7FF', height: 52 },
+  filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
   filterTab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(226,232,240,0.8)' },
   filterTabOn: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
   filterTabTxt: { fontSize: 13, fontWeight: '600', color: '#64748B' },
   filterTabTxtOn: { color: '#fff', fontWeight: '700' },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 20, marginBottom: 12 },
   sectionHeader: { fontSize: 17, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 },
-  featuredCard: { flex: 1, padding: 16 },
+  featuredCard: { height: 240, borderRadius: 24, padding: 16, overflow: 'hidden' },
   officialBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
   categoryCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   featuredTitle: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 30 },
