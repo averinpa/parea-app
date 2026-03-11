@@ -3,6 +3,7 @@ import { Feather, Ionicons } from '@expo/vector-icons'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
+import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
@@ -11,6 +12,7 @@ import {
   KeyboardAvoidingView, LayoutAnimation, Modal, Platform, SafeAreaView,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
+import ConfettiCannon from 'react-native-confetti-cannon'
 
 const { width: W } = Dimensions.get('window')
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY || ''
@@ -73,6 +75,18 @@ const MOCK_EVENTS = [
 ]
 
 const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻' }
+
+const BENTO_SONGS = ['Flowers — Miley Cyrus 🌸', 'Midnight Rain — Taylor Swift 🌧️', 'Blinding Lights — The Weeknd 🌆', 'Levitating — Dua Lipa 🪩', 'Cruel Summer — Taylor Swift ☀️', 'Espresso — Sabrina Carpenter ☕', 'Die With A Smile — Lady Gaga 💜', 'APT. — Rose & Bruno Mars 🌹']
+const BENTO_FLAGS = ['Spontaneous plans 🟢', 'Great listener 🟢', 'Dog lover 🟢', 'Always on time 🟢', 'Foodie 🟢', 'Late replies 🚩', "Cancels last minute 🚩", 'No sense of humour 🚩', "Can't make plans 🚩"]
+const BENTO_MOODS = ['Rooftop bar 🍸', 'Beach sunset 🌊', 'Cozy café ☕', 'Hiking adventure 🥾', 'Art gallery 🎨', 'House party 🎉', 'Chill picnic 🧺', 'Live concert 🎶']
+const MAGIC_BIOS = [
+  "Searching for my concert partner-in-crime 🎸",
+  "Professional event-hopper, amateur chef 🍝",
+  "Can't sit still — always planning the next adventure ✈️",
+  "Here for the vibes and the people behind them 🌟",
+  "Late night coffee, good music, and great company ☕🎶",
+  "Living for unexpected Fridays and good conversations 💬",
+]
 const FLAG_MAP: Record<string, string> = { en: '🇬🇧', ru: '🇷🇺', el: '🇬🇷', uk: '🇺🇦', de: '🇩🇪', he: '🇮🇱', fr: '🇫🇷' }
 const TRANSPORT_LABEL: Record<string, string> = { car: '🚗 Can give a lift', lift: '🙋 Needs a lift', meet: '📍 Meeting there' }
 
@@ -533,7 +547,14 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
   const [langs, setLangs] = useState<string[]>([])
-  const [hasCar, setHasCar] = useState(false)
+  const [bentoSong, setBentoSong] = useState('')
+  const [bentoFlags, setBentoFlags] = useState('')
+  const [bentoMood, setBentoMood] = useState('')
+  const [vibeCheckPassed, setVibeCheckPassed] = useState(false)
+  const [magicLoading, setMagicLoading] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const vibeFlashAnim = useRef(new Animated.Value(0)).current
+  const counterBounceAnim = useRef(new Animated.Value(1)).current
   const slideAnim = useRef(new Animated.Value(0)).current
   const ageRef = useRef<TextInput>(null)
 
@@ -562,13 +583,19 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return interests.length > 0
     if (step === 4) return langs.length > 0
-    if (step === 5) return bio.trim().length >= 10
+    if (step === 5) return bio.trim().length >= 10 || (!!bentoSong && !!bentoMood)
     return true
   }
 
   const next = () => {
     if (step < TOTAL) { animSlide(1); setStep(p => p + 1) }
-    else onFinish({ name, age, gender, photos, bio, interests, langs, hasCar })
+    else {
+      setShowConfetti(true)
+      setTimeout(() => {
+        setShowConfetti(false)
+        onFinish({ name, age, gender, photos, bio, interests, langs, bentoSong, bentoFlags, bentoMood })
+      }, 2200)
+    }
   }
 
   const back = () => {
@@ -643,11 +670,68 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     }
   }
 
+  const handleBioChange = (text: string) => {
+    setBio(text.slice(0, 150))
+    // Counter bounce
+    counterBounceAnim.setValue(1.18)
+    Animated.spring(counterBounceAnim, { toValue: 1, useNativeDriver: true, friction: 4 }).start()
+    // Vibe check at 20 chars
+    if (!vibeCheckPassed && text.length >= 20) {
+      setVibeCheckPassed(true)
+      Animated.sequence([
+        Animated.timing(vibeFlashAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(vibeFlashAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]).start()
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    }
+    if (text.length < 20) setVibeCheckPassed(false)
+  }
+
+  const magicRewrite = () => {
+    if (!bio.trim() || magicLoading) return
+    setMagicLoading(true)
+    setTimeout(() => {
+      setBio(MAGIC_BIOS[Math.floor(Math.random() * MAGIC_BIOS.length)])
+      setMagicLoading(false)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    }, 1500)
+  }
+
+  const pickBento = (type: 'song' | 'flags' | 'mood') => {
+    const options = type === 'song' ? BENTO_SONGS : type === 'flags' ? BENTO_FLAGS : BENTO_MOODS
+    Alert.alert(
+      type === 'song' ? '🎧 Current Song' : type === 'flags' ? '🚩🟢 My Flag' : '⚡ Weekend Mood',
+      '',
+      [
+        ...options.map(o => ({ text: o, onPress: () => {
+          if (type === 'song') setBentoSong(o)
+          else if (type === 'flags') setBentoFlags(o)
+          else setBentoMood(o)
+          Haptics.selectionAsync()
+        }})),
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    )
+  }
+
+  const step5BgColors = (): [string, string, string] => {
+    if (step !== 5) return ['#EDE9FE', '#E0E7FF', '#DBEAFE']
+    if (/sport|tennis|gym|swim|run|hik/i.test(bio)) return ['#F0FDF4', '#DCFCE7', '#D1FAE5']
+    if (/music|concert|jazz|guitar|song|beat/i.test(bio)) return ['#F5F3FF', '#EDE9FE', '#DDD6FE']
+    if (/coffee|food|eat|restaurant|wine/i.test(bio)) return ['#FFF7ED', '#FEF3C7', '#FDE68A']
+    if (/travel|beach|sea|explore|adventure/i.test(bio)) return ['#EFF6FF', '#DBEAFE', '#BFDBFE']
+    return ['#EDE9FE', '#E0E7FF', '#DBEAFE']
+  }
+
   const progress = (step / TOTAL) * 100
 
   return (
-    <LinearGradient colors={['#EDE9FE', '#E0E7FF', '#DBEAFE']} style={s.fill}>
+    <LinearGradient colors={step5BgColors()} style={s.fill}>
       <StatusBar style="dark" />
+      {/* Vibe flash overlay */}
+      <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', opacity: vibeFlashAnim, zIndex: 99 }} />
+      {/* Confetti */}
+      {showConfetti && <ConfettiCannon count={180} origin={{ x: W / 2, y: -20 }} fadeOut autoStart />}
       <SafeAreaView style={s.fill}>
         <View style={s.onbHeader}>
           <TouchableOpacity onPress={back} style={s.authBackBtn}>
@@ -805,14 +889,74 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
               {step === 5 && (
                 <View>
-                  <Text style={s.stepTitle}>About you</Text>
-                  <Text style={s.stepSub}>A few words so people know who they're meeting</Text>
+                  <Text style={s.stepTitle}>The Vibe Check ✨</Text>
+                  <Text style={s.stepSub}>Make your profile unforgettable</Text>
+
+                  {/* Bento grid */}
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12, height: 200 }}>
+                    {/* Song card — tall left */}
+                    <TouchableOpacity onPress={() => pickBento('song')} activeOpacity={0.8} style={[s.bentoCard, { flex: 1.1 }]}>
+                      <BlurView intensity={60} tint="light" style={s.bentoBlur}>
+                        <Text style={s.bentoIcon}>🎧</Text>
+                        <Text style={s.bentoLabel}>Current song</Text>
+                        <Text style={[s.bentoValue, !!bentoSong && s.bentoValueFilled]} numberOfLines={3}>
+                          {bentoSong || 'Tap to add'}
+                        </Text>
+                        {!!bentoSong && <View style={s.bentoDot} />}
+                      </BlurView>
+                    </TouchableOpacity>
+
+                    {/* Right column */}
+                    <View style={{ flex: 1, gap: 10 }}>
+                      <TouchableOpacity onPress={() => pickBento('flags')} activeOpacity={0.8} style={[s.bentoCard, { flex: 1 }]}>
+                        <BlurView intensity={60} tint="light" style={s.bentoBlur}>
+                          <Text style={s.bentoIcon}>🚩🟢</Text>
+                          <Text style={s.bentoLabel}>My flag</Text>
+                          <Text style={[s.bentoValue, !!bentoFlags && s.bentoValueFilled]} numberOfLines={2}>
+                            {bentoFlags || 'Tap to add'}
+                          </Text>
+                          {!!bentoFlags && <View style={s.bentoDot} />}
+                        </BlurView>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => pickBento('mood')} activeOpacity={0.8} style={[s.bentoCard, { flex: 1 }]}>
+                        <BlurView intensity={60} tint="light" style={s.bentoBlur}>
+                          <Text style={s.bentoIcon}>⚡</Text>
+                          <Text style={s.bentoLabel}>Weekend mood</Text>
+                          <Text style={[s.bentoValue, !!bentoMood && s.bentoValueFilled]} numberOfLines={2}>
+                            {bentoMood || 'Tap to add'}
+                          </Text>
+                          {!!bentoMood && <View style={s.bentoDot} />}
+                        </BlurView>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* About me (compact) */}
                   <TextInput
-                    style={[s.input, s.bioInput]} value={bio}
-                    onChangeText={t => setBio(t.slice(0, 150))}
-                    placeholder={'e.g. Love jazz, good coffee\nand spontaneous adventures 🎷'}
-                    placeholderTextColor="#94A3B8" multiline maxLength={150} textAlignVertical="top" />
-                  <Text style={s.charCount}>{bio.length} / 150</Text>
+                    style={[s.input, { height: 90, textAlignVertical: 'top', paddingTop: 12 }]}
+                    value={bio}
+                    onChangeText={handleBioChange}
+                    placeholder={'Add a short note about yourself...'}
+                    placeholderTextColor="#94A3B8" multiline maxLength={150} />
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, marginBottom: 14 }}>
+                    <Animated.Text style={[s.charCount, { transform: [{ scale: counterBounceAnim }] }]}>
+                      {bio.length} / 150
+                    </Animated.Text>
+                    {vibeCheckPassed && (
+                      <Text style={{ fontSize: 12, color: '#16a34a', fontWeight: '700' }}>Vibe Check Passed! ✅</Text>
+                    )}
+                  </View>
+
+                  {/* Magic Rewrite button */}
+                  <TouchableOpacity onPress={magicRewrite} disabled={!bio.trim() || magicLoading} activeOpacity={0.85}>
+                    <LinearGradient colors={['#a78bfa', '#6366F1', '#3b82f6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                      style={{ borderRadius: 14, paddingVertical: 12, alignItems: 'center', opacity: bio.trim() ? 1 : 0.45 }}>
+                      {magicLoading
+                        ? <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Vibing... ✨</Text>
+                        : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Magic Rewrite ✨</Text>}
+                    </LinearGradient>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -821,9 +965,19 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
         </KeyboardAvoidingView>
 
         <View style={s.bottomBar}>
-          <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext()}>
-            <Text style={[s.btnPrimaryText, { color: '#fff' }]}>{step === TOTAL ? 'Finish! 🚀' : 'Continue'}</Text>
-          </TouchableOpacity>
+          {step === TOTAL ? (
+            <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
+              <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
+                <LinearGradient colors={['#a78bfa', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bentoFinishGrad}>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>Let's slay! 🚀</Text>
+                </LinearGradient>
+              </BlurView>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext()}>
+              <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -1430,6 +1584,16 @@ const s = StyleSheet.create({
   photoRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   verifiedBadge: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#22c55e', paddingVertical: 6, alignItems: 'center' },
   mainBadge: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(99,102,241,0.88)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  bentoCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.22)', shadowColor: '#6366F1', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  bentoBlur: { flex: 1, padding: 14, justifyContent: 'flex-end' },
+  bentoIcon: { fontSize: 22, marginBottom: 4 },
+  bentoLabel: { fontSize: 10, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  bentoValue: { fontSize: 13, color: '#94A3B8', fontWeight: '500', lineHeight: 18 },
+  bentoValueFilled: { color: '#1E1B4B', fontWeight: '700' },
+  bentoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#6366F1', marginTop: 6 },
+  bentoFinishBtn: { borderRadius: 20, overflow: 'hidden', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  bentoFinishBlur: { borderRadius: 20, overflow: 'hidden' },
+  bentoFinishGrad: { paddingVertical: 18, alignItems: 'center', borderRadius: 20 },
   photoEditBtn: { position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center' },
   carRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', borderRadius: 16, padding: 16, marginTop: 4 },
   checkbox: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: 'rgba(99,102,241,0.45)', alignItems: 'center', justifyContent: 'center' },
