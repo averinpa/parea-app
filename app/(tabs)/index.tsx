@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, Image,
+  ActivityIndicator, Alert, Animated, Dimensions, Image, Linking,
   KeyboardAvoidingView, LayoutAnimation, Modal, Platform,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
@@ -64,19 +64,19 @@ const LANGUAGES_LIST = [
 const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
 
 const MOCK_EVENTS = [
-  { id: 1,  city: 'Limassol', type: 'official',   title: 'Tennis Tournament at Aphrodite Hills', time: 'Today, 18:00',    distance: '2km',   category: 'sports',  gradient: ['#667eea', '#764ba2'], seekerColors: ['#818CF8', '#4CAF50', '#2196F3'],          seekingCount: 12, participantsCount: 22, maxParticipants: 24 },
-  { id: 2,  city: 'Limassol', type: 'official',   title: 'Limassol Wine Festival 2025',          time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine',    gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'],                     seekingCount: 28, participantsCount: 40, maxParticipants: 200 },
-  { id: 9,  city: 'Limassol', type: 'official',   title: 'CyprusTech Conference 2025',           time: 'Sat, 10:00',     distance: '3km',   category: 'tech',    gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], seekingCount: 7,  participantsCount: 80, maxParticipants: 150 },
-  { id: 5,  city: 'Paphos',   type: 'official',   title: 'Sunset Hike to Troodos',               time: 'Sat, 07:00',     distance: '8km',   category: 'sports',  gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'],          seekingCount: 9,  participantsCount: 14, maxParticipants: 20 },
+  { id: 1,  city: 'Limassol', type: 'official',   title: 'Tennis Tournament at Aphrodite Hills', time: 'Today, 18:00',    distance: '2km',   category: 'sports',  gradient: ['#667eea', '#764ba2'], seekerColors: ['#818CF8', '#4CAF50', '#2196F3'],          seekingCount: 12, participantsCount: 22, maxParticipants: 24,  organizer: { name: 'Cyprus Sports Federation', emoji: '🎾' }, ticketLink: 'https://tickets.cy/tennis2025',        source: 'Official Website' },
+  { id: 2,  city: 'Limassol', type: 'official',   title: 'Limassol Wine Festival 2025',          time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine',    gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'],                     seekingCount: 28, participantsCount: 40, maxParticipants: 200, organizer: { name: 'SoldOut Tickets',              emoji: '🍷' }, ticketLink: 'https://soldout.com.cy/wine-festival', source: 'SoldOut Tickets' },
+  { id: 9,  city: 'Limassol', type: 'official',   title: 'CyprusTech Conference 2025',           time: 'Sat, 10:00',     distance: '3km',   category: 'tech',    gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], seekingCount: 7,  participantsCount: 80, maxParticipants: 150, organizer: { name: 'CyprusTech Events',             emoji: '💻' }, ticketLink: 'https://cyprustech.io/2025',           source: 'Official Website' },
+  { id: 5,  city: 'Paphos',   type: 'official',   title: 'Sunset Hike to Troodos',               time: 'Sat, 07:00',     distance: '8km',   category: 'sports',  gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'],          seekingCount: 9,  participantsCount: 14, maxParticipants: 20,  organizer: { name: 'Paphos Outdoor Club',          emoji: '🥾' }, ticketLink: null,                                  source: 'Official Website' },
   { id: 3,  city: 'Limassol', type: 'community',  title: 'Morning Coffee & Chat',               time: 'Today, 09:30',   distance: '0.5km', category: 'coffee',  gradient: ['#4facfe', '#00c6fb'], seekerColors: ['#FF9800', '#03A9F4', '#8BC34A', '#FF5722'], seekingCount: 4,  participantsCount: 8,  maxParticipants: 8 },
   { id: 4,  city: 'Nicosia',  type: 'community',  title: 'Board Games Night',                   time: 'Fri, 19:00',     distance: '3km',   category: 'gaming',  gradient: ['#43e97b', '#38f9d7'], seekerColors: ['#FF5722', '#9C27B0'],                     seekingCount: 2,  participantsCount: 3,  maxParticipants: 10 },
   { id: 6,  city: 'Nicosia',  type: 'community',  title: 'Specialty Coffee Tour',               time: 'Sun, 11:00',     distance: '1km',   category: 'coffee',  gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 2,  participantsCount: 6,  maxParticipants: 6 },
   { id: 7,  city: 'Larnaca',  type: 'community',  title: 'Beach Volleyball',                    time: 'Today, 17:00',   distance: '4km',   category: 'sports',  gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'],          seekingCount: 3,  participantsCount: 12, maxParticipants: 12 },
   { id: 8,  city: 'Larnaca',  type: 'community',  title: 'Wine & Jazz Evening',                 time: 'Sat, 20:00',     distance: '2km',   category: 'wine',    gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'],                     seekingCount: 5,  participantsCount: 8,  maxParticipants: 20 },
   { id: 10, city: 'Limassol', type: 'community',  title: 'Sunset Picnic at Dasoudi Beach',      time: 'Today, 17:30',   distance: '1.5km', category: 'outdoors',gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'],          seekingCount: 6,  participantsCount: 9,  maxParticipants: 15 },
-  { id: 11, city: 'Limassol', type: 'official',   title: 'Mediterranean Food Festival',         time: 'Tomorrow, 12:00',distance: '0.8km', category: 'food',    gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'],          seekingCount: 19, participantsCount: 55, maxParticipants: 500 },
+  { id: 11, city: 'Limassol', type: 'official',   title: 'Mediterranean Food Festival',         time: 'Tomorrow, 12:00',distance: '0.8km', category: 'food',    gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'],          seekingCount: 19, participantsCount: 55, maxParticipants: 500, organizer: { name: 'Limassol Municipality',      emoji: '🍕' }, ticketLink: 'https://limassol.gov.cy/food-fest',   source: 'Official Website' },
   { id: 12, city: 'Limassol', type: 'community',  title: 'Photography Walk — Old Port',         time: 'Sun, 09:00',     distance: '1km',   category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 3,  participantsCount: 7,  maxParticipants: 10 },
-  { id: 13, city: 'Nicosia',  type: 'official',   title: 'Open Air Cinema Night',               time: 'Sat, 21:00',     distance: '2km',   category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'],          seekingCount: 11, participantsCount: 30, maxParticipants: 50 },
+  { id: 13, city: 'Nicosia',  type: 'official',   title: 'Open Air Cinema Night',               time: 'Sat, 21:00',     distance: '2km',   category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'],          seekingCount: 11, participantsCount: 30, maxParticipants: 50,  organizer: { name: 'Coca-Cola Arena Nicosia',      emoji: '🎬' }, ticketLink: 'https://tickets.cy/cinema-night',     source: 'Coca-Cola Arena' },
 ]
 
 // Maps INTERESTS_LIST labels → event categories for Data Matching
@@ -1120,7 +1120,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const JoinButton = ({ ev, large }: { ev: any; large?: boolean }) => {
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Pending…' : 'Join →'
+    const joinLabel = ev.type === 'official' ? "I'm Going" : 'Join →'
+    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Pending…' : joinLabel
     const bg = isFull ? 'rgba(255,255,255,0.10)' : state !== 'none' ? 'rgba(99,255,180,0.22)' : 'rgba(255,255,255,0.22)'
     return (
       <TouchableOpacity
@@ -1634,8 +1635,42 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                 </View>
               </LinearGradient>
 
-              <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 }}>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>People going to this event</Text>
+              {/* Organizer Block (Official only) */}
+              {eventDetail.type === 'official' && eventDetail.organizer && (
+                <View style={s.organizerBlock}>
+                  <View style={s.organizerLogoWrap}>
+                    <Text style={{ fontSize: 22 }}>{eventDetail.organizer.emoji}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E1B4B' }}>{eventDetail.organizer.name}</Text>
+                    {eventDetail.source && (
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>Source: {eventDetail.source}</Text>
+                    )}
+                  </View>
+                  <View style={s.orgVerifiedBadge}>
+                    <Ionicons name="checkmark-circle" size={12} color="#6366F1" />
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#6366F1', marginLeft: 3 }}>Verified</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Get Tickets button */}
+              {eventDetail.ticketLink && (
+                <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 }}>
+                  <TouchableOpacity
+                    style={s.ticketBtn}
+                    onPress={() => Linking.openURL(eventDetail.ticketLink)}
+                    activeOpacity={0.8}>
+                    <Ionicons name="ticket-outline" size={16} color="#6366F1" style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#6366F1' }}>Get Tickets 🎫</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>
+                  {eventDetail.type === 'official' ? 'Find your buddy for this event' : 'People going to this event'}
+                </Text>
                 <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>Like someone to start chatting 💬</Text>
               </View>
 
@@ -1980,6 +2015,10 @@ const s = StyleSheet.create({
   // Event detail
   detailHeader: { padding: 20, paddingTop: 56, paddingBottom: 24, flexDirection: 'row', alignItems: 'flex-start' },
   detailBackBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(0,0,0,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 },
+  organizerBlock: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginTop: 16, marginBottom: 4, backgroundColor: '#fff', borderRadius: 14, padding: 12, gap: 10, borderWidth: 1, borderColor: 'rgba(99,102,241,0.12)', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  organizerLogoWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(99,102,241,0.08)', alignItems: 'center', justifyContent: 'center' },
+  orgVerifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(99,102,241,0.2)' },
+  ticketBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#6366F1', borderRadius: 12, paddingVertical: 11, backgroundColor: 'rgba(99,102,241,0.05)' },
 
   // Seekers
   seekerCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
