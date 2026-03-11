@@ -1873,7 +1873,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                         </View>
                       ) : (
                         <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: result === 'vibe' ? 'rgba(129,140,248,0.15)' : 'rgba(0,0,0,0.05)' }}>
-                          <Text style={{ fontSize: 18 }}>{result === 'vibe' ? '💜' : '✕'}</Text>
+                          <Text style={{ fontSize: 18 }}>{result === 'vibe' ? '⭐' : '✕'}</Text>
                         </View>
                       )}
                     </View>
@@ -1898,7 +1898,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               ))}
 
               <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(167,139,250,0.8)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
-                The Vibe is Mutual
+                You Found Your Parea
               </Text>
 
               {/* Animated avatars */}
@@ -1907,7 +1907,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                   source={{ uri: 'https://i.pravatar.cc/120?img=1' }}
                   style={[s.matchAvatar, { transform: [{ translateX: matchLeftX }] }]} />
                 <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#6d28d9', alignItems: 'center', justifyContent: 'center', zIndex: 5, marginHorizontal: -8 }}>
-                  <Text style={{ fontSize: 18 }}>💜</Text>
+                  <Text style={{ fontSize: 18 }}>🤝</Text>
                 </View>
                 <Animated.Image
                   source={{ uri: matchedWith.photo }}
@@ -1915,7 +1915,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               </Animated.View>
 
               <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -0.8, marginBottom: 10, textAlign: 'center' }}>
-                It's a Vibe! 🔥
+                Found a Buddy! 🤝
               </Text>
               <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', marginBottom: 36, textAlign: 'center', lineHeight: 22 }}>
                 Say hi in your new{'\n'}Parea chat 🚀
