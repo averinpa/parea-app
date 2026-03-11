@@ -949,22 +949,29 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                   <Text style={s.stepSub}>Make your profile unforgettable</Text>
 
                   {/* Bento grid */}
-                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14, height: 210 }}>
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16, height: 220 }}>
 
                     {/* Song card */}
-                    <TouchableOpacity onPress={() => openBento('song')} activeOpacity={0.75} style={{ flex: 1.1 }}>
-                      <LinearGradient colors={bentoSong ? ['#4c1d95', '#312e81'] : ['rgba(124,58,237,0.18)', 'rgba(99,102,241,0.10)']}
-                        style={[s.bentoCard, { borderColor: bentoSong ? 'rgba(139,92,246,0.6)' : 'rgba(139,92,246,0.25)' }]}>
-                        <Text style={{ fontSize: 26, marginBottom: 6 }}>🎧</Text>
-                        <Text style={[s.bentoLabel, { color: bentoSong ? 'rgba(196,181,253,0.8)' : '#94A3B8' }]}>MUSIC TASTE</Text>
-                        <Text style={{ fontSize: 12, color: bentoSong ? '#e9d5ff' : 'rgba(148,163,184,0.6)', fontWeight: bentoSong ? '700' : '400', lineHeight: 17, marginTop: 2, flex: 1 }} numberOfLines={4}>
+                    <TouchableOpacity onPress={() => openBento('song')} activeOpacity={0.8}
+                      style={{ flex: 1.1, borderRadius: 22, overflow: 'hidden' }}>
+                      <LinearGradient
+                        colors={bentoSong ? ['#4c1d95', '#6d28d9'] : ['#7c3aed', '#a78bfa']}
+                        style={[s.bentoCard, { borderColor: 'rgba(255,255,255,0.18)' }]}>
+                        <Text style={{ fontSize: 28, marginBottom: 8 }}>🎧</Text>
+                        <Text style={[s.bentoLabel, { color: 'rgba(255,255,255,0.6)' }]}>MUSIC TASTE</Text>
+                        <Text style={{ fontSize: 13, color: '#fff', fontWeight: bentoSong ? '700' : '400', lineHeight: 18, marginTop: 2, flex: 1, opacity: bentoSong ? 1 : 0.55 }} numberOfLines={4}>
                           {bentoSong || '+ add'}
                         </Text>
                         {!!bentoSong && (
-                          <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 18, marginTop: 6 }}>
+                          <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 20, marginTop: 8 }}>
                             {barAnims.map((anim, i) => (
-                              <Animated.View key={i} style={{ width: 3, borderRadius: 2, backgroundColor: '#a78bfa', height: 18, transform: [{ scaleY: anim }] }} />
+                              <Animated.View key={i} style={{ width: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.85)', height: 20, transform: [{ scaleY: anim }] }} />
                             ))}
+                          </View>
+                        )}
+                        {!bentoSong && (
+                          <View style={{ position: 'absolute', bottom: 12, right: 12, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 18, color: '#fff', lineHeight: 22 }}>+</Text>
                           </View>
                         )}
                       </LinearGradient>
@@ -972,23 +979,27 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
                     {/* Right column */}
                     <View style={{ flex: 1, gap: 10 }}>
-                      <TouchableOpacity onPress={() => openBento('flags')} activeOpacity={0.75} style={{ flex: 1 }}>
-                        <LinearGradient colors={bentoFlags ? ['#064e3b', '#065f46'] : ['rgba(16,185,129,0.18)', 'rgba(52,211,153,0.10)']}
-                          style={[s.bentoCard, { borderColor: bentoFlags ? 'rgba(52,211,153,0.6)' : 'rgba(16,185,129,0.25)' }]}>
-                          <Text style={{ fontSize: 18, marginBottom: 4 }}>🚩🟢</Text>
-                          <Text style={[s.bentoLabel, { color: bentoFlags ? 'rgba(110,231,183,0.8)' : '#94A3B8' }]}>MY FLAG</Text>
-                          <Text style={{ fontSize: 11, color: bentoFlags ? '#a7f3d0' : 'rgba(148,163,184,0.6)', fontWeight: bentoFlags ? '700' : '400', flex: 1 }} numberOfLines={2}>
+                      <TouchableOpacity onPress={() => openBento('flags')} activeOpacity={0.8}
+                        style={{ flex: 1, borderRadius: 22, overflow: 'hidden' }}>
+                        <LinearGradient
+                          colors={bentoFlags ? ['#064e3b', '#059669'] : ['#10b981', '#34d399']}
+                          style={[s.bentoCard, { borderColor: 'rgba(255,255,255,0.18)' }]}>
+                          <Text style={{ fontSize: 20, marginBottom: 4 }}>🚩🟢</Text>
+                          <Text style={[s.bentoLabel, { color: 'rgba(255,255,255,0.6)' }]}>MY FLAG</Text>
+                          <Text style={{ fontSize: 11, color: '#fff', fontWeight: bentoFlags ? '700' : '400', flex: 1, opacity: bentoFlags ? 1 : 0.55 }} numberOfLines={2}>
                             {bentoFlags || '+ add'}
                           </Text>
                         </LinearGradient>
                       </TouchableOpacity>
 
-                      <TouchableOpacity onPress={() => openBento('mood')} activeOpacity={0.75} style={{ flex: 1 }}>
-                        <LinearGradient colors={bentoMood ? ['#7c2d12', '#92400e'] : ['rgba(251,146,60,0.18)', 'rgba(245,158,11,0.10)']}
-                          style={[s.bentoCard, { borderColor: bentoMood ? 'rgba(251,146,60,0.6)' : 'rgba(245,158,11,0.25)' }]}>
-                          <Text style={{ fontSize: 18, marginBottom: 4 }}>⚡</Text>
-                          <Text style={[s.bentoLabel, { color: bentoMood ? 'rgba(253,186,116,0.8)' : '#94A3B8' }]}>WEEKEND MOOD</Text>
-                          <Text style={{ fontSize: 11, color: bentoMood ? '#fed7aa' : 'rgba(148,163,184,0.6)', fontWeight: bentoMood ? '700' : '400', flex: 1 }} numberOfLines={2}>
+                      <TouchableOpacity onPress={() => openBento('mood')} activeOpacity={0.8}
+                        style={{ flex: 1, borderRadius: 22, overflow: 'hidden' }}>
+                        <LinearGradient
+                          colors={bentoMood ? ['#92400e', '#b45309'] : ['#f97316', '#fbbf24']}
+                          style={[s.bentoCard, { borderColor: 'rgba(255,255,255,0.18)' }]}>
+                          <Text style={{ fontSize: 20, marginBottom: 4 }}>⚡</Text>
+                          <Text style={[s.bentoLabel, { color: 'rgba(255,255,255,0.6)' }]}>WEEKEND MOOD</Text>
+                          <Text style={{ fontSize: 11, color: '#fff', fontWeight: bentoMood ? '700' : '400', flex: 1, opacity: bentoMood ? 1 : 0.55 }} numberOfLines={2}>
                             {bentoMood || '+ add'}
                           </Text>
                         </LinearGradient>
@@ -1879,7 +1890,7 @@ const s = StyleSheet.create({
   photoRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   verifiedBadge: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#22c55e', paddingVertical: 6, alignItems: 'center' },
   mainBadge: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(99,102,241,0.88)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  bentoCard: { flex: 1, borderRadius: 22, borderWidth: 1.5, padding: 14, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  bentoCard: { flex: 1, borderRadius: 22, borderWidth: 1.5, padding: 14 },
   bentoLabel: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
   bentoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#6366F1', marginTop: 6 },
   bentoFinishBtn: { borderRadius: 20, overflow: 'hidden', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
