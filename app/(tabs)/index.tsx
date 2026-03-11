@@ -1396,8 +1396,25 @@ function ProfileTab({ userData }: { userData: any }) {
 
 // ─── FEED SCREEN ──────────────────────────────────────────────────────────────
 
+const CREATE_EVENT_TYPES = [
+  { id: 'coffee',      label: 'Coffee',      emoji: '☕' },
+  { id: 'bar',         label: 'Bar / Drinks', emoji: '🍹' },
+  { id: 'beach',       label: 'Beach',        emoji: '🏖️' },
+  { id: 'hiking',      label: 'Hiking',       emoji: '🥾' },
+  { id: 'walk',        label: 'Walk',         emoji: '🚶' },
+  { id: 'it',          label: 'IT Meetup',    emoji: '💻' },
+  { id: 'boardgames',  label: 'Board Games',  emoji: '🎲' },
+  { id: 'daytrip',     label: 'Day Trip',     emoji: '🗺️' },
+  { id: 'dinner',      label: 'Dinner',       emoji: '🍽️' },
+  { id: 'cinema',      label: 'Cinema',       emoji: '🎬' },
+  { id: 'boat',        label: 'Boat Trip',    emoji: '⛵' },
+  { id: 'picnic',      label: 'Picnic',       emoji: '🧺' },
+]
+
 function FeedScreen({ userData = {} }: { userData?: any }) {
   const [activeTab, setActiveTab] = useState<'home' | 'search' | 'messages' | 'profile'>('home')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createType, setCreateType] = useState<string | null>(null)
   const [city, setCity] = useState('Limassol')
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
@@ -1445,10 +1462,25 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
         {/* Bottom nav */}
         <View style={s.bottomNav}>
           {([
-            { id: 'home', icon: 'home', label: 'Home' },
-            { id: 'search', icon: 'search', label: 'Explore' },
+            { id: 'home',     icon: 'home',           label: 'Home' },
+            { id: 'search',   icon: 'search',          label: 'Explore' },
+          ] as const).map(tab => (
+            <TouchableOpacity key={tab.id} style={s.navItem} onPress={() => setActiveTab(tab.id)}>
+              <Feather name={tab.icon} size={22} color={activeTab === tab.id ? '#6366F1' : '#94A3B8'} />
+              <Text style={[s.navLabel, activeTab === tab.id && { color: '#6366F1' }]}>{tab.label}</Text>
+            </TouchableOpacity>
+          ))}
+
+          {/* Center create button */}
+          <TouchableOpacity style={s.navCreateBtn} onPress={() => { setCreateType(null); setCreateOpen(true) }} activeOpacity={0.85}>
+            <LinearGradient colors={['#818CF8', '#6366F1']} style={s.navCreateGrad}>
+              <Feather name="plus" size={26} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {([
             { id: 'messages', icon: 'message-circle', label: 'Chats' },
-            { id: 'profile', icon: 'user', label: 'Profile' },
+            { id: 'profile',  icon: 'user',           label: 'Profile' },
           ] as const).map(tab => (
             <TouchableOpacity key={tab.id} style={s.navItem} onPress={() => setActiveTab(tab.id)}>
               <Feather name={tab.icon} size={22} color={activeTab === tab.id ? '#6366F1' : '#94A3B8'} />
@@ -1456,6 +1488,43 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Create event modal */}
+        <Modal visible={createOpen} transparent animationType="slide" onRequestClose={() => setCreateOpen(false)}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,12,41,0.55)' }} activeOpacity={1} onPress={() => setCreateOpen(false)} />
+          <View style={s.createSheet}>
+            <View style={s.bentoSheetHandle} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1, textTransform: 'uppercase' }}>Step 1 of 3</Text>
+              <TouchableOpacity onPress={() => setCreateOpen(false)} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(100,116,139,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name="x" size={15} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 18 }}>What's the vibe? 👀</Text>
+
+            {/* Progress bar */}
+            <View style={{ height: 3, backgroundColor: '#E2E8F0', borderRadius: 99, marginBottom: 20 }}>
+              <View style={{ width: '33%', height: '100%', backgroundColor: '#6366F1', borderRadius: 99 }} />
+            </View>
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 }}>
+              {CREATE_EVENT_TYPES.map(t => (
+                <TouchableOpacity key={t.id} onPress={() => setCreateType(t.id)} activeOpacity={0.8}
+                  style={[s.createTypeCard, createType === t.id && s.createTypeCardOn]}>
+                  <Text style={{ fontSize: 28, marginBottom: 6 }}>{t.emoji}</Text>
+                  <Text style={[s.createTypeLabel, createType === t.id && { color: '#6366F1', fontWeight: '700' }]}>{t.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[s.btnPrimary, !createType && { opacity: 0.4 }, createType && { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 }]}
+              disabled={!createType}
+              onPress={() => Alert.alert('Coming soon', 'Step 2 — date, time & location is coming next!')}>
+              <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue →</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
       </SafeAreaView>
 
       {/* City picker */}
@@ -1770,9 +1839,15 @@ const s = StyleSheet.create({
   bottomBar: { paddingHorizontal: 24, paddingBottom: 36, paddingTop: 8, gap: 10 },
 
   // Feed bottom nav
-  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 8, paddingBottom: 8 },
+  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 8, paddingBottom: 8, alignItems: 'center' },
   navItem: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 4 },
   navLabel: { fontSize: 10, fontWeight: '600', color: '#94A3B8' },
+  navCreateBtn: { width: 58, height: 58, borderRadius: 29, marginTop: -20, shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 10 },
+  navCreateGrad: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  createSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, maxHeight: '80%' },
+  createTypeCard: { width: (W - 40 - 30) / 3, aspectRatio: 1, borderRadius: 18, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+  createTypeCardOn: { backgroundColor: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.35)' },
+  createTypeLabel: { fontSize: 11, color: '#64748B', fontWeight: '500', textAlign: 'center' },
 
   // Feed header
   feedHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 52, paddingBottom: 12, backgroundColor: '#F8F7FF' },
@@ -1780,7 +1855,7 @@ const s = StyleSheet.create({
   cityBtnTxt: { fontSize: 13, fontWeight: '700', color: '#4338CA' },
   bellBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.08)', alignItems: 'center', justifyContent: 'center' },
   filterScroll: { backgroundColor: '#F8F7FF' },
-  filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  filterContent: { paddingHorizontal: 16, paddingVertical: 8, gap: 8, alignItems: 'center' },
   filterTab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(226,232,240,0.8)' },
   filterTabOn: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
   filterTabTxt: { fontSize: 13, fontWeight: '600', color: '#64748B' },
