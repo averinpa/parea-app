@@ -528,6 +528,8 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [photoStatus, setPhotoStatus] = useState<('idle' | 'verified' | 'error')[]>(['idle', 'idle', 'idle'])
   const [photoError, setPhotoError] = useState<(string | null)[]>([null, null, null])
   const [photoBadge, setPhotoBadge] = useState([false, false, false])
+  const [checklist, setChecklist] = useState<('idle' | 'ok' | 'warn')[]>(['idle', 'idle', 'idle'])
+  const photoFadeAnims = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
   const [langs, setLangs] = useState<string[]>([])
@@ -578,7 +580,20 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     setPhotos(p => { const n = [...p]; n[idx] = null; return n })
     setPhotoStatus(s => { const n = [...s]; n[idx] = 'idle'; return n })
     setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
+    if (idx === 0) setChecklist(['idle', 'idle', 'idle'])
   }
+
+  // ── Replace this function body with a real API call when ready ──────────────
+  // Expected: return 'verified' | 'error'
+  const verifyPhoto = (imageUri: string, base64: string): Promise<'verified' | 'error'> =>
+    new Promise(resolve =>
+      setTimeout(async () => {
+        const isTestFail = imageUri.toLowerCase().includes('test_fail')
+        const safe = await isImageSafe(base64)
+        resolve(isTestFail || !safe ? 'error' : 'verified')
+      }, 2500)
+    )
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const pickPhoto = async (idx: number) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -587,34 +602,33 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
 
-    // Clear previous state
     setPhotos(p => { const n = [...p]; n[idx] = null; return n })
     setPhotoStatus(s => { const n = [...s]; n[idx] = 'idle'; return n })
     setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
     setPhotoLoading(l => { const n = [...l]; n[idx] = true; return n })
 
-    // Simulate face verification 2.5s
-    setTimeout(async () => {
-      setPhotoLoading(l => { const n = [...l]; n[idx] = false; return n })
+    const result2 = await verifyPhoto(asset.uri, asset.base64 ?? '')
+    setPhotoLoading(l => { const n = [...l]; n[idx] = false; return n })
 
-      const isTestFail = asset.uri.toLowerCase().includes('test_fail')
-      const safe = await isImageSafe(asset.base64 ?? '')
+    if (result2 === 'error') {
+      setPhotoStatus(s => { const n = [...s]; n[idx] = 'error'; return n })
+      setPhotoError(e => { const n = [...e]; n[idx] = 'Face not detected. Try another photo.'; return n })
+      return
+    }
 
-      if (isTestFail || !safe) {
-        setPhotoStatus(s => { const n = [...s]; n[idx] = 'error'; return n })
-        setPhotoError(e => { const n = [...e]; n[idx] = 'Face not detected. Try another photo.'; return n })
-        return
-      }
-
-      setPhotos(p => { const n = [...p]; n[idx] = asset.uri; return n })
-      setPhotoStatus(s => { const n = [...s]; n[idx] = 'verified'; return n })
-      setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
-
-      // Success badge for 1 second
-      setPhotoBadge(b => { const n = [...b]; n[idx] = true; return n })
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      setTimeout(() => setPhotoBadge(b => { const n = [...b]; n[idx] = false; return n }), 1500)
-    }, 2500)
+    setPhotos(p => { const n = [...p]; n[idx] = asset.uri; return n })
+    setPhotoStatus(s => { const n = [...s]; n[idx] = 'verified'; return n })
+    setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
+    setPhotoBadge(b => { const n = [...b]; n[idx] = true; return n })
+    if (idx === 0) {
+      const hasGlasses = asset.uri.toLowerCase().includes('glasses')
+      setChecklist(['ok', 'ok', hasGlasses ? 'warn' : 'ok'])
+      if (hasGlasses) Alert.alert('Sunglasses detected', 'Your photo may be rejected by moderation. Consider using a photo without sunglasses.')
+    }
+    photoFadeAnims[idx].setValue(0)
+    Animated.timing(photoFadeAnims[idx], { toValue: 1, duration: 400, useNativeDriver: true }).start()
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    setTimeout(() => setPhotoBadge(b => { const n = [...b]; n[idx] = false; return n }), 1500)
   }
 
   const onPhotoPress = (idx: number) => {
@@ -689,13 +703,24 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                   <Text style={s.stepTitle}>Add your photos</Text>
                   <Text style={s.stepSub}>First photo required · All photos are automatically checked</Text>
 
-                  {/* Tips */}
-                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-                    {['✅ Clear face', '✅ Good lighting', '❌ No sunglasses'].map(tip => (
-                      <View key={tip} style={{ backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' }}>
-                        <Text style={{ fontSize: 12, color: '#334155', fontWeight: '500' }}>{tip}</Text>
-                      </View>
-                    ))}
+                  {/* Dynamic checklist */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Clear face', ci: 0 },
+                      { label: 'Good lighting', ci: 1 },
+                      { label: 'No sunglasses', ci: 2 },
+                    ].map(({ label, ci }) => {
+                      const st = checklist[ci]
+                      const bg = st === 'ok' ? 'rgba(34,197,94,0.15)' : st === 'warn' ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.55)'
+                      const border = st === 'ok' ? 'rgba(34,197,94,0.4)' : st === 'warn' ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.8)'
+                      const color = st === 'ok' ? '#16a34a' : st === 'warn' ? '#DC2626' : '#64748B'
+                      const icon = st === 'ok' ? '✅ ' : st === 'warn' ? '❌ ' : '◦ '
+                      return (
+                        <View key={label} style={{ backgroundColor: bg, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: border }}>
+                          <Text style={{ fontSize: 12, color, fontWeight: '500' }}>{icon}{label}</Text>
+                        </View>
+                      )
+                    })}
                   </View>
 
                   {/* Photo slots */}
@@ -712,10 +737,18 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                             </View>
                           ) : uri ? (
                             <>
-                              <Image source={{ uri }} style={s.photoImg} />
-                              <TouchableOpacity style={s.photoRemoveBtn} onPress={() => removePhoto(idx)}>
-                                <Ionicons name="close" size={13} color="#fff" />
+                              <Animated.Image source={{ uri }} style={[s.photoImg, { opacity: photoFadeAnims[idx] }]} />
+                              <TouchableOpacity
+                                style={s.photoRemoveBtn}
+                                onPress={() => removePhoto(idx)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                <Ionicons name="close" size={14} color="#fff" />
                               </TouchableOpacity>
+                              {idx === 0 && photoStatus[0] === 'verified' && (
+                                <View style={s.mainBadge}>
+                                  <Text style={{ fontSize: 10, color: '#fff', fontWeight: '800', letterSpacing: 1 }}>MAIN</Text>
+                                </View>
+                              )}
                               {photoBadge[idx] && (
                                 <View style={s.verifiedBadge}>
                                   <Text style={{ fontSize: 11, color: '#fff', fontWeight: '700' }}>Face verified ✅</Text>
@@ -726,6 +759,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                             <View style={s.photoCenter}>
                               <Ionicons name="add" size={30} color="rgba(99,102,241,0.45)" />
                               {idx === 0 && <Text style={s.photoMainTxt}>MAIN</Text>}
+                              <Text style={s.photoCropHint}>Tap · drag to crop</Text>
                             </View>
                           )}
                         </TouchableOpacity>
@@ -800,7 +834,6 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
           <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext()}>
             <Text style={[s.btnPrimaryText, { color: '#fff' }]}>{step === TOTAL ? 'Finish 🎉' : 'Continue'}</Text>
           </TouchableOpacity>
-          <Text style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', fontWeight: '600' }}>{step} / {TOTAL}</Text>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -1402,9 +1435,11 @@ const s = StyleSheet.create({
   photoImg: { width: '100%', height: '100%' },
   photoCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
   photoCheckTxt: { fontSize: 11, color: '#818CF8', fontWeight: '600' },
+  photoCropHint: { fontSize: 10, color: 'rgba(99,102,241,0.5)', textAlign: 'center', marginTop: 2 },
   photoMainTxt: { fontSize: 10, fontWeight: '700', color: '#6366F1', opacity: 0.7, textTransform: 'uppercase', letterSpacing: 1 },
   photoRemoveBtn: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   verifiedBadge: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#22c55e', paddingVertical: 6, alignItems: 'center' },
+  mainBadge: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(99,102,241,0.88)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   photoEditBtn: { position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center', justifyContent: 'center' },
   carRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', borderRadius: 16, padding: 16, marginTop: 4 },
   checkbox: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: 'rgba(99,102,241,0.45)', alignItems: 'center', justifyContent: 'center' },
