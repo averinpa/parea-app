@@ -1275,23 +1275,28 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 4 }}>
               {todayEvents.map(ev => (
-                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.85} style={s.compactCard}>
-                  <LinearGradient colors={ev.gradient as any} style={s.compactCardGrad}>
-                    <Text style={{ fontSize: 26 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
-                    {ev.type === 'official' && (
-                      <View style={[s.officialBadge, { position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2 }]}>
-                        <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>★</Text>
+                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.85} style={s.compactCardShadow}>
+                  <View style={s.compactCard}>
+                    <LinearGradient colors={ev.gradient as any} style={s.compactCardGrad}>
+                      <Text style={{ fontSize: 26 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
+                      {ev.type === 'official' && (
+                        <View style={[s.officialBadge, { position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2 }]}>
+                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>★</Text>
+                        </View>
+                      )}
+                    </LinearGradient>
+                    <View style={s.compactCardBody}>
+                      <Text style={s.compactCardTitle} numberOfLines={2}>{ev.title}</Text>
+                      <Text style={s.compactCardTime}>{ev.time.split(', ')[1] || ev.time}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          {ev.seekerColors.slice(0, 3).map((c, i) => (
+                            <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
+                          ))}
+                          <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} in</Text>
+                        </View>
+                        <JoinButton ev={ev} />
                       </View>
-                    )}
-                  </LinearGradient>
-                  <View style={s.compactCardBody}>
-                    <Text style={s.compactCardTitle} numberOfLines={2}>{ev.title}</Text>
-                    <Text style={s.compactCardTime}>{ev.time.split(', ')[1] || ev.time}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
-                      {ev.seekerColors.slice(0, 3).map((c, i) => (
-                        <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
-                      ))}
-                      <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} in</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -1308,29 +1313,31 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </View>
             <View style={{ paddingHorizontal: 16, gap: 10 }}>
               {upcoming.map(ev => (
-                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88} style={s.listCard}>
-                  <LinearGradient colors={ev.gradient as any} style={s.listCardLeft}>
-                    <Text style={{ fontSize: 24 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
-                  </LinearGradient>
-                  <View style={s.listCardBody}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                      {ev.type === 'official' && (
-                        <View style={[s.officialBadge, { paddingHorizontal: 7, paddingVertical: 2 }]}>
-                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>OFFICIAL</Text>
-                        </View>
-                      )}
-                      <Text style={{ fontSize: 11, color: '#94A3B8' }}>{ev.distance}</Text>
+                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88} style={s.listCardShadow}>
+                  <View style={s.listCard}>
+                    <LinearGradient colors={ev.gradient as any} style={s.listCardLeft}>
+                      <Text style={{ fontSize: 24 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
+                    </LinearGradient>
+                    <View style={s.listCardBody}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        {ev.type === 'official' && (
+                          <View style={[s.officialBadge, { paddingHorizontal: 7, paddingVertical: 2 }]}>
+                            <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>OFFICIAL</Text>
+                          </View>
+                        )}
+                        <Text style={{ fontSize: 11, color: '#94A3B8' }}>{ev.distance}</Text>
+                      </View>
+                      <Text style={s.listCardTitle} numberOfLines={1}>{ev.title}</Text>
+                      <Text style={s.listCardTime}>{ev.time}</Text>
                     </View>
-                    <Text style={s.listCardTitle} numberOfLines={1}>{ev.title}</Text>
-                    <Text style={s.listCardTime}>{ev.time}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end', gap: 6, paddingRight: 14 }}>
-                    <View style={{ flexDirection: 'row' }}>
-                      {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
-                        <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
-                      ))}
+                    <View style={{ alignItems: 'flex-end', gap: 6, paddingRight: 14 }}>
+                      <View style={{ flexDirection: 'row' }}>
+                        {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
+                          <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
+                        ))}
+                      </View>
+                      <JoinButton ev={ev} />
                     </View>
-                    <JoinButton ev={ev} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1349,7 +1356,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
       {/* ── Join Bottom Sheet ──────────────────────────────────────── */}
       <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(10,8,30,0.55)' }} activeOpacity={1} onPress={closeJoinSheet} />
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,8,30,0.75)' }} activeOpacity={1} onPress={closeJoinSheet} />
         <View style={s.joinSheetWrap}>
           <View style={s.joinSheetHandle} />
 
@@ -1438,6 +1446,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               </TouchableOpacity>
             </>
           )}
+        </View>
         </View>
       </Modal>
 
@@ -1691,6 +1700,357 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   )
 }
 
+// ─── VIBE CHECK TAB ───────────────────────────────────────────────────────────
+
+const QUEUE_PROFILES = [
+  { id: 1,  name: 'Alex',    age: 29, flag: '🇬🇧', color: '#818CF8', colors: ['#818CF8','#6366F1'], emoji: '🎾',
+    bio: 'Tennis addict & coffee snob. Love meeting new people over a good game.',
+    interests: ['Tennis','Coffee','Tech','Travel'], langs: ['🇬🇧','🇷🇺'], transport: 'car',  goal: 'networking' },
+  { id: 2,  name: 'Maya',    age: 26, flag: '🇷🇺', color: '#4CAF50', colors: ['#43E97B','#38f9d7'], emoji: '📚',
+    bio: 'Book lover, yoga fan. Looking for chill hangouts with good vibes.',
+    interests: ['Yoga','Books','Art','Wine'],       langs: ['🇷🇺','🇬🇧','🇩🇪'], transport: 'meet', goal: 'chill' },
+  { id: 3,  name: 'Luca',    age: 32, flag: '🇮🇹', color: '#FF9800', colors: ['#f97316','#fbbf24'], emoji: '🍕',
+    bio: 'Italian who takes food seriously. Can talk for hours about pasta.',
+    interests: ['Food','Football','Music','Wine'],  langs: ['🇮🇹','🇬🇧'], transport: 'car',  goal: 'chill' },
+  { id: 4,  name: 'Sara',    age: 27, flag: '🇩🇪', color: '#2196F3', colors: ['#667eea','#764ba2'], emoji: '💻',
+    bio: 'Product designer at a startup. Into hiking and craft beer.',
+    interests: ['Design','Hiking','Beer','Tech'],   langs: ['🇩🇪','🇬🇧','🇫🇷'], transport: 'meet', goal: 'networking' },
+  { id: 5,  name: 'Noa',     age: 24, flag: '🇮🇱', color: '#E91E63', colors: ['#f093fb','#f5576c'], emoji: '🎵',
+    bio: 'Music producer by night, beach person by day. Always down for adventures.',
+    interests: ['Music','Beach','Photography'],     langs: ['🇮🇱','🇬🇧'], transport: 'lift', goal: 'activity' },
+  { id: 6,  name: 'Chris',   age: 31, flag: '🇨🇾', color: '#22c55e', colors: ['#134e5e','#71b280'], emoji: '🏄',
+    bio: 'Local Cypriot. I know every hidden beach spot on the island.',
+    interests: ['Surfing','Diving','Outdoors'],     langs: ['🇨🇾','🇬🇧','🇬🇷'], transport: 'car',  goal: 'activity' },
+]
+
+const VIBE_FORMAT_MAX: Record<string, number>       = { '1+1': 2, squad: 5, party: 20 }
+const VIBE_FORMAT_THRESHOLD: Record<string, number> = { '1+1': 2, squad: 5, party: 12 } // party goes active at 12, cap stays 20
+const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': 'Duo 👥', squad: 'Squad 🫂', party: 'Party 🎉' }
+const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', networking: '🤝 Networking', activity: '⚡ Activity' }
+
+function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () => void }) {
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const slideAnim = useRef(new Animated.Value(300)).current
+
+  useEffect(() => {
+    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start()
+  }, [])
+
+  const close = () => {
+    Animated.timing(slideAnim, { toValue: 400, duration: 220, useNativeDriver: true }).start(onClose)
+  }
+
+  // 3 gradient combos per person as photo placeholders
+  const photoPalettes = [
+    profile.colors,
+    [profile.colors[1], '#0A0812'],
+    ['#0A0812', profile.colors[0]],
+  ]
+
+  return (
+    <Modal transparent animationType="none" onRequestClose={close}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={close} />
+      <Animated.View style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        backgroundColor: '#100D20', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        overflow: 'hidden', transform: [{ translateY: slideAnim }],
+      }}>
+        {/* Photo carousel */}
+        <View style={{ height: 280, position: 'relative' }}>
+          <LinearGradient colors={photoPalettes[photoIdx] as any} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 72 }}>{profile.emoji}</Text>
+          </LinearGradient>
+          {/* Gradient overlay bottom */}
+          <LinearGradient colors={['transparent', '#100D20']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }} />
+          {/* Dot indicators */}
+          <View style={{ position: 'absolute', bottom: 14, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            {photoPalettes.map((_, i) => (
+              <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
+                <View style={{ width: i === photoIdx ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.3)' }} />
+              </TouchableOpacity>
+            ))}
+          </View>
+          {/* Swipe areas */}
+          <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: '45%', height: '100%' }}
+            onPress={() => setPhotoIdx(i => Math.max(0, i - 1))} />
+          <TouchableOpacity style={{ position: 'absolute', right: 0, top: 0, width: '45%', height: '100%' }}
+            onPress={() => setPhotoIdx(i => Math.min(2, i + 1))} />
+          {/* Close */}
+          <TouchableOpacity onPress={close} style={{
+            position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16,
+            backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Feather name="x" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ paddingHorizontal: 22, paddingBottom: 40 }}>
+          {/* Name + age */}
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
+            <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{profile.age}</Text>
+            <Text style={{ fontSize: 20 }}>{profile.flag}</Text>
+          </View>
+
+          {/* Bio */}
+          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
+
+          {/* Transport + goal */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+            <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>
+                {profile.transport === 'car' ? '🚗 Driving' : profile.transport === 'lift' ? '🙋 Needs lift' : '📍 Meet there'}
+              </Text>
+            </View>
+            <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>{GOAL_LABEL[profile.goal] || '😌 Chill'}</Text>
+            </View>
+          </View>
+
+          {/* Languages */}
+          <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>LANGUAGES</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+            {profile.langs.map((l: string, i: number) => (
+              <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
+                <Text style={{ fontSize: 14 }}>{l}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Interests */}
+          <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>INTERESTS</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {profile.interests.map((tag: string, i: number) => (
+              <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: `${profile.colors[0]}22`, borderWidth: 1, borderColor: `${profile.colors[0]}44` }}>
+                <Text style={{ fontSize: 12, color: profile.colors[0], fontWeight: '700' }}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </Animated.View>
+    </Modal>
+  )
+}
+
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome }: any) {
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id])
+  const [previewProfile, setPreviewProfile] = useState<any>(null)
+
+  // aurora blob animations
+  const blob1 = useRef(new Animated.Value(0)).current
+  const blob2 = useRef(new Animated.Value(0)).current
+  const blob3 = useRef(new Animated.Value(0)).current
+  const radar1 = useRef(new Animated.Value(0)).current
+  const radar2 = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    const loop = (val: Animated.Value, dur: number, delay: number) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(val, { toValue: 1, duration: dur, useNativeDriver: true }),
+        Animated.timing(val, { toValue: 0, duration: dur, useNativeDriver: true }),
+      ])).start()
+    loop(blob1, 3200, 0); loop(blob2, 2800, 600); loop(blob3, 3600, 1200)
+    Animated.loop(Animated.sequence([
+      Animated.timing(radar1, { toValue: 1, duration: 1800, useNativeDriver: true }),
+      Animated.timing(radar1, { toValue: 0, duration: 0, useNativeDriver: true }),
+    ])).start()
+    Animated.loop(Animated.sequence([
+      Animated.delay(900),
+      Animated.timing(radar2, { toValue: 1, duration: 1800, useNativeDriver: true }),
+      Animated.timing(radar2, { toValue: 0, duration: 0, useNativeDriver: true }),
+    ])).start()
+  }, [])
+
+  const AuroraBg = () => (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+      <Animated.View style={{
+        position: 'absolute', top: -60, left: -60, width: 260, height: 260, borderRadius: 130, backgroundColor: '#FF6B6B',
+        opacity: blob1.interpolate({ inputRange: [0,1], outputRange: [0.18, 0.32] }),
+        transform: [{ scale: blob1.interpolate({ inputRange: [0,1], outputRange: [1, 1.2] }) }],
+      }} />
+      <Animated.View style={{
+        position: 'absolute', top: 120, right: -80, width: 220, height: 220, borderRadius: 110, backgroundColor: '#43E97B',
+        opacity: blob2.interpolate({ inputRange: [0,1], outputRange: [0.14, 0.26] }),
+        transform: [{ scale: blob2.interpolate({ inputRange: [0,1], outputRange: [1, 1.15] }) }],
+      }} />
+      <Animated.View style={{
+        position: 'absolute', bottom: 80, left: 40, width: 200, height: 200, borderRadius: 100, backgroundColor: '#6366F1',
+        opacity: blob3.interpolate({ inputRange: [0,1], outputRange: [0.16, 0.28] }),
+        transform: [{ scale: blob3.interpolate({ inputRange: [0,1], outputRange: [1, 1.1] }) }],
+      }} />
+    </View>
+  )
+
+  if (myEvents.length === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
+        <AuroraBg />
+        <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+          <View style={{ alignItems: 'center' }}>
+            <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center', marginBottom: 32 }}>
+              <Animated.View style={{
+                position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.6)',
+                opacity: radar1.interpolate({ inputRange: [0,0.5,1], outputRange: [0.8,0.3,0] }),
+                transform: [{ scale: radar1.interpolate({ inputRange: [0,1], outputRange: [0.4,1] }) }],
+              }} />
+              <Animated.View style={{
+                position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 1.5, borderColor: 'rgba(67,233,123,0.5)',
+                opacity: radar2.interpolate({ inputRange: [0,0.5,1], outputRange: [0.8,0.3,0] }),
+                transform: [{ scale: radar2.interpolate({ inputRange: [0,1], outputRange: [0.4,1] }) }],
+              }} />
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 32 }}>✨</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', textAlign: 'center', letterSpacing: -0.5, marginBottom: 10 }}>Your crew awaits</Text>
+            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 22, marginBottom: 36 }}>
+              Join an event and we'll find{'\n'}the perfect people to go with
+            </Text>
+            <TouchableOpacity onPress={onGoHome} activeOpacity={0.85} style={{ paddingHorizontal: 28, paddingVertical: 14, borderRadius: 99, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.5, shadowRadius: 16, elevation: 8 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>Browse Events →</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
+    )
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
+      <AuroraBg />
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
+          <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+            {myEvents.length} event{myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew
+          </Text>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 32 }}>
+          {myEvents.map((ev: any) => {
+            const format     = userEventFormat?.[ev.id]    || 'squad'
+            const transport  = userEventTransport?.[ev.id] || 'meet'
+            const cap        = VIBE_FORMAT_MAX[format] || 5
+            const threshold  = VIBE_FORMAT_THRESHOLD[format] || cap
+            const isParty    = format === 'party'
+            const found      = Math.min(cap, 1 + (ev.id % Math.max(1, threshold - 1)))
+            const isActive   = found >= threshold  // group is active / ready
+            const profiles   = QUEUE_PROFILES.slice(0, Math.min(found, QUEUE_PROFILES.length))
+
+            // Status label
+            const statusLabel = isActive
+              ? (isParty ? 'GROUP ACTIVE 🔥' : 'READY ✓')
+              : 'SCANNING…'
+            const statusColor = isActive ? '#43E97B' : '#818CF8'
+            const statusBg    = isActive ? 'rgba(67,233,123,0.15)' : 'rgba(99,102,241,0.13)'
+            const statusBorder= isActive ? 'rgba(67,233,123,0.35)' : 'rgba(99,102,241,0.28)'
+
+            return (
+              <View key={ev.id} style={{
+                borderRadius: 28, overflow: 'hidden',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderWidth: 1, borderColor: isActive ? 'rgba(67,233,123,0.35)' : 'rgba(255,255,255,0.09)',
+              }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+
+                <View style={{ padding: 20 }}>
+                  {/* Title + status */}
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3, lineHeight: 21 }} numberOfLines={2}>{ev.title}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time} · {ev.distance}</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: statusBg, borderWidth: 1, borderColor: statusBorder }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: statusColor }}>{statusLabel}</Text>
+                    </View>
+                  </View>
+
+                  {/* My choices pills */}
+                  <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {[VIBE_FORMAT_LABEL[format], TRANSPORT_LABEL[transport]].map((label, i) => (
+                      <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
+                        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '600' }}>{label || '—'}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Progress */}
+                  <View style={{ marginBottom: 18 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '700', letterSpacing: 0.5 }}>
+                        {isParty && isActive ? 'GROUP ACTIVE · STILL OPEN' : 'CREW FOUND'}
+                      </Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor }}>
+                        {isParty ? `${found} / ${cap} joined` : `${found} / ${cap}`}
+                      </Text>
+                    </View>
+                    {/* Two-segment bar for party: threshold zone + overflow zone */}
+                    <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
+                      <LinearGradient
+                        colors={isActive ? ['#43E97B','#22c55e'] : ['#6366F1','#818CF8']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={{ height: 3, borderRadius: 99, width: `${(found / cap) * 100}%` as any }}
+                      />
+                      {/* Threshold marker for party */}
+                      {isParty && (
+                        <View style={{ position: 'absolute', left: `${(threshold / cap) * 100}%` as any, top: -2, width: 2, height: 7, backgroundColor: '#43E97B', borderRadius: 1 }} />
+                      )}
+                    </View>
+                    {isParty && (
+                      <Text style={{ fontSize: 10, color: 'rgba(67,233,123,0.6)', marginTop: 5, fontWeight: '600' }}>
+                        {isActive ? `${found - threshold} more joined after launch · ${cap - found} spots left` : `Group launches at ${threshold} people`}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Clickable avatars */}
+                  <View style={{ marginBottom: isActive ? 20 : 0 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, marginBottom: 12 }}>
+                      TAP TO VET YOUR CREW
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      {profiles.map((p, i) => (
+                        <TouchableOpacity key={i} onPress={() => { setPreviewProfile(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
+                          <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                            <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
+                          </LinearGradient>
+                          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 4, fontWeight: '600' }}>{p.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                      {found < cap && (
+                        <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.2)' }}>+{cap - found}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* CTA */}
+                  {isActive && (
+                    <View style={{ gap: 10 }}>
+                      <TouchableOpacity activeOpacity={0.85} style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>
+                          {isParty ? "Join the chat 🎉" : "I'm in! 🎉"}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity activeOpacity={0.8} style={{ borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Plans changed</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )
+          })}
+        </ScrollView>
+      </SafeAreaView>
+
+      {previewProfile && <ProfilePreviewSheet profile={previewProfile} onClose={() => setPreviewProfile(null)} />}
+    </View>
+  )
+}
+
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
 function ProfileTab({ userData }: { userData: any }) {
@@ -1774,7 +2134,7 @@ const CREATE_EVENT_TYPES = [
 ]
 
 function FeedScreen({ userData = {} }: { userData?: any }) {
-  const [activeTab, setActiveTab] = useState<'home' | 'search' | 'messages' | 'profile'>('home')
+  const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
   const [createOpen, setCreateOpen] = useState(false)
   const [createType, setCreateType] = useState<string | null>(null)
   const [city, setCity] = useState('Limassol')
@@ -1876,13 +2236,13 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
           {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} />}
-          {activeTab === 'search' && (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 40, marginBottom: 12 }}>🗺️</Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#334155' }}>Map Search</Text>
-              <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Coming soon</Text>
-            </View>
-          )}
+          {activeTab === 'vibecheck' && <VibeCheckTab
+            joinedEvents={joinedEvents}
+            allEvents={MOCK_EVENTS}
+            userEventFormat={userEventFormat}
+            userEventTransport={userEventTransport}
+            onGoHome={() => setActiveTab('home')}
+          />}
           {activeTab === 'messages' && <MessagesTab
             chatList={chatList}
             onOpenChat={setOpenChat}
@@ -1920,15 +2280,19 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
 
         {/* Bottom nav */}
         <View style={s.bottomNav}>
-          {([
-            { id: 'home',     icon: 'home',           label: 'Home' },
-            { id: 'search',   icon: 'search',          label: 'Explore' },
-          ] as const).map(tab => (
-            <TouchableOpacity key={tab.id} style={s.navItem} onPress={() => setActiveTab(tab.id)}>
-              <Feather name={tab.icon} size={22} color={activeTab === tab.id ? '#6366F1' : '#94A3B8'} />
-              <Text style={[s.navLabel, activeTab === tab.id && { color: '#6366F1' }]}>{tab.label}</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('home')}>
+            <Feather name="home" size={22} color={activeTab === 'home' ? '#6366F1' : '#94A3B8'} />
+            <Text style={[s.navLabel, activeTab === 'home' && { color: '#6366F1' }]}>Home</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('vibecheck')}>
+            <View style={{ position: 'relative' }}>
+              <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
+              {Object.keys(joinedEvents).length > 0 && (
+                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+              )}
+            </View>
+            <Text style={[s.navLabel, activeTab === 'vibecheck' && { color: '#6366F1' }]}>Vibe</Text>
+          </TouchableOpacity>
 
           {/* Center create button */}
           <TouchableOpacity style={s.navCreateBtn} onPress={() => { setCreateType(null); setCreateOpen(true) }} activeOpacity={0.85}>
@@ -2454,12 +2818,14 @@ const s = StyleSheet.create({
   avatarDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
   avatarDotSm: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#fff' },
   joinBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 99, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
-  compactCard: { width: 152, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  compactCardShadow: { width: 152, borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  compactCard: { borderRadius: 18, overflow: 'hidden', backgroundColor: '#fff' },
   compactCardGrad: { height: 88, alignItems: 'center', justifyContent: 'center' },
   compactCardBody: { padding: 10 },
   compactCardTitle: { fontSize: 12, fontWeight: '700', color: '#1E1B4B', lineHeight: 17 },
   compactCardTime: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
-  listCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  listCardShadow: { borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  listCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden' },
   listCardLeft: { width: 72, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
   listCardBody: { flex: 1, paddingVertical: 14, paddingLeft: 4 },
   listCardTitle: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.2 },
