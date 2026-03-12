@@ -1155,18 +1155,30 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return joinedEvents?.[ev.id] || 'none'
   }
 
-  const JoinButton = ({ ev, large }: { ev: any; large?: boolean }) => {
+  const JoinButton = ({ ev, large, onDark = false }: { ev: any; large?: boolean; onDark?: boolean }) => {
     const state = getJoinState(ev)
     const isFull = state === 'full'
     const joinLabel = ev.type === 'official' ? "I'm Going" : 'Join →'
     const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Pending…' : joinLabel
-    const bg = isFull ? 'rgba(255,255,255,0.10)' : state !== 'none' ? 'rgba(99,255,180,0.22)' : 'rgba(255,255,255,0.22)'
+
+    // onDark=true (featured card): white translucent. onDark=false (list cards): solid colors
+    let bg: string, textColor: string
+    if (onDark) {
+      bg = isFull ? 'rgba(255,255,255,0.10)' : state !== 'none' ? 'rgba(99,255,180,0.22)' : 'rgba(255,255,255,0.22)'
+      textColor = '#fff'
+    } else {
+      if (isFull)             { bg = 'rgba(100,116,139,0.1)';  textColor = '#94A3B8' }
+      else if (state === 'joined')  { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
+      else if (state === 'pending') { bg = 'rgba(251,191,36,0.15)'; textColor = '#d97706' }
+      else                          { bg = '#6366F1';              textColor = '#fff' }
+    }
+
     return (
       <TouchableOpacity
         onPress={() => { if (!isFull && state === 'none') openJoinSheet(ev); else if (!isFull) onJoin(ev) }}
         activeOpacity={isFull ? 1 : 0.75}
-        style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1 }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
-        <Text style={{ fontSize: large ? 14 : 13, fontWeight: '800', color: '#fff' }}>{label}</Text>
+        style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1, borderColor: onDark ? 'rgba(255,255,255,0.4)' : 'transparent' }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
+        <Text style={{ fontSize: large ? 14 : 13, fontWeight: '800', color: textColor }}>{label}</Text>
       </TouchableOpacity>
     )
   }
@@ -1259,7 +1271,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       {featured.seekingCount} looking for company
                     </Text>
                   </View>
-                  <JoinButton ev={featured} />
+                  <JoinButton ev={featured} onDark />
                 </View>
               </View>
             </LinearGradient>
