@@ -1178,7 +1178,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         onPress={() => { if (!isFull && state === 'none') openJoinSheet(ev); else if (!isFull) onJoin(ev) }}
         activeOpacity={isFull ? 1 : 0.75}
         style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1, borderColor: onDark ? 'rgba(255,255,255,0.4)' : 'transparent' }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
-        <Text style={{ fontSize: large ? 14 : 13, fontWeight: '800', color: textColor }}>{label}</Text>
+        <Text style={{ fontSize: large ? 14 : 11, fontWeight: '700', color: textColor }}>{label}</Text>
       </TouchableOpacity>
     )
   }
@@ -2994,7 +2994,7 @@ const s = StyleSheet.create({
   infoPillTxt: { fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
   avatarDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
   avatarDotSm: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#fff' },
-  joinBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 99, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
+  joinBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
   compactCardShadow: { width: 152, borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   compactCard: { borderRadius: 18, overflow: 'hidden', backgroundColor: '#fff' },
   compactCardGrad: { height: 88, alignItems: 'center', justifyContent: 'center' },
