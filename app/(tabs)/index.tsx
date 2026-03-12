@@ -1173,9 +1173,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // ── Format & Transport options ────────────────────────────────────────────
   const FORMAT_OPTIONS = [
-    { id: '1+1',   emoji: '🧑‍🤝‍🧑', label: 'Duo',   sub: 'Just the two of us' },
-    { id: 'squad', emoji: '🫂', label: 'Squad',  sub: 'Up to 5 people' },
-    { id: 'party', emoji: '🎉', label: 'Party',  sub: 'The more the merrier' },
+    { id: '1+1',   emoji: '🧑‍🤝‍🧑', label: 'Duo',   sub: 'Me + 1 person' },
+    { id: 'squad', emoji: '🫂', label: 'Squad',  sub: 'Me + 4 people' },
+    { id: 'party', emoji: '🎉', label: 'Party',  sub: 'Me + up to 19' },
   ]
   const TRANSPORT_OPTIONS = [
     { id: 'car',  emoji: '🚗', label: "I'm driving",    sub: 'Can give a lift' },
@@ -1390,7 +1390,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}
-                          <Text style={{ color: '#94A3B8', fontWeight: '400', fontSize: 12 }}>  {opt.id === '1+1' ? '1+1' : opt.id === 'squad' ? '≤5' : '≤20'}</Text>
+                          <Text style={{ color: '#94A3B8', fontWeight: '400', fontSize: 12 }}>  {opt.id === '1+1' ? 'me +1' : opt.id === 'squad' ? 'me +4' : 'me +19'}</Text>
                         </Text>
                         <Text style={s.joinSheetCardSub}>{opt.sub}</Text>
                       </View>
@@ -1456,15 +1456,26 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
+  initialSubTab?: 'going' | 'messages';
 }) {
-  const [subTab, setSubTab] = useState<'going' | 'messages'>('going')
+  const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
+  const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
+  const crewSheetAnim = useRef(new Animated.Value(0)).current
   const hasNew = chatList.some(c => c.isNew)
 
-  const myEvents = MOCK_EVENTS.filter(ev => joinedEvents[ev.id] === 'joined' || joinedEvents[ev.id] === 'pending')
+  const openCrewSheet = (ev: any, profiles: any[], found: number, cap: number) => {
+    setCrewSheet({ ev, profiles, found, cap })
+    Animated.spring(crewSheetAnim, { toValue: 1, useNativeDriver: true, tension: 65, friction: 11 }).start()
+  }
+  const closeCrewSheet = () => {
+    Animated.timing(crewSheetAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setCrewSheet(null))
+  }
+
+  const myEvents = MOCK_EVENTS.filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
 
   const FORMAT_CHIP: Record<string, { emoji: string; label: string; color: string }> = {
     '1+1':   { emoji: '👥', label: 'Duo',   color: '#f472b6' },
@@ -1527,14 +1538,29 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
             </View>
           ) : (
             myEvents.map(ev => {
-              const fmt  = FORMAT_CHIP[userEventFormat[ev.id]]
-              const trsp = TRANSPORT_CHIP[userEventTransport[ev.id]]
-              const isPending = joinedEvents[ev.id] === 'pending'
+              const fmt    = FORMAT_CHIP[userEventFormat[ev.id]]
+              const trsp   = TRANSPORT_CHIP[userEventTransport[ev.id]]
               const isLive = isToday(ev.time)
 
+              // Mirror Vibe Check math
+              const format        = userEventFormat[ev.id] || 'squad'
+              const cap           = VIBE_FORMAT_MAX[format] || 5
+              const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
+              const partnersFound = Math.min(cap - 1, (ev.id % Math.max(1, threshold - 1)) + 1)
+              const found         = 1 + partnersFound
+              const isActive      = found >= threshold
+              const crewProfiles  = QUEUE_PROFILES.slice(0, partnersFound)
+
+              // Smart status badge
+              const isConfirmed = joinedEvents[ev.id] === 'confirmed'
+              const statusLabel = isConfirmed ? 'Confirmed ✅'
+                : isActive ? 'Group Ready!'
+                : partnersFound > 0 ? 'Vetting...' : 'Matching...'
+              const statusColor = isConfirmed ? '#16a34a' : isActive ? '#16a34a' : partnersFound > 0 ? '#6366F1' : '#d97706'
+              const statusBg    = isConfirmed ? 'rgba(34,197,94,0.12)' : isActive ? 'rgba(34,197,94,0.12)' : partnersFound > 0 ? 'rgba(99,102,241,0.1)' : 'rgba(251,191,36,0.15)'
+
               return (
-                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.08)' }}>
-                  {/* Gradient top strip */}
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: isActive ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.08)' }}>
                   <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
 
                   <View style={{ padding: 16 }}>
@@ -1552,13 +1578,9 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           <Text style={{ fontSize: 12, color: '#64748B' }}>⏰ {ev.time}  ·  📍 {ev.distance}</Text>
                         </View>
                       </View>
-                      {/* Status + menu */}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99,
-                          backgroundColor: isPending ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: isPending ? '#d97706' : '#16a34a' }}>
-                            {isPending ? 'Pending' : 'Going ✓'}
-                          </Text>
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: statusBg }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor }}>{statusLabel}</Text>
                         </View>
                         <TouchableOpacity
                           onPress={() => {
@@ -1584,15 +1606,13 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     {(fmt || trsp) && (
                       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
                         {fmt && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
-                            backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
                             <Text style={{ fontSize: 13 }}>{fmt.emoji}</Text>
                             <Text style={{ fontSize: 12, fontWeight: '700', color: fmt.color }}>{fmt.label}</Text>
                           </View>
                         )}
                         {trsp && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
-                            backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
                             <Text style={{ fontSize: 13 }}>{trsp.emoji}</Text>
                             <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{trsp.label}</Text>
                           </View>
@@ -1600,31 +1620,39 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       </View>
                     )}
 
-                    {/* Divider */}
                     <View style={{ height: 1, backgroundColor: 'rgba(99,102,241,0.08)', marginBottom: 14 }} />
 
-                    {/* Avatar stack + Who's going button */}
+                    {/* Crew avatars + counter + button */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <View style={{ flexDirection: 'row' }}>
-                          {(ev.seekerColors || []).slice(0, 4).map((col: string, i: number) => (
-                            <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: col,
-                              borderWidth: 2, borderColor: '#fff', marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i,
-                              alignItems: 'center', justifyContent: 'center' }}>
-                              <Text style={{ fontSize: 12 }}>😊</Text>
+                          {/* Me */}
+                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#6366F1', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                            <Text style={{ fontSize: 12 }}>😊</Text>
+                          </View>
+                          {/* Found partners */}
+                          {crewProfiles.map((p, i) => (
+                            <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: p.color, borderWidth: 2, borderColor: '#fff', marginLeft: -8, alignItems: 'center', justifyContent: 'center', zIndex: 9 - i }}>
+                              <Text style={{ fontSize: 11 }}>{p.emoji}</Text>
                             </View>
                           ))}
                         </View>
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                          {ev.participantsCount} going
+                          {found}/{cap} joined
                         </Text>
                       </View>
 
                       <TouchableOpacity activeOpacity={0.8}
-                        onPress={() => { onVibeCheck?.(ev); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6,
-                          backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Who's going? →</Text>
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                          if (isConfirmed) {
+                            openCrewSheet(ev, crewProfiles, found, cap)
+                          } else {
+                            onVibeCheck?.(ev)
+                          }
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{"Who's going? →"}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1696,6 +1724,93 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
           ))}
         </ScrollView>
       )}
+
+      {/* Crew Sheet — who's going (confirmed events) */}
+      {crewSheet && (
+        <Modal transparent animationType="none" onRequestClose={closeCrewSheet}>
+          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={closeCrewSheet} />
+            <Animated.View style={{
+              transform: [{ translateY: crewSheetAnim.interpolate({ inputRange: [0, 1], outputRange: [500, 0] }) }],
+              backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+              paddingBottom: 32, maxHeight: '85%',
+            }}>
+              {/* Handle */}
+              <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+              </View>
+
+              {/* Header */}
+              <View style={{ paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.08)' }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>{crewSheet.ev.title}</Text>
+                <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700', marginTop: 4 }}>
+                  🎉 {crewSheet.found}/{crewSheet.cap} confirmed · Your crew
+                </Text>
+              </View>
+
+              <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+                {/* Me */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: 'rgba(99,102,241,0.06)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.15)' }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 22 }}>😊</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>You</Text>
+                      <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: '#6366F1' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>ME</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>That's you 👋</Text>
+                  </View>
+                </View>
+
+                {/* Each partner */}
+                {crewSheet.profiles.map((p: any, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, padding: 14, borderRadius: 18, backgroundColor: `${p.color}08`, borderWidth: 1, borderColor: `${p.color}20` }}>
+                    <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}</Text>
+                        <Text style={{ fontSize: 13, color: '#64748B' }}>{p.age}</Text>
+                        <Text style={{ fontSize: 14 }}>{p.flag}</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18, marginBottom: 8 }}>{p.bio}</Text>
+                      {/* Transport + goal */}
+                      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(100,116,139,0.1)' }}>
+                          <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600' }}>
+                            {p.transport === 'car' ? '🚗 Driving' : p.transport === 'lift' ? '🙋 Needs lift' : '🚶 Meet there'}
+                          </Text>
+                        </View>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(100,116,139,0.1)' }}>
+                          <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600' }}>
+                            {p.goal === 'chill' ? '😌 Chill' : p.goal === 'networking' ? '🤝 Networking' : '⚡ Activity'}
+                          </Text>
+                        </View>
+                      </View>
+                      {/* Interests */}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {p.interests.slice(0, 3).map((tag: string, ti: number) => (
+                          <View key={ti} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: `${p.color}15`, borderWidth: 1, borderColor: `${p.color}30` }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: p.color }}>{tag}</Text>
+                          </View>
+                        ))}
+                        {/* Languages */}
+                        {p.langs.map((l: string, li: number) => (
+                          <Text key={`l${li}`} style={{ fontSize: 14 }}>{l}</Text>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
     </View>
   )
 }
@@ -1725,7 +1840,7 @@ const QUEUE_PROFILES = [
 
 const VIBE_FORMAT_MAX: Record<string, number>       = { '1+1': 2, squad: 5, party: 20 }
 const VIBE_FORMAT_THRESHOLD: Record<string, number> = { '1+1': 2, squad: 5, party: 12 } // party goes active at 12, cap stays 20
-const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': 'Duo 👥', squad: 'Squad 🫂', party: 'Party 🎉' }
+const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': 'Duo · me +1', squad: 'Squad · me +4', party: 'Party · me +19' }
 const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', networking: '🤝 Networking', activity: '⚡ Activity' }
 
 function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () => void }) {
@@ -1832,8 +1947,8 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome }: any) {
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id])
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave }: any) {
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed')
   const [previewProfile, setPreviewProfile] = useState<any>(null)
 
   // aurora blob animations
@@ -1934,9 +2049,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const cap        = VIBE_FORMAT_MAX[format] || 5
             const threshold  = VIBE_FORMAT_THRESHOLD[format] || cap
             const isParty    = format === 'party'
-            const found      = Math.min(cap, 1 + (ev.id % Math.max(1, threshold - 1)))
-            const isActive   = found >= threshold  // group is active / ready
-            const profiles   = QUEUE_PROFILES.slice(0, Math.min(found, QUEUE_PROFILES.length))
+            // found = total slots filled INCLUDING me (slot #1)
+            // partners = found - 1 (the other people in the queue)
+            const partnersFound = Math.min(cap - 1, (ev.id % Math.max(1, threshold - 1)) + 1)
+            const found      = 1 + partnersFound   // me + partners
+            const isActive   = found >= threshold
+            const partners   = QUEUE_PROFILES.slice(0, partnersFound) // only partners, not me
 
             // Status label
             const statusLabel = isActive
@@ -2010,7 +2128,15 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       TAP TO VET YOUR CREW
                     </Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                      {profiles.map((p, i) => (
+                      {/* Me — always first */}
+                      <View>
+                        <LinearGradient colors={['#6366F1','#818CF8']} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
+                          <Text style={{ fontSize: 22 }}>😊</Text>
+                        </LinearGradient>
+                        <Text style={{ fontSize: 10, color: '#818CF8', textAlign: 'center', marginTop: 4, fontWeight: '700' }}>You</Text>
+                      </View>
+                      {/* Partners */}
+                      {partners.map((p, i) => (
                         <TouchableOpacity key={i} onPress={() => { setPreviewProfile(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
                           <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
                             <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
@@ -2018,6 +2144,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                           <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 4, fontWeight: '600' }}>{p.name}</Text>
                         </TouchableOpacity>
                       ))}
+                      {/* Empty slots = cap - found (me already counted in found) */}
                       {found < cap && (
                         <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }}>
                           <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.2)' }}>+{cap - found}</Text>
@@ -2029,12 +2156,18 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   {/* CTA */}
                   {isActive && (
                     <View style={{ gap: 10 }}>
-                      <TouchableOpacity activeOpacity={0.85} style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => onConfirm?.(ev, partners, format)}
+                        style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
                         <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>
-                          {isParty ? "Join the chat 🎉" : "I'm in! 🎉"}
+                          {isParty ? 'Join the chat 🎉' : "Count me in! 🎉"}
                         </Text>
                       </TouchableOpacity>
-                      <TouchableOpacity activeOpacity={0.8} style={{ borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => onLeave?.(ev)}
+                        style={{ borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                         <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Plans changed</Text>
                       </TouchableOpacity>
                     </View>
@@ -2135,6 +2268,7 @@ const CREATE_EVENT_TYPES = [
 
 function FeedScreen({ userData = {} }: { userData?: any }) {
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
+  const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
   const [createType, setCreateType] = useState<string | null>(null)
   const [city, setCity] = useState('Limassol')
@@ -2149,7 +2283,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const scrollRef = useRef<ScrollView>(null)
 
-  const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined'>>({})
+  const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
@@ -2242,8 +2376,39 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
             onGoHome={() => setActiveTab('home')}
+            onConfirm={(ev: any, partners: any[], format: string) => {
+              const isGroup = format !== '1+1'
+              const newChat = isGroup ? {
+                id: Date.now(), type: 'group',
+                event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                members: partners.length + 1,
+                avatars: [], colors: partners.map((p: any) => p.color),
+                lastMsg: '🎉 Group chat created! Say hi',
+                time: 'now', isNew: true, expiresIn: 24,
+              } : {
+                id: Date.now(), type: 'duo',
+                name: partners[0]?.name || 'Your match',
+                age: partners[0]?.age || '',
+                transport: partners[0]?.transport || 'meet',
+                color: partners[0]?.color || '#818CF8',
+                photo: '', lastMsg: '👋 You matched! Say hello',
+                time: 'now', isNew: true, expiresIn: 24,
+                event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+              }
+              setChatList(prev => [newChat, ...prev])
+              setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+              showToast(`Chat created! 🎉`)
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+              setMessagesInitialSubTab('messages')
+              setActiveTab('messages')
+            }}
+            onLeave={(ev: any) => {
+              setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              showToast("We let them know your plans changed 📅")
+            }}
           />}
           {activeTab === 'messages' && <MessagesTab
+            initialSubTab={messagesInitialSubTab}
             chatList={chatList}
             onOpenChat={setOpenChat}
             onLeaveChat={(id, addSystemMsg) => {
@@ -2259,7 +2424,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
             joinedEvents={joinedEvents}
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
-            onVibeCheck={ev => { setEventDetail(ev); setActiveTab('home') }}
+            onVibeCheck={() => setActiveTab('vibecheck')}
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               // Remove any group chats linked to this event
@@ -2305,7 +2470,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
             { id: 'messages', icon: 'message-circle', label: 'Chats' },
             { id: 'profile',  icon: 'user',           label: 'Profile' },
           ] as const).map(tab => (
-            <TouchableOpacity key={tab.id} style={s.navItem} onPress={() => setActiveTab(tab.id)}>
+            <TouchableOpacity key={tab.id} style={s.navItem} onPress={() => { if (tab.id === 'messages') setMessagesInitialSubTab('going'); setActiveTab(tab.id) }}>
               <Feather name={tab.icon} size={22} color={activeTab === tab.id ? '#6366F1' : '#94A3B8'} />
               <Text style={[s.navLabel, activeTab === tab.id && { color: '#6366F1' }]}>{tab.label}</Text>
             </TouchableOpacity>
