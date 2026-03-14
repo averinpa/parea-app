@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator, Alert, Animated, Dimensions, Image, Linking,
-  KeyboardAvoidingView, LayoutAnimation, Modal, Platform,
+  KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -116,36 +116,9 @@ const FORMAT_BADGE: Record<string, { color: string; label: string }> = {
   'party': { color: '#fb923c', label: 'Party' },
 }
 
-const MOCK_CHATS = [
-  { id: 1, type: 'duo', name: 'Elena', age: 27, transport: 'car', color: '#818CF8', photo: 'https://i.pravatar.cc/150?img=47', lastMsg: 'See you at the event! 🎾', time: '2m', isNew: true, expiresIn: 18, event: 'Tennis @ Marina', eventEmoji: '🎾' },
-  { id: 2, type: 'duo', name: 'Sarah', age: 24, transport: 'meet', color: '#2196F3', photo: 'https://i.pravatar.cc/150?img=32', lastMsg: "Let's meet at 17:45", time: '1h', isNew: false, expiresIn: 6, event: 'Wine Tasting', eventEmoji: '🍷' },
-  { id: 3, type: 'group', event: 'Tennis @ Marina', eventEmoji: '🎾', members: 8, avatars: ['https://i.pravatar.cc/150?img=12', 'https://i.pravatar.cc/150?img=25', 'https://i.pravatar.cc/150?img=8'], colors: ['#4CAF50', '#9C27B0', '#FF9800'], lastMsg: 'Dmitri: Anyone bringing extra rackets?', time: '15m', isNew: false, expiresIn: 31 },
-  { id: 4, type: 'group', event: 'Wine Tasting Old Town', eventEmoji: '🍷', members: 4, avatars: ['https://i.pravatar.cc/150?img=20', 'https://i.pravatar.cc/150?img=15', 'https://i.pravatar.cc/150?img=39'], colors: ['#E91E63', '#9C27B0', '#818CF8'], lastMsg: "Yael: I know a great parking spot!", time: '3h', isNew: false, expiresIn: 3 },
-]
+const MOCK_CHATS: any[] = []
 
-const MOCK_MESSAGES: Record<number, Array<{ from: string; text: string; time: string; senderName?: string; senderPhoto?: string; senderColor?: string }>> = {
-  1: [
-    { from: 'them', text: 'Hi! Are you going to the tennis thing tonight?', time: '1h', senderName: 'Elena', senderPhoto: 'https://i.pravatar.cc/40?img=47', senderColor: '#818CF8' },
-    { from: 'me', text: 'Yes! Looking forward to it 🎾', time: '58m' },
-    { from: 'them', text: 'See you at the event! 🎾', time: '2m', senderName: 'Elena', senderPhoto: 'https://i.pravatar.cc/40?img=47', senderColor: '#818CF8' },
-  ],
-  2: [
-    { from: 'them', text: 'Hey! Wine tasting tonight?', time: '2h', senderName: 'Sarah', senderPhoto: 'https://i.pravatar.cc/40?img=32', senderColor: '#2196F3' },
-    { from: 'me', text: 'Absolutely! What time works?', time: '1h 30m' },
-    { from: 'them', text: "Let's meet at 17:45", time: '1h', senderName: 'Sarah', senderPhoto: 'https://i.pravatar.cc/40?img=32', senderColor: '#2196F3' },
-  ],
-  3: [
-    { from: 'them', text: 'Hey everyone! 🎾', time: '1h', senderName: 'Dmitri', senderPhoto: 'https://i.pravatar.cc/40?img=12', senderColor: '#4CAF50' },
-    { from: 'them', text: "What time exactly?", time: '58m', senderName: 'Yael', senderPhoto: 'https://i.pravatar.cc/40?img=25', senderColor: '#9C27B0' },
-    { from: 'me', text: "I'll be there by 19:00 sharp", time: '55m' },
-    { from: 'them', text: 'Anyone bringing extra rackets?', time: '15m', senderName: 'Dmitri', senderPhoto: 'https://i.pravatar.cc/40?img=12', senderColor: '#4CAF50' },
-  ],
-  4: [
-    { from: 'them', text: 'This place is amazing 🍷', time: '4h', senderName: 'Yael', senderPhoto: 'https://i.pravatar.cc/40?img=20', senderColor: '#E91E63' },
-    { from: 'me', text: 'See you all there!', time: '3h 10m' },
-    { from: 'them', text: 'I know a great parking spot!', time: '3h', senderName: 'Yael', senderPhoto: 'https://i.pravatar.cc/40?img=20', senderColor: '#E91E63' },
-  ],
-}
+const MOCK_MESSAGES: Record<number, Array<{ from: string; text: string; time: string; senderName?: string; senderPhoto?: string; senderColor?: string }>> = {}
 
 // ─── IMAGE SAFETY ─────────────────────────────────────────────────────────────
 
@@ -1305,9 +1278,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           {ev.seekerColors.slice(0, 3).map((c, i) => (
                             <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
                           ))}
-                          <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} in</Text>
+                          <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} going</Text>
                         </View>
-                        <JoinButton ev={ev} />
+                        <TouchableOpacity
+                          onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
+                          activeOpacity={getJoinState(ev) === 'full' ? 1 : 0.75}
+                          style={{ backgroundColor: getJoinState(ev) === 'full' ? 'rgba(100,116,139,0.1)' : getJoinState(ev) === 'joined' ? 'rgba(34,197,94,0.12)' : getJoinState(ev) === 'pending' ? 'rgba(251,191,36,0.15)' : '#6366F1', borderRadius: 99, paddingHorizontal: 9, paddingVertical: 4, opacity: getJoinState(ev) === 'full' ? 0.55 : 1 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: getJoinState(ev) === 'full' ? '#94A3B8' : getJoinState(ev) === 'joined' ? '#16a34a' : getJoinState(ev) === 'pending' ? '#d97706' : '#fff' }}>
+                            {getJoinState(ev) === 'full' ? 'Full' : getJoinState(ev) === 'joined' ? 'Joined ✓' : getJoinState(ev) === 'pending' ? 'Pending…' : ev.type === 'official' ? "Going →" : 'Join →'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </View>
@@ -1401,9 +1381,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}
-                          <Text style={{ color: '#94A3B8', fontWeight: '400', fontSize: 12 }}>  {opt.id === '1+1' ? 'me +1' : opt.id === 'squad' ? 'me +4' : 'me +19'}</Text>
-                        </Text>
+                        <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}</Text>
                         <Text style={s.joinSheetCardSub}>{opt.sub}</Text>
                       </View>
                       {active && <Ionicons name="checkmark-circle" size={22} color="#6366F1" />}
@@ -1567,7 +1545,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
               const statusLabel = isConfirmed ? 'Confirmed ✅'
                 : isActive ? 'Group Ready!'
-                : partnersFound > 0 ? 'Vetting...' : 'Matching...'
+                : partnersFound > 0 ? 'Building crew...' : 'Matching...'
               const statusColor = isConfirmed ? '#16a34a' : isActive ? '#16a34a' : partnersFound > 0 ? '#6366F1' : '#d97706'
               const statusBg    = isConfirmed ? 'rgba(34,197,94,0.12)' : isActive ? 'rgba(34,197,94,0.12)' : partnersFound > 0 ? 'rgba(99,102,241,0.1)' : 'rgba(251,191,36,0.15)'
 
@@ -1708,8 +1686,8 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               {chat.expiresIn <= 6 && <View style={{ height: 3, backgroundColor: '#EF4444', borderRadius: 99 }} />}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13 }}>
                 {chat.type === 'duo' ? (
-                  <View style={[s.chatAvatar, { backgroundColor: chat.color }]}>
-                    <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%', borderRadius: 28 }} />
+                  <View style={[s.chatAvatar, { backgroundColor: chat.color, alignItems: 'center', justifyContent: 'center' }]}>
+                    {chat.photo ? <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%', borderRadius: 28 }} /> : <Text style={{ fontSize: 22 }}>👤</Text>}
                   </View>
                 ) : (
                   <View style={{ width: 56, height: 42 }}>
@@ -1831,6 +1809,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 
 const QUEUE_PROFILES = [
   { id: 1,  name: 'Alex',    age: 29, flag: '🇬🇧', color: '#818CF8', colors: ['#818CF8','#6366F1'], emoji: '🎾',
+    photo: 'https://i.pravatar.cc/400?img=11',
     bio: 'Tennis addict & coffee snob. Love meeting new people over a good game.',
     interests: ['Tennis','Coffee','Tech','Travel'], langs: ['🇬🇧','🇷🇺'], transport: 'car',  goal: 'networking' },
   { id: 2,  name: 'Maya',    age: 26, flag: '🇷🇺', color: '#4CAF50', colors: ['#43E97B','#38f9d7'], emoji: '📚',
@@ -1885,7 +1864,10 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
         {/* Photo carousel */}
         <View style={{ height: 280, position: 'relative' }}>
           <LinearGradient colors={photoPalettes[photoIdx] as any} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 72 }}>{profile.emoji}</Text>
+            {profile.photo && photoIdx === 0
+              ? <Image source={{ uri: profile.photo }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              : <Text style={{ fontSize: 72 }}>{profile.emoji}</Text>
+            }
           </LinearGradient>
           {/* Gradient overlay bottom */}
           <LinearGradient colors={['transparent', '#100D20']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }} />
@@ -1898,10 +1880,18 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
             ))}
           </View>
           {/* Swipe areas */}
-          <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: '45%', height: '100%' }}
-            onPress={() => setPhotoIdx(i => Math.max(0, i - 1))} />
-          <TouchableOpacity style={{ position: 'absolute', right: 0, top: 0, width: '45%', height: '100%' }}
-            onPress={() => setPhotoIdx(i => Math.min(2, i + 1))} />
+          <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', paddingLeft: 14, opacity: photoIdx > 0 ? 1 : 0 }}
+            onPress={() => setPhotoIdx(i => Math.max(0, i - 1))}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="chevron-left" size={22} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ position: 'absolute', right: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', alignItems: 'flex-end', paddingRight: 14, opacity: photoIdx < photoPalettes.length - 1 ? 1 : 0 }}
+            onPress={() => setPhotoIdx(i => Math.min(photoPalettes.length - 1, i + 1))}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="chevron-right" size={22} color="#fff" />
+            </View>
+          </TouchableOpacity>
           {/* Close */}
           <TouchableOpacity onPress={close} style={{
             position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16,
@@ -1956,6 +1946,159 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
         </View>
       </Animated.View>
     </Modal>
+  )
+}
+
+function SeekersListWithProfile({ vibeResults, onPass, onLike }: { vibeResults: Record<number, string>; onPass: (id: number) => void; onLike: (sk: any) => void }) {
+  const [preview, setPreview] = useState<any>(null)
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        {MOCK_SEEKERS.map(sk => {
+          const result = vibeResults[sk.id]
+          return (
+            <View key={sk.id} style={[s.seekerCard, result === 'vibe' && { borderColor: '#818CF8', borderWidth: 2 }, result === 'pass' && { opacity: 0.35 }]}>
+              <TouchableOpacity onPress={() => { setPreview({ ...sk, colors: [sk.color, '#1E1B4B'], flag: FLAG_MAP[sk.langs[0]] || '🌍', langs: sk.langs.map((l: string) => FLAG_MAP[l] || '🌍'), interests: [], goal: sk.format === '1+1' ? 'networking' : 'chill', emoji: FORMAT_BADGE[sk.format]?.label || '👤' }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.8}>
+                <Image source={{ uri: sk.photo }} style={s.seekerPhoto} />
+                {FORMAT_BADGE[sk.format] && (
+                  <View style={[s.formatBadge, { backgroundColor: FORMAT_BADGE[sk.format].color }]}>
+                    <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>{FORMAT_BADGE[sk.format].label}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>{sk.name}, {sk.age}</Text>
+                  {sk.langs.map((l: string) => <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌍'}</Text>)}
+                </View>
+                <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }} numberOfLines={2}>{sk.bio}</Text>
+                <Text style={{ fontSize: 11, color: '#818CF8', marginTop: 4, fontWeight: '600' }}>{TRANSPORT_LABEL[sk.transport]}</Text>
+              </View>
+              {!result ? (
+                <View style={{ gap: 8 }}>
+                  <TouchableOpacity style={s.passBtn} onPress={() => onPass(sk.id)}>
+                    <Ionicons name="close" size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.vibeBtn} onPress={() => onLike(sk)}>
+                    <Text style={{ fontSize: 18 }}>⭐</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: result === 'vibe' ? 'rgba(129,140,248,0.15)' : 'rgba(0,0,0,0.05)' }}>
+                  <Text style={{ fontSize: 18 }}>{result === 'vibe' ? '⭐' : '✕'}</Text>
+                </View>
+              )}
+            </View>
+          )
+        })}
+      </ScrollView>
+      {preview && <InlineProfileSheet profile={preview} onClose={() => setPreview(null)} />}
+    </View>
+  )
+}
+
+function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () => void }) {
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const slideAnim = useRef(new Animated.Value(400)).current
+  const leftArrow = useRef(new Animated.Value(0)).current
+  const rightArrow = useRef(new Animated.Value(0)).current
+
+  const flash = (anim: Animated.Value) => {
+    anim.setValue(1)
+    Animated.timing(anim, { toValue: 0, duration: 300, useNativeDriver: true }).start()
+  }
+
+  useEffect(() => {
+    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start()
+  }, [])
+
+  const close = () => {
+    Animated.timing(slideAnim, { toValue: 400, duration: 220, useNativeDriver: true }).start(onClose)
+  }
+
+  const photoPalettes = [
+    profile.colors,
+    [profile.colors[1], '#0A0812'],
+    ['#0A0812', profile.colors[0]],
+  ]
+
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={close} />
+      <Animated.View style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        backgroundColor: '#100D20', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        transform: [{ translateY: slideAnim }],
+        maxHeight: '90%',
+      }}>
+        {/* Photo carousel */}
+        <View style={{ height: 280, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }}>
+          <LinearGradient colors={photoPalettes[photoIdx] as any} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            {profile.photo && photoIdx === 0
+              ? <Image source={{ uri: profile.photo }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              : <Text style={{ fontSize: 72 }}>{profile.emoji}</Text>
+            }
+          </LinearGradient>
+          <LinearGradient colors={['transparent', '#100D20']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }} pointerEvents="none" />
+          <TouchableOpacity onPress={() => setPhotoIdx(i => Math.max(0, i - 1))} style={{ position: 'absolute', left: 14, top: 120, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', opacity: photoIdx > 0 ? 1 : 0 }}>
+            <Feather name="chevron-left" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setPhotoIdx(i => Math.min(photoPalettes.length - 1, i + 1))} style={{ position: 'absolute', right: 14, top: 120, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', opacity: photoIdx < photoPalettes.length - 1 ? 1 : 0 }}>
+            <Feather name="chevron-right" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={close} style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+            <Feather name="x" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        {/* Контент — свой ScrollView */}
+        <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+          <View style={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
+              <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{profile.age}</Text>
+              <Text style={{ fontSize: 20 }}>{profile.flag}</Text>
+            </View>
+            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>
+                  {profile.transport === 'car' ? '🚗 Driving' : profile.transport === 'lift' ? '🙋 Needs lift' : '📍 Meet there'}
+                </Text>
+              </View>
+              {profile.goal && (
+                <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>{GOAL_LABEL[profile.goal] || '😌 Chill'}</Text>
+                </View>
+              )}
+            </View>
+            {profile.langs?.length > 0 && (
+              <>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>LANGUAGES</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+                  {profile.langs.map((l: string, i: number) => (
+                    <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
+                      <Text style={{ fontSize: 14 }}>{l}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+            {profile.interests?.length > 0 && (
+              <>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>INTERESTS</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {profile.interests.map((tag: string, i: number) => (
+                    <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: `${profile.colors[0]}22`, borderWidth: 1, borderColor: `${profile.colors[0]}44` }}>
+                      <Text style={{ fontSize: 12, color: profile.colors[0], fontWeight: '700' }}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </View>
   )
 }
 
@@ -2173,7 +2316,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         onPress={() => onConfirm?.(ev, partners, format)}
                         style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
                         <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>
-                          {isParty ? 'Join the chat 🎉' : "Count me in! 🎉"}
+                          {isParty ? 'Join the chat 🚀' : "Let's go! 🚀"}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -2293,6 +2436,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
   const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
   const [chatInput, setChatInput] = useState('')
   const [chatList, setChatList] = useState(MOCK_CHATS)
+  const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
   const scrollRef = useRef<ScrollView>(null)
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
@@ -2406,6 +2550,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                 photo: '', lastMsg: '👋 You matched! Say hello',
                 time: 'now', isNew: true, expiresIn: 24,
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                partnerProfile: partners[0] || null,
               }
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
@@ -2601,46 +2746,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                 <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>Like someone to start chatting 💬</Text>
               </View>
 
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-                {MOCK_SEEKERS.map(sk => {
-                  const result = vibeResults[sk.id]
-                  return (
-                    <View key={sk.id} style={[s.seekerCard, result === 'vibe' && { borderColor: '#818CF8', borderWidth: 2 }, result === 'pass' && { opacity: 0.35 }]}>
-                      <View>
-                        <Image source={{ uri: sk.photo }} style={s.seekerPhoto} />
-                        {/* Format badge on avatar */}
-                        {FORMAT_BADGE[sk.format] && (
-                          <View style={[s.formatBadge, { backgroundColor: FORMAT_BADGE[sk.format].color }]}>
-                            <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>{FORMAT_BADGE[sk.format].label}</Text>
-                          </View>
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>{sk.name}, {sk.age}</Text>
-                          {sk.langs.map((l: string) => <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌍'}</Text>)}
-                        </View>
-                        <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }} numberOfLines={2}>{sk.bio}</Text>
-                        <Text style={{ fontSize: 11, color: '#818CF8', marginTop: 4, fontWeight: '600' }}>{TRANSPORT_LABEL[sk.transport]}</Text>
-                      </View>
-                      {!result ? (
-                        <View style={{ gap: 8 }}>
-                          <TouchableOpacity style={s.passBtn} onPress={() => handlePass(sk.id)}>
-                            <Ionicons name="close" size={20} color="#94A3B8" />
-                          </TouchableOpacity>
-                          <TouchableOpacity style={s.vibeBtn} onPress={() => handleLike(sk)}>
-                            <Text style={{ fontSize: 18 }}>⭐</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: result === 'vibe' ? 'rgba(129,140,248,0.15)' : 'rgba(0,0,0,0.05)' }}>
-                          <Text style={{ fontSize: 18 }}>{result === 'vibe' ? '⭐' : '✕'}</Text>
-                        </View>
-                      )}
-                    </View>
-                  )
-                })}
-              </ScrollView>
+              <SeekersListWithProfile vibeResults={vibeResults} onPass={handlePass} onLike={handleLike} />
             </SafeAreaView>
           </LinearGradient>
         </Modal>
@@ -2707,24 +2813,39 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
                   <Ionicons name="chevron-back" size={24} color="#1E1B4B" />
                 </TouchableOpacity>
                 {openChat.type === 'duo' ? (
-                  <View style={[s.chatHeaderAvatar, { backgroundColor: openChat.color }]}>
-                    <Image source={{ uri: openChat.photo }} style={{ width: '100%', height: '100%', borderRadius: 20 }} />
-                  </View>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 4 }}
+                    onPress={() => { if (openChat.partnerProfile) { setChatPartnerPreview(openChat.partnerProfile); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) } }}
+                    activeOpacity={openChat.partnerProfile ? 0.7 : 1}
+                  >
+                    <View style={[s.chatHeaderAvatar, { backgroundColor: openChat.color, alignItems: 'center', justifyContent: 'center' }]}>
+                      {openChat.photo ? <Image source={{ uri: openChat.photo }} style={{ width: '100%', height: '100%', borderRadius: 20 }} /> : <Text style={{ fontSize: 22 }}>👤</Text>}
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }}>
+                        {`${openChat.name}, ${openChat.age}`}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#64748B' }}>
+                        {openChat.eventEmoji} {openChat.event}
+                        {openChat.partnerProfile ? '  · View profile' : ''}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 ) : (
-                  <View style={{ width: 44, height: 40, marginLeft: 10 }}>
-                    {openChat.avatars?.slice(0, 2).map((av: string, ai: number) => (
-                      <Image key={ai} source={{ uri: av }} style={[s.chatAvatarOverlap, { left: ai * 16, zIndex: 2 - ai }]} />
-                    ))}
-                  </View>
+                  <>
+                    <View style={{ width: 44, height: 40, marginLeft: 10 }}>
+                      {openChat.avatars?.slice(0, 2).map((av: string, ai: number) => (
+                        <Image key={ai} source={{ uri: av }} style={[s.chatAvatarOverlap, { left: ai * 16, zIndex: 2 - ai }]} />
+                      ))}
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }}>{openChat.event}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B' }}>
+                        {openChat.eventEmoji} {openChat.members} members
+                      </Text>
+                    </View>
+                  </>
                 )}
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }}>
-                    {openChat.type === 'duo' ? `${openChat.name}, ${openChat.age}` : openChat.event}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: '#64748B' }}>
-                    {openChat.eventEmoji} {openChat.type === 'duo' ? openChat.event : `${openChat.members} members`}
-                  </Text>
-                </View>
                 <TouchableOpacity onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                   const msg = openChat.type === 'duo'
@@ -2809,6 +2930,8 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
           </LinearGradient>
         </Modal>
       )}
+
+      {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
 
       {/* Toast notification */}
       {toast.visible && (
