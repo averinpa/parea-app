@@ -1038,7 +1038,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
+        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 24, 80) }]}>
           {step === TOTAL ? (
             <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
               <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
@@ -2341,52 +2341,120 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
-function ProfileTab({ userData }: { userData: any }) {
+function ProfileTab({ userData, onLogOut }: { userData: any; onLogOut?: () => void }) {
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
+  const userPhotos: string[] = (userData?.photos || []).filter(Boolean)
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null)
 
   return (
-    <ScrollView contentContainerStyle={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 48 }}>
-      <View style={{ alignItems: 'center', marginBottom: 28 }}>
-        <View style={s.profileAvatar}>
-          {userData?.photos?.[0] ? (
-            <Image source={{ uri: userData.photos[0] }} style={{ width: '100%', height: '100%', borderRadius: 60 }} />
-          ) : (
-            <Text style={{ fontSize: 44 }}>😊</Text>
+    <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+      {/* Full-screen photo preview with info overlay */}
+      <Modal visible={previewIdx !== null} transparent animationType="fade" onRequestClose={() => setPreviewIdx(null)}>
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          {previewIdx !== null && userPhotos[previewIdx] && (
+            <Image source={{ uri: userPhotos[previewIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           )}
+          {/* Gradient + info at bottom */}
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 60 }}>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
+            {userData?.bio ? <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 6, lineHeight: 20 }}>{userData.bio}</Text> : null}
+            {(userData?.interests || []).length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+                {(userData.interests || []).map((item: string) => (
+                  <View key={item} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 13, color: '#fff', fontWeight: '600' }}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {(userData?.langs || []).length > 0 && (
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+                {(userData.langs || []).map((code: string) => {
+                  const l = LANGUAGES_LIST.find(x => x.code === code)
+                  return l ? <Text key={code} style={{ fontSize: 18 }}>{l.flag}</Text> : null
+                })}
+              </View>
+            )}
+          </LinearGradient>
+          {/* Left arrow */}
+          {previewIdx !== null && previewIdx > 0 && (
+            <TouchableOpacity onPress={() => setPreviewIdx(i => (i !== null ? i - 1 : i))}
+              style={{ position: 'absolute', left: 16, top: '45%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="chevron-left" size={26} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {/* Right arrow */}
+          {previewIdx !== null && previewIdx < userPhotos.length - 1 && (
+            <TouchableOpacity onPress={() => setPreviewIdx(i => (i !== null ? i + 1 : i))}
+              style={{ position: 'absolute', right: 16, top: '45%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="chevron-right" size={26} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {/* Dots */}
+          {userPhotos.length > 1 && (
+            <View style={{ flexDirection: 'row', gap: 6, position: 'absolute', top: 52, alignSelf: 'center', left: 0, right: 0, justifyContent: 'center' }}>
+              {userPhotos.map((_, i) => (
+                <TouchableOpacity key={i} onPress={() => setPreviewIdx(i)}>
+                  <View style={{ width: previewIdx === i ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: previewIdx === i ? '#fff' : 'rgba(255,255,255,0.4)' }} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          {/* Close */}
+          <TouchableOpacity onPress={() => setPreviewIdx(null)}
+            style={{ position: 'absolute', top: 44, right: 20, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+            <Feather name="x" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
-        <Text style={{ fontSize: 24, fontWeight: '800', color: '#1E1B4B', marginTop: 14, letterSpacing: -0.4 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
-        {userData?.bio ? <Text style={{ fontSize: 14, color: '#64748B', marginTop: 6, textAlign: 'center', lineHeight: 20 }}>{userData.bio}</Text> : null}
-        {userData?.hasCar && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, backgroundColor: 'rgba(99,102,241,0.08)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 99 }}>
-            <Text style={{ fontSize: 14 }}>🚗</Text>
-            <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '600' }}>Has a car</Text>
+      </Modal>
+
+      {/* Header */}
+      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.4 }}>My Profile</Text>
+      </View>
+
+      {/* Photo grid */}
+      <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+        {userPhotos.length > 0 ? (
+          userPhotos.length === 1 ? (
+            <TouchableOpacity onPress={() => setPreviewIdx(0)} style={{ width: '100%', height: 260, borderRadius: 20, overflow: 'hidden' }}>
+              <Image source={{ uri: userPhotos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            </TouchableOpacity>
+          ) : userPhotos.length === 2 ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {userPhotos.map((uri, i) => (
+                <TouchableOpacity key={i} onPress={() => setPreviewIdx(i)} style={{ flex: 1, height: 200, borderRadius: 16, overflow: 'hidden' }}>
+                  <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity onPress={() => setPreviewIdx(0)} style={{ flex: 2, height: 240, borderRadius: 16, overflow: 'hidden' }}>
+                <Image source={{ uri: userPhotos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              </TouchableOpacity>
+              <View style={{ flex: 1, gap: 8 }}>
+                {userPhotos.slice(1).map((uri, i) => (
+                  <TouchableOpacity key={i} onPress={() => setPreviewIdx(i + 1)} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
+                    <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )
+        ) : (
+          <View style={[s.profileAvatar, { alignSelf: 'center' }]}>
+            <Text style={{ fontSize: 44 }}>😊</Text>
           </View>
         )}
       </View>
 
-      {(userData?.interests || []).length > 0 && (
-        <View style={{ marginBottom: 24 }}>
-          <Text style={s.profileSectionTitle}>Interests</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-            {(userData.interests || []).map((item: string) => (
-              <View key={item} style={s.profileChip}><Text style={s.profileChipTxt}>{item}</Text></View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {(userData?.langs || []).length > 0 && (
-        <View style={{ marginBottom: 28 }}>
-          <Text style={s.profileSectionTitle}>Languages</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-            {(userData.langs || []).map((code: string) => {
-              const l = LANGUAGES_LIST.find(x => x.code === code)
-              return l ? <View key={code} style={s.profileChip}><Text style={s.profileChipTxt}>{l.flag} {l.label}</Text></View> : null
-            })}
-          </View>
-        </View>
-      )}
+      {/* Name + bio compact */}
+      <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
+        {userData?.bio ? <Text style={{ fontSize: 14, color: '#64748B', marginTop: 4, lineHeight: 20 }}>{userData.bio}</Text> : null}
+      </View>
 
       {[
         { icon: 'settings', label: 'Settings' },
@@ -2394,7 +2462,7 @@ function ProfileTab({ userData }: { userData: any }) {
         { icon: 'file-text', label: 'Terms of Service' },
         { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
       ].map(item => (
-        <TouchableOpacity key={item.label} style={s.profileActionRow}>
+        <TouchableOpacity key={item.label} style={s.profileActionRow} onPress={item.label === 'Log Out' ? onLogOut : undefined}>
           <Feather name={item.icon as any} size={18} color={item.color || '#64748B'} />
           <Text style={[{ flex: 1, fontSize: 15, color: '#334155', marginLeft: 14 }, item.color ? { color: item.color } : {}]}>{item.label}</Text>
           <Feather name="chevron-right" size={16} color="#CBD5E1" />
@@ -2421,7 +2489,7 @@ const CREATE_EVENT_TYPES = [
   { id: 'picnic',      label: 'Picnic',       emoji: '🧺' },
 ]
 
-function FeedScreen({ userData = {} }: { userData?: any }) {
+function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: () => void }) {
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
@@ -2597,7 +2665,7 @@ function FeedScreen({ userData = {} }: { userData?: any }) {
               setTimeout(() => setPendingJoinEv(ev), 150)
             }}
           />}
-          {activeTab === 'profile' && <ProfileTab userData={userData} />}
+          {activeTab === 'profile' && <ProfileTab userData={userData} onLogOut={onLogOut} />}
         </View>
 
         {/* Bottom nav */}
@@ -2963,7 +3031,7 @@ export default function App() {
   if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onContinue={() => setScreen('otp')} />
   if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} onVerify={() => setScreen('onboarding')} />
   if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={data => { setUserData(data); setScreen('feed') }} />
-  return <FeedScreen userData={userData} />
+  return <FeedScreen userData={userData} onLogOut={() => { setUserData({}); setScreen('register') }} />
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
