@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator, Alert, Animated, Dimensions, Image, Linking,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform,
@@ -1847,10 +1847,12 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
   }
 
   // 3 gradient combos per person as photo placeholders
+  const c0 = (profile.colors?.[0]) || profile.color || '#6366F1'
+  const c1 = (profile.colors?.[1]) || profile.color || '#818CF8'
   const photoPalettes = [
-    profile.colors,
-    [profile.colors[1], '#0A0812'],
-    ['#0A0812', profile.colors[0]],
+    [c0, c1],
+    [c1, '#0A0812'],
+    ['#0A0812', c0],
   ]
 
   return (
@@ -1925,24 +1927,32 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
           </View>
 
           {/* Languages */}
-          <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>LANGUAGES</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
-            {profile.langs.map((l: string, i: number) => (
-              <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
-                <Text style={{ fontSize: 14 }}>{l}</Text>
+          {(profile.langs || []).length > 0 && (
+            <>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>LANGUAGES</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+                {(profile.langs || []).map((l: string, i: number) => (
+                  <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
+                    <Text style={{ fontSize: 14 }}>{l}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            </>
+          )}
 
           {/* Interests */}
-          <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>INTERESTS</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {profile.interests.map((tag: string, i: number) => (
-              <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: `${profile.colors[0]}22`, borderWidth: 1, borderColor: `${profile.colors[0]}44` }}>
-                <Text style={{ fontSize: 12, color: profile.colors[0], fontWeight: '700' }}>{tag}</Text>
+          {(profile.interests || []).length > 0 && (
+            <>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>INTERESTS</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(profile.interests || []).map((tag: string, i: number) => (
+                  <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: `${c0}22`, borderWidth: 1, borderColor: `${c0}44` }}>
+                    <Text style={{ fontSize: 12, color: c0, fontWeight: '700' }}>{tag}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            </>
+          )}
         </View>
       </Animated.View>
     </Modal>
@@ -2509,6 +2519,9 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
+  const evHost = eventDetail?.type === 'community' ? MOCK_SEEKERS[(eventDetail.id - 1) % MOCK_SEEKERS.length] : null
+  const evSpotsLeft = eventDetail?.maxParticipants ? eventDetail.maxParticipants - eventDetail.participantsCount : null
+  const evIsFull = evSpotsLeft !== null && evSpotsLeft <= 0
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
@@ -2758,66 +2771,121 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
 
       {/* Event detail */}
       {eventDetail && (
-        <Modal visible animationType="slide" onRequestClose={() => { setEventDetail(null); setVibeResults({}) }}>
-          <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
-            <StatusBar style="dark" />
-            <SafeAreaView style={s.fill}>
-              <LinearGradient colors={eventDetail.gradient as any} style={s.detailHeader}>
-                <TouchableOpacity onPress={() => { setEventDetail(null); setVibeResults({}) }} style={s.detailBackBtn}>
-                  <Ionicons name="chevron-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <View style={{ flex: 1, paddingRight: 56 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
-                    {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()}  ·  {eventDetail.distance}
-                  </Text>
-                  <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28 }}>{eventDetail.title}</Text>
-                  <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>🕐 {eventDetail.time}</Text>
-                </View>
-              </LinearGradient>
+          <Modal visible animationType="slide" onRequestClose={() => setEventDetail(null)}>
+            <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
+              <StatusBar style="dark" />
+              <SafeAreaView style={s.fill}>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {/* Header */}
+                  <LinearGradient colors={eventDetail.gradient as any} style={{ minHeight: 200, padding: 20, paddingTop: 52, justifyContent: 'flex-end' }}>
+                    <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { top: 16 }]}>
+                      <Ionicons name="chevron-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
+                      {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()} · {eventDetail.distance}
+                    </Text>
+                    <Text style={{ fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 30 }}>{eventDetail.title}</Text>
+                  </LinearGradient>
 
-              {/* Organizer Block (Official only) */}
-              {eventDetail.type === 'official' && eventDetail.organizer && (
-                <View style={s.organizerBlock}>
-                  <View style={s.organizerLogoWrap}>
-                    <Text style={{ fontSize: 22 }}>{eventDetail.organizer.emoji}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E1B4B' }}>{eventDetail.organizer.name}</Text>
-                    {eventDetail.source && (
-                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>Source: {eventDetail.source}</Text>
+                  <View style={{ padding: 16, gap: 12 }}>
+                    {/* Time + Location card */}
+                    <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, gap: 14 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="clock" size={18} color="#6366F1" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date & Time</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>{eventDetail.time}</Text>
+                        </View>
+                      </View>
+                      <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="map-pin" size={18} color="#6366F1" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Location</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>{eventDetail.city}</Text>
+                          <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>{eventDetail.distance} from you</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Map placeholder */}
+                    <View style={{ backgroundColor: '#E2E8F0', borderRadius: 16, height: 130, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      <Feather name="map" size={30} color="#94A3B8" />
+                      <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 6, fontWeight: '600' }}>Map coming soon</Text>
+                    </View>
+
+                    {/* Participants */}
+                    <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="users" size={18} color="#6366F1" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Participants</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>
+                          {eventDetail.participantsCount} going{evSpotsLeft !== null ? `  ·  ${evSpotsLeft} spots left` : ''}
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: evIsFull ? '#fef2f2' : '#f0fdf4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: evIsFull ? '#EF4444' : '#22c55e' }}>{evIsFull ? 'Full' : 'Open'}</Text>
+                      </View>
+                    </View>
+
+                    {/* Organizer (official) */}
+                    {eventDetail.type === 'official' && eventDetail.organizer && (
+                      <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 22 }}>{eventDetail.organizer.emoji}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Organizer</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>{eventDetail.organizer.name}</Text>
+                          {eventDetail.source && <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>via {eventDetail.source}</Text>}
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5 }}>
+                          <Ionicons name="checkmark-circle" size={12} color="#6366F1" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>Verified</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Get Tickets */}
+                    {eventDetail.ticketLink && (
+                      <TouchableOpacity style={s.ticketBtn} onPress={() => Linking.openURL(eventDetail.ticketLink)} activeOpacity={0.8}>
+                        <Ionicons name="ticket-outline" size={16} color="#6366F1" style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#6366F1' }}>Get Tickets 🎫</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Host card (community events) */}
+                    {evHost && (
+                      <>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B', marginTop: 4, letterSpacing: -0.3 }}>Event Host</Text>
+                        <TouchableOpacity
+                          onPress={() => setChatPartnerPreview(evHost)}
+                          style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                          activeOpacity={0.85}>
+                          <Image source={{ uri: evHost.photo }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#EEF2FF' }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{evHost.name}, {evHost.age}</Text>
+                            <Text style={{ fontSize: 13, color: '#64748B', marginTop: 3, lineHeight: 18 }} numberOfLines={2}>{evHost.bio}</Text>
+                            <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                              {evHost.langs.map((l: string) => <Text key={l} style={{ fontSize: 15 }}>{FLAG_MAP[l]}</Text>)}
+                              {evHost.transport && <Text style={{ fontSize: 12, color: '#94A3B8', marginLeft: 4 }}>{TRANSPORT_LABEL[evHost.transport]}</Text>}
+                            </View>
+                          </View>
+                          <Feather name="chevron-right" size={18} color="#CBD5E1" />
+                        </TouchableOpacity>
+                      </>
                     )}
                   </View>
-                  <View style={s.orgVerifiedBadge}>
-                    <Ionicons name="checkmark-circle" size={12} color="#6366F1" />
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#6366F1', marginLeft: 3 }}>Verified</Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Get Tickets button */}
-              {eventDetail.ticketLink && (
-                <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 }}>
-                  <TouchableOpacity
-                    style={s.ticketBtn}
-                    onPress={() => Linking.openURL(eventDetail.ticketLink)}
-                    activeOpacity={0.8}>
-                    <Ionicons name="ticket-outline" size={16} color="#6366F1" style={{ marginRight: 6 }} />
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#6366F1' }}>Get Tickets 🎫</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 }}>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>
-                  {eventDetail.type === 'official' ? 'Find your buddy for this event' : 'People going to this event'}
-                </Text>
-                <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>Like someone to start chatting 💬</Text>
-              </View>
-
-              <SeekersListWithProfile vibeResults={vibeResults} onPass={handlePass} onLike={handleLike} />
-            </SafeAreaView>
-          </LinearGradient>
-        </Modal>
+                </ScrollView>
+              </SafeAreaView>
+            </LinearGradient>
+          </Modal>
       )}
 
       {/* Match modal */}
