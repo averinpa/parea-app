@@ -2672,6 +2672,82 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+  type Notif = { id: string; type: string; title: string; body: string; emoji: string; color: string; time: number; read: boolean }
+  const [notifications, setNotifications] = useState<Notif[]>([])
+  const [notifOpen, setNotifOpen] = useState(false)
+  const bellShake = useRef(new Animated.Value(0)).current
+  const notifPanelY = useRef(new Animated.Value(-600)).current
+  const prevPendingRef = useRef<Record<number, any[]>>({})
+  const prevChatCountRef = useRef(0)
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const addNotif = (n: Omit<Notif, 'id' | 'time' | 'read'>) => {
+    const newN: Notif = { ...n, id: `${Date.now()}-${Math.random()}`, time: Date.now(), read: false }
+    setNotifications(prev => [newN, ...prev].slice(0, 30))
+    // Bell shake animation
+    bellShake.setValue(0)
+    Animated.sequence([
+      Animated.timing(bellShake, { toValue: 12, duration: 60, useNativeDriver: true }),
+      Animated.timing(bellShake, { toValue: -10, duration: 60, useNativeDriver: true }),
+      Animated.timing(bellShake, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(bellShake, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(bellShake, { toValue: 3, duration: 40, useNativeDriver: true }),
+      Animated.timing(bellShake, { toValue: 0, duration: 40, useNativeDriver: true }),
+    ]).start()
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+  }
+
+  const openNotifPanel = () => {
+    setNotifOpen(true)
+    Animated.spring(notifPanelY, { toValue: 0, useNativeDriver: true, tension: 70, friction: 12 }).start()
+  }
+  const closeNotifPanel = () => {
+    Animated.timing(notifPanelY, { toValue: -600, duration: 260, useNativeDriver: true }).start(() => setNotifOpen(false))
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
+  const dismissNotif = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  }
+
+  // Watch for new join requests
+  useEffect(() => {
+    Object.entries(pendingJoinRequests).forEach(([evId, reqs]) => {
+      const prev = prevPendingRef.current[Number(evId)] || []
+      reqs.filter(r => !prev.find((p: any) => p.requestId === r.requestId)).forEach(req => {
+        const ev = userCreatedEvents.find(e => e.id === Number(evId))
+        addNotif({ type: 'join_request', emoji: '🙋', color: '#6366F1', title: `${req.name} wants to join`, body: ev?.title || 'your social' })
+      })
+    })
+    prevPendingRef.current = pendingJoinRequests
+  }, [pendingJoinRequests])
+
+  // Watch for new chats (approvals / matches)
+  useEffect(() => {
+    if (chatList.length > prevChatCountRef.current && prevChatCountRef.current > 0) {
+      const newest = chatList[0]
+      if (newest.type === 'duo') {
+        addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `You matched with ${newest.name}!`, body: newest.event || 'Check your chats' })
+      } else {
+        addNotif({ type: 'group_chat', emoji: '🎉', color: '#10B981', title: 'Group chat is live!', body: newest.event || 'Your crew is ready' })
+      }
+    }
+    prevChatCountRef.current = chatList.length
+  }, [chatList.length])
+
+  const timeAgo = (ms: number) => {
+    const s = Math.floor((Date.now() - ms) / 1000)
+    if (s < 60) return 'just now'
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+    return `${Math.floor(s / 86400)}d ago`
+  }
+  // ── End Notifications ──────────────────────────────────────────────────────
+
   const [toast, setToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
   const toastAnim = useRef(new Animated.Value(0)).current
 
@@ -2782,6 +2858,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
               }
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+              addNotif({ type: 'confirmed', emoji: '✅', color: '#10B981', title: 'You\'re in!', body: `Your crew for "${ev.title}" is ready` })
               showToast(`Chat created! 🎉`)
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
@@ -3683,6 +3760,99 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
       )}
 
       {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
+
+      {/* ── Floating Bell ──────────────────────────────────────────────────── */}
+      {!createOpen && !eventDetail && !openChat && (
+        <Animated.View style={{
+          position: 'absolute', top: 52, right: 20, zIndex: 500,
+          transform: [{ rotate: bellShake.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) }],
+        }}>
+          <TouchableOpacity onPress={openNotifPanel} activeOpacity={0.85}
+            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+              shadowColor: '#6366F1', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
+            <Ionicons name="notifications-outline" size={22} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
+            {unreadCount > 0 && (
+              <View style={{ position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8,
+                backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
+                paddingHorizontal: 3, borderWidth: 1.5, borderColor: '#fff' }}>
+                <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* ── Notification Panel ─────────────────────────────────────────────── */}
+      {notifOpen && (
+        <Modal visible transparent animationType="none" onRequestClose={closeNotifPanel}>
+          <View style={{ flex: 1 }}>
+            {/* Backdrop */}
+            <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,8,18,0.55)' }}
+              activeOpacity={1} onPress={closeNotifPanel} />
+            {/* Panel */}
+            <Animated.View style={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              transform: [{ translateY: notifPanelY }],
+              backgroundColor: '#fff', borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
+              maxHeight: '78%',
+              shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 24, elevation: 20,
+            }}>
+              {/* Top safe area fill */}
+              <View style={{ height: 52, backgroundColor: '#fff', borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }} />
+
+              {/* Header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingBottom: 14 }}>
+                <View>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>Notifications</Text>
+                  {unreadCount > 0 && <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '700', marginTop: 1 }}>{unreadCount} new</Text>}
+                </View>
+                <TouchableOpacity onPress={closeNotifPanel} activeOpacity={0.7}
+                  style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                  <Feather name="x" size={16} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 10 }}>
+                {notifications.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+                    <Text style={{ fontSize: 42, marginBottom: 12 }}>🔔</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B', marginBottom: 6 }}>All caught up!</Text>
+                    <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>Notifications will appear here{'\n'}when something happens</Text>
+                  </View>
+                ) : (
+                  notifications.map(n => (
+                    <View key={n.id} style={{
+                      flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+                      backgroundColor: n.read ? '#FAFAFA' : '#F5F3FF',
+                      borderRadius: 18, padding: 14,
+                      borderLeftWidth: 3, borderLeftColor: n.read ? '#E2E8F0' : n.color,
+                      shadowColor: n.read ? 'transparent' : n.color,
+                      shadowOpacity: n.read ? 0 : 0.12, shadowRadius: 8, elevation: n.read ? 0 : 2,
+                    }}>
+                      {/* Emoji icon */}
+                      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${n.color}18`,
+                        alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Text style={{ fontSize: 20 }}>{n.emoji}</Text>
+                      </View>
+                      {/* Text */}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: n.read ? '600' : '800', color: '#1E1B4B', marginBottom: 2 }}>{n.title}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }}>{n.body}</Text>
+                        <Text style={{ fontSize: 11, color: n.color, fontWeight: '600', marginTop: 5 }}>{timeAgo(n.time)}</Text>
+                      </View>
+                      {/* Dismiss */}
+                      <TouchableOpacity onPress={() => dismissNotif(n.id)} activeOpacity={0.7}
+                        style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                        <Feather name="x" size={13} color="#94A3B8" />
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
 
       {/* Group members sheet */}
       {groupMembersOpen && openChat && (
