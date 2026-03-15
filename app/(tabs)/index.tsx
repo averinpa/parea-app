@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator, Alert, Animated, Dimensions, Image, Linking,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform,
-  ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
@@ -2503,7 +2503,14 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
+  const [createStep, setCreateStep] = useState(1)
+  const [createSize, setCreateSize] = useState<string | null>(null)
   const [createType, setCreateType] = useState<string | null>(null)
+  const [createDay, setCreateDay] = useState('')
+  const [createHour, setCreateHour] = useState('')
+  const [createLocation, setCreateLocation] = useState('')
+  const [createDriving, setCreateDriving] = useState(false)
+  const [createLangs, setCreateLangs] = useState<string[]>([])
   const [city, setCity] = useState('Limassol')
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
@@ -2716,40 +2723,160 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
         </View>
 
         {/* Create event modal */}
-        <Modal visible={createOpen} transparent animationType="slide" onRequestClose={() => setCreateOpen(false)}>
-          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,12,41,0.55)' }} activeOpacity={1} onPress={() => setCreateOpen(false)} />
-          <View style={s.createSheet}>
-            <View style={s.bentoSheetHandle} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1, textTransform: 'uppercase' }}>Step 1 of 3</Text>
-              <TouchableOpacity onPress={() => setCreateOpen(false)} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(100,116,139,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="x" size={15} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 18 }}>What's the vibe? 👀</Text>
+        <Modal visible={createOpen} transparent animationType="slide" onRequestClose={() => { setCreateOpen(false); setCreateStep(1) }}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,12,41,0.55)' }} activeOpacity={1} onPress={() => { setCreateOpen(false); setCreateStep(1) }} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={[s.createSheet, { maxHeight: '88%' }]}>
+              <View style={s.bentoSheetHandle} />
 
-            {/* Progress bar */}
-            <View style={{ height: 3, backgroundColor: '#E2E8F0', borderRadius: 99, marginBottom: 20 }}>
-              <View style={{ width: '33%', height: '100%', backgroundColor: '#6366F1', borderRadius: 99 }} />
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 }}>
-              {CREATE_EVENT_TYPES.map(t => (
-                <TouchableOpacity key={t.id} onPress={() => setCreateType(t.id)} activeOpacity={0.8}
-                  style={[s.createTypeCard, createType === t.id && s.createTypeCardOn]}>
-                  <Text style={{ fontSize: 28, marginBottom: 6 }}>{t.emoji}</Text>
-                  <Text style={[s.createTypeLabel, createType === t.id && { color: '#6366F1', fontWeight: '700' }]}>{t.label}</Text>
+              {/* Fixed header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {createStep > 1 && (
+                    <TouchableOpacity onPress={() => setCreateStep(cs => cs - 1)} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(100,116,139,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Feather name="chevron-left" size={15} color="#64748B" />
+                    </TouchableOpacity>
+                  )}
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1, textTransform: 'uppercase' }}>Step {createStep} of 4</Text>
+                </View>
+                <TouchableOpacity onPress={() => { setCreateOpen(false); setCreateStep(1) }} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(100,116,139,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Feather name="x" size={15} color="#64748B" />
                 </TouchableOpacity>
-              ))}
-            </View>
+              </View>
+              <View style={{ height: 3, backgroundColor: '#E2E8F0', borderRadius: 99, marginBottom: 20 }}>
+                <View style={{ width: `${createStep * 25}%`, height: '100%', backgroundColor: '#6366F1', borderRadius: 99 }} />
+              </View>
 
-            <TouchableOpacity
-              style={[s.btnPrimary, !createType && { opacity: 0.4 }, createType && { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 }]}
-              disabled={!createType}
-              onPress={() => Alert.alert('Coming soon', 'Step 2 — date, time & location is coming next!')}>
-              <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue →</Text>
-            </TouchableOpacity>
-          </View>
+              {/* Content */}
+              <View>
+
+                {/* ── Step 1: Size ── */}
+                {createStep === 1 && (
+                  <View style={{ paddingBottom: 8 }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 16 }}>Who's coming? 👀</Text>
+                    <View style={{ gap: 10 }}>
+                      {[
+                        { id: 'duo',   emoji: '👥', label: 'Duo',   sub: 'Just 2 people — more intimate' },
+                        { id: 'squad', emoji: '🫂', label: 'Squad', sub: 'Small group, up to 5' },
+                        { id: 'party', emoji: '🎉', label: 'Party', sub: 'The more the merrier, up to 20' },
+                      ].map(opt => (
+                        <TouchableOpacity key={opt.id} onPress={() => setCreateSize(opt.id)} activeOpacity={0.8}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 18, backgroundColor: createSize === opt.id ? '#EEF2FF' : '#F8FAFC', borderWidth: 2, borderColor: createSize === opt.id ? '#6366F1' : 'transparent' }}>
+                          <Text style={{ fontSize: 30 }}>{opt.emoji}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{opt.label}</Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{opt.sub}</Text>
+                          </View>
+                          {createSize === opt.id && <Ionicons name="checkmark-circle" size={22} color="#6366F1" />}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* ── Step 2: Activity ── */}
+                {createStep === 2 && (
+                  <View style={{ paddingBottom: 8 }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 16 }}>What's the vibe? 🎯</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                      {CREATE_EVENT_TYPES.map(t => (
+                        <TouchableOpacity key={t.id} onPress={() => setCreateType(t.id)} activeOpacity={0.8}
+                          style={[s.createTypeCard, createType === t.id && s.createTypeCardOn]}>
+                          <Text style={{ fontSize: 26, marginBottom: 4 }}>{t.emoji}</Text>
+                          <Text style={[s.createTypeLabel, createType === t.id && { color: '#6366F1', fontWeight: '700' }]}>{t.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* ── Step 3: Logistics ── */}
+                {createStep === 3 && (
+                  <View style={{ paddingBottom: 8 }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 16 }}>When & Where? 📍</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>When</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                      {['Today', 'Tomorrow', 'Weekend'].map(d => (
+                        <TouchableOpacity key={d} onPress={() => setCreateDay(d)} activeOpacity={0.8}
+                          style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: createDay === d ? '#6366F1' : '#F1F5F9' }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: createDay === d ? '#fff' : '#334155' }}>{d}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => (
+                          <TouchableOpacity key={h} onPress={() => setCreateHour(h)} activeOpacity={0.8}
+                            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: createHour === h ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: createHour === h ? '#6366F1' : 'transparent' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: createHour === h ? '#6366F1' : '#64748B' }}>{h}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Location</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: createLocation.length > 0 ? '#6366F1' : '#F1F5F9' }}>
+                      <Feather name="map-pin" size={16} color="#6366F1" />
+                      <TextInput value={createLocation} onChangeText={setCreateLocation} placeholder="Café, beach, address..." placeholderTextColor="#94A3B8" style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
+                    </View>
+                  </View>
+                )}
+
+                {/* ── Step 4: Preferences ── */}
+                {createStep === 4 && (
+                  <View style={{ paddingBottom: 8 }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 20 }}>A few last things 🙌</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Text style={{ fontSize: 22 }}>🚗</Text>
+                        <View>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>I'm driving</Text>
+                          <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>Can give people a lift</Text>
+                        </View>
+                      </View>
+                      <Switch value={createDriving} onValueChange={setCreateDriving} trackColor={{ false: '#E2E8F0', true: '#818CF8' }} thumbColor={createDriving ? '#6366F1' : '#f4f3f4'} />
+                    </View>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Languages spoken</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {LANGUAGES_LIST.map((l: any) => (
+                        <TouchableOpacity key={l.code} onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])} activeOpacity={0.8}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: createLangs.includes(l.code) ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: createLangs.includes(l.code) ? '#6366F1' : 'transparent' }}>
+                          <Text style={{ fontSize: 14 }}>{l.flag || '🌐'}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: createLangs.includes(l.code) ? '#6366F1' : '#64748B' }}>{l.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+              </View>
+
+              {/* Fixed bottom button — extends background over navbar */}
+              <View style={{ backgroundColor: '#fff', marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 36 : 70 }}>
+                {createStep < 4 ? (
+                  <TouchableOpacity
+                    style={[s.btnPrimary,
+                      (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
+                        ? { opacity: 0.35 }
+                        : { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 }
+                    ]}
+                    disabled={(createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))}
+                    onPress={() => setCreateStep(cs => cs + 1)}>
+                    <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue →</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 }]}
+                    onPress={() => {
+                      setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null)
+                      setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false); setCreateLangs([])
+                      showToast('Event created! 🎉')
+                    }}>
+                    <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Event 🚀</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
 
@@ -3231,8 +3358,8 @@ const s = StyleSheet.create({
   navLabel: { fontSize: 10, fontWeight: '600', color: '#94A3B8' },
   navCreateBtn: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#fff', marginTop: -24, alignItems: 'center', justifyContent: 'center', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 12 },
   navCreateGrad: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-  createSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, maxHeight: '80%' },
-  createTypeCard: { width: (W - 40 - 30) / 3, aspectRatio: 1, borderRadius: 18, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+  createSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 0 },
+  createTypeCard: { width: (W - 40 - 24) / 4, aspectRatio: 1, borderRadius: 16, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'transparent' },
   createTypeCardOn: { backgroundColor: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.35)' },
   createTypeLabel: { fontSize: 11, color: '#64748B', fontWeight: '500', textAlign: 'center' },
 
