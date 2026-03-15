@@ -1736,10 +1736,11 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   const extra = (chat.members || 1) - 1 - shown.length
                   const cols = (chat.colors || ['#818CF8', '#6366F1', '#4F46E5'])
                   if (shown.length === 0) {
-                    // No member photos yet — show a single gradient circle with event emoji
+                    const gc0 = (cols[0] && typeof cols[0] === 'string') ? cols[0] : '#818CF8'
+                    const gc1 = (cols[1] && typeof cols[1] === 'string') ? cols[1] : '#6366F1'
                     return (
                       <LinearGradient
-                        colors={[cols[0] || '#818CF8', cols[1] || '#6366F1']}
+                        colors={[gc0, gc1]}
                         style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 24 }}>{chat.eventEmoji || '🎉'}</Text>
                       </LinearGradient>
@@ -3569,7 +3570,10 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     {/* Overlapping avatars / fallback emoji */}
                     {(openChat.avatars || []).length === 0 ? (
                       <LinearGradient
-                        colors={[(openChat.colors || ['#818CF8'])[0], (openChat.colors || ['#818CF8','#6366F1'])[1] || '#6366F1']}
+                        colors={[
+                          ((openChat.colors || [])[0] && typeof (openChat.colors || [])[0] === 'string') ? (openChat.colors || [])[0] : '#818CF8',
+                          ((openChat.colors || [])[1] && typeof (openChat.colors || [])[1] === 'string') ? (openChat.colors || [])[1] : '#6366F1',
+                        ]}
                         style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
                         <Text style={{ fontSize: 20 }}>{openChat.eventEmoji || '🎉'}</Text>
                       </LinearGradient>
