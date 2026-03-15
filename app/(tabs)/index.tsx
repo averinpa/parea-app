@@ -3758,7 +3758,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
       {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
 
       {/* ── Floating Bell ──────────────────────────────────────────────────── */}
-      {!createOpen && !eventDetail && !openChat && (
+      {activeTab === 'home' && !createOpen && !eventDetail && !openChat && (
         <Animated.View style={{
           position: 'absolute', top: 52, right: 20, zIndex: 500,
           transform: [{ rotate: bellShake.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) }],
