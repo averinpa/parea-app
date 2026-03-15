@@ -41,3 +41,10 @@ app-example
 # generated native folders
 /ios
 /android
+
+# local notes
+addevent.md
+chats.md
+
+# claude settings
+.claude/
