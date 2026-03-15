@@ -1240,7 +1240,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {featured.seekerColors.slice(0, 4).map((c, i) => (
+                    {featured.seekerColors.slice(0, 4).map((c: string, i: number) => (
                       <View key={i} style={[s.avatarDot, { backgroundColor: c, marginLeft: i > 0 ? -8 : 0, zIndex: 10 - i }]}>
                         <Ionicons name="person" size={11} color="rgba(255,255,255,0.9)" />
                       </View>
@@ -1280,7 +1280,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <Text style={s.compactCardTime}>{ev.time.split(', ')[1] || ev.time}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          {ev.seekerColors.slice(0, 3).map((c, i) => (
+                          {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
                             <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
                           ))}
                           <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} going</Text>
