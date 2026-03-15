@@ -1735,20 +1735,23 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   const shown = (chat.avatars || []).slice(0, 3)
                   const extra = (chat.members || 1) - 1 - shown.length
                   const cols = (chat.colors || ['#818CF8', '#6366F1', '#4F46E5'])
+                  if (shown.length === 0) {
+                    // No member photos yet — show a single gradient circle with event emoji
+                    return (
+                      <LinearGradient
+                        colors={[cols[0] || '#818CF8', cols[1] || '#6366F1']}
+                        style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 24 }}>{chat.eventEmoji || '🎉'}</Text>
+                      </LinearGradient>
+                    )
+                  }
                   return (
                     <View style={{ width: 64, height: 42, position: 'relative' }}>
-                      {shown.length > 0
-                        ? shown.map((av: string, ai: number) => (
-                            <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
-                              <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
-                            </View>
-                          ))
-                        : [0,1,2].map(ai => (
-                            <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', backgroundColor: cols[ai] || '#818CF8', alignItems: 'center', justifyContent: 'center', zIndex: 3 - ai }}>
-                              <Text style={{ fontSize: 14 }}>👤</Text>
-                            </View>
-                          ))
-                      }
+                      {shown.map((av: string, ai: number) => (
+                        <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
+                          <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
+                        </View>
+                      ))}
                       {extra > 0 && (
                         <View style={{ position: 'absolute', right: -2, bottom: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff' }}>
                           <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
@@ -3563,19 +3566,22 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     onPress={() => { setGroupMembersOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
                     activeOpacity={0.7}
                   >
-                    {/* Overlapping avatars */}
-                    <View style={{ width: 54, height: 36, position: 'relative', marginRight: 10 }}>
-                      {(openChat.avatars || []).slice(0, 3).map((av: string, ai: number) => (
-                        <View key={ai} style={{ position: 'absolute', left: ai * 16, top: 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: (openChat.colors || [])[ai] || '#818CF8', zIndex: 3 - ai }}>
-                          <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
-                        </View>
-                      ))}
-                      {(openChat.avatars || []).length === 0 && [0,1].map(ai => (
-                        <View key={ai} style={{ position: 'absolute', left: ai * 16, top: 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', backgroundColor: (openChat.colors || ['#818CF8','#6366F1'])[ai] || '#818CF8', alignItems: 'center', justifyContent: 'center', zIndex: 2 - ai }}>
-                          <Text style={{ fontSize: 14 }}>👤</Text>
-                        </View>
-                      ))}
-                    </View>
+                    {/* Overlapping avatars / fallback emoji */}
+                    {(openChat.avatars || []).length === 0 ? (
+                      <LinearGradient
+                        colors={[(openChat.colors || ['#818CF8'])[0], (openChat.colors || ['#818CF8','#6366F1'])[1] || '#6366F1']}
+                        style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                        <Text style={{ fontSize: 20 }}>{openChat.eventEmoji || '🎉'}</Text>
+                      </LinearGradient>
+                    ) : (
+                      <View style={{ width: 54, height: 36, position: 'relative', marginRight: 10 }}>
+                        {(openChat.avatars || []).slice(0, 3).map((av: string, ai: number) => (
+                          <View key={ai} style={{ position: 'absolute', left: ai * 16, top: 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: (openChat.colors || [])[ai] || '#818CF8', zIndex: 3 - ai }}>
+                            <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
+                          </View>
+                        ))}
+                      </View>
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }} numberOfLines={1}>{openChat.event}</Text>
                       <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>
@@ -3706,35 +3712,89 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                 </View>
                 {/* Approved members */}
                 {(openChat.memberProfiles || []).map((p: any, i: number) => (
-                  <TouchableOpacity key={i} activeOpacity={0.8}
-                    onPress={() => {
-                      setChatPartnerPreview({
-                        ...p,
-                        colors: [p.color, '#1E1B4B'],
-                        flag: FLAG_MAP[p.langs?.[0]] || '🌍',
-                        langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l),
-                        interests: [], goal: 'chill', emoji: '👤',
-                      })
-                      setGroupMembersOpen(false)
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 20, backgroundColor: `${p.color}0D`, borderWidth: 1.5, borderColor: `${p.color}25` }}>
-                    <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: p.color }}>
-                      {p.photo
-                        ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} />
-                        : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}, {p.age}</Text>
-                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
-                      <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                        {(p.langs || []).map((l: string) => (
-                          <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌐'}</Text>
-                        ))}
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 20, backgroundColor: `${p.color}0D`, borderWidth: 1.5, borderColor: `${p.color}25` }}>
+                    {/* Photo + info — tappable to view profile */}
+                    <TouchableOpacity activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}
+                      onPress={() => {
+                        setChatPartnerPreview({
+                          ...p,
+                          colors: [p.color, '#1E1B4B'],
+                          flag: FLAG_MAP[p.langs?.[0]] || '🌍',
+                          langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                          interests: [], goal: 'chill', emoji: '👤',
+                        })
+                        setGroupMembersOpen(false)
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      }}>
+                      <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: p.color }}>
+                        {p.photo
+                          ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} />
+                          : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
                       </View>
-                    </View>
-                    <Feather name="chevron-right" size={16} color="#CBD5E1" />
-                  </TouchableOpacity>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}, {p.age}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
+                        <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                          {(p.langs || []).map((l: string) => (
+                            <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌐'}</Text>
+                          ))}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Remove button — only for host */}
+                    {openChat.hostEventId && (
+                      <TouchableOpacity activeOpacity={0.8}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                          Alert.alert(
+                            `Remove ${p.name}?`,
+                            'They will be removed from the group chat.',
+                            [
+                              { text: 'Remove', style: 'destructive', onPress: () => {
+                                // Remove from memberProfiles + avatars in chatList
+                                setChatList(prev => prev.map(c => {
+                                  if (c.id !== openChat.id) return c
+                                  const newProfiles = (c.memberProfiles || []).filter((_: any, idx: number) => idx !== i)
+                                  return {
+                                    ...c,
+                                    memberProfiles: newProfiles,
+                                    avatars: newProfiles.map((m: any) => m.photo).filter(Boolean),
+                                    colors: newProfiles.map((m: any) => m.color),
+                                    members: newProfiles.length + 1,
+                                    lastMsg: `🚫 ${p.name} was removed`,
+                                    time: 'now',
+                                  }
+                                }))
+                                // Update openChat in-place
+                                setOpenChat((prev: any) => {
+                                  if (!prev) return prev
+                                  const newProfiles = (prev.memberProfiles || []).filter((_: any, idx: number) => idx !== i)
+                                  return {
+                                    ...prev,
+                                    memberProfiles: newProfiles,
+                                    avatars: newProfiles.map((m: any) => m.photo).filter(Boolean),
+                                    colors: newProfiles.map((m: any) => m.color),
+                                    members: newProfiles.length + 1,
+                                  }
+                                })
+                                // Add system message
+                                setChatMessages(prev => ({
+                                  ...prev,
+                                  [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: `🚫 ${p.name} was removed from the group`, time: 'now' }],
+                                }))
+                                setGroupMembersOpen(false)
+                                showToast(`${p.name} removed`)
+                              }},
+                              { text: 'Cancel', style: 'cancel' },
+                            ]
+                          )
+                        }}
+                        style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="user-x" size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 ))}
               </ScrollView>
             </View>
