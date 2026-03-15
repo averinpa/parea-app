@@ -64,19 +64,19 @@ const LANGUAGES_LIST = [
 const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
 
 const MOCK_EVENTS = [
-  { id: 1,  city: 'Limassol', type: 'official',   title: 'Tennis Tournament at Aphrodite Hills', time: 'Today, 18:00',    distance: '2km',   category: 'sports',  gradient: ['#667eea', '#764ba2'], seekerColors: ['#818CF8', '#4CAF50', '#2196F3'],          seekingCount: 12, participantsCount: 22, maxParticipants: 24,  organizer: { name: 'Cyprus Sports Federation', emoji: '🎾' }, ticketLink: 'https://tickets.cy/tennis2025',        source: 'Official Website' },
-  { id: 2,  city: 'Limassol', type: 'official',   title: 'Limassol Wine Festival 2025',          time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine',    gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'],                     seekingCount: 28, participantsCount: 40, maxParticipants: 200, organizer: { name: 'SoldOut Tickets',              emoji: '🍷' }, ticketLink: 'https://soldout.com.cy/wine-festival', source: 'SoldOut Tickets' },
-  { id: 9,  city: 'Limassol', type: 'official',   title: 'CyprusTech Conference 2025',           time: 'Sat, 10:00',     distance: '3km',   category: 'tech',    gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], seekingCount: 7,  participantsCount: 80, maxParticipants: 150, organizer: { name: 'CyprusTech Events',             emoji: '💻' }, ticketLink: 'https://cyprustech.io/2025',           source: 'Official Website' },
-  { id: 5,  city: 'Paphos',   type: 'official',   title: 'Sunset Hike to Troodos',               time: 'Sat, 07:00',     distance: '8km',   category: 'sports',  gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'],          seekingCount: 9,  participantsCount: 14, maxParticipants: 20,  organizer: { name: 'Paphos Outdoor Club',          emoji: '🥾' }, ticketLink: null,                                  source: 'Official Website' },
-  { id: 3,  city: 'Limassol', type: 'community',  title: 'Morning Coffee & Chat',               time: 'Today, 09:30',   distance: '0.5km', category: 'coffee',  gradient: ['#4facfe', '#00c6fb'], seekerColors: ['#FF9800', '#03A9F4', '#8BC34A', '#FF5722'], seekingCount: 4,  participantsCount: 8,  maxParticipants: 8 },
-  { id: 4,  city: 'Nicosia',  type: 'community',  title: 'Board Games Night',                   time: 'Fri, 19:00',     distance: '3km',   category: 'gaming',  gradient: ['#43e97b', '#38f9d7'], seekerColors: ['#FF5722', '#9C27B0'],                     seekingCount: 2,  participantsCount: 3,  maxParticipants: 10 },
-  { id: 6,  city: 'Nicosia',  type: 'community',  title: 'Specialty Coffee Tour',               time: 'Sun, 11:00',     distance: '1km',   category: 'coffee',  gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 2,  participantsCount: 6,  maxParticipants: 6 },
-  { id: 7,  city: 'Larnaca',  type: 'community',  title: 'Beach Volleyball',                    time: 'Today, 17:00',   distance: '4km',   category: 'sports',  gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'],          seekingCount: 3,  participantsCount: 12, maxParticipants: 12 },
-  { id: 8,  city: 'Larnaca',  type: 'community',  title: 'Wine & Jazz Evening',                 time: 'Sat, 20:00',     distance: '2km',   category: 'wine',    gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'],                     seekingCount: 5,  participantsCount: 8,  maxParticipants: 20 },
-  { id: 10, city: 'Limassol', type: 'community',  title: 'Sunset Picnic at Dasoudi Beach',      time: 'Today, 17:30',   distance: '1.5km', category: 'outdoors',gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'],          seekingCount: 6,  participantsCount: 9,  maxParticipants: 15 },
-  { id: 11, city: 'Limassol', type: 'official',   title: 'Mediterranean Food Festival',         time: 'Tomorrow, 12:00',distance: '0.8km', category: 'food',    gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'],          seekingCount: 19, participantsCount: 55, maxParticipants: 500, organizer: { name: 'Limassol Municipality',      emoji: '🍕' }, ticketLink: 'https://limassol.gov.cy/food-fest',   source: 'Official Website' },
-  { id: 12, city: 'Limassol', type: 'community',  title: 'Photography Walk — Old Port',         time: 'Sun, 09:00',     distance: '1km',   category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 3,  participantsCount: 7,  maxParticipants: 10 },
-  { id: 13, city: 'Nicosia',  type: 'official',   title: 'Open Air Cinema Night',               time: 'Sat, 21:00',     distance: '2km',   category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'],          seekingCount: 11, participantsCount: 30, maxParticipants: 50,  organizer: { name: 'Coca-Cola Arena Nicosia',      emoji: '🎬' }, ticketLink: 'https://tickets.cy/cinema-night',     source: 'Coca-Cola Arena' },
+  { id: 1,  city: 'Limassol', type: 'official',   title: 'Tennis Tournament at Aphrodite Hills', time: 'Today, 18:00',    distance: '2km',   category: 'sports',  gradient: ['#667eea', '#764ba2'], seekerColors: ['#818CF8', '#4CAF50', '#2196F3'],          seekingCount: 12, participantsCount: 22, maxParticipants: 24,  organizer: { name: 'Cyprus Sports Federation', emoji: '🎾' }, ticketLink: 'https://tickets.cy/tennis2025',        source: 'Official Website', description: 'Official singles & doubles tournament at the iconic Aphrodite Hills resort. Open to all levels — bring your racket or rent one on site. Refreshments included.' },
+  { id: 2,  city: 'Limassol', type: 'official',   title: 'Limassol Wine Festival 2025',          time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine',    gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'],                     seekingCount: 28, participantsCount: 40, maxParticipants: 200, organizer: { name: 'SoldOut Tickets',              emoji: '🍷' }, ticketLink: 'https://soldout.com.cy/wine-festival', source: 'SoldOut Tickets',  description: 'The biggest wine celebration on the island. 40+ local wineries, live music, and Cypriot mezze. Ticket includes unlimited tastings from 20:00 to midnight.' },
+  { id: 9,  city: 'Limassol', type: 'official',   title: 'CyprusTech Conference 2025',           time: 'Sat, 10:00',     distance: '3km',   category: 'tech',    gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], seekingCount: 7,  participantsCount: 80, maxParticipants: 150, organizer: { name: 'CyprusTech Events',             emoji: '💻' }, ticketLink: 'https://cyprustech.io/2025',           source: 'Official Website', description: 'Annual tech conference with speakers from EU startups, AI panels, and networking sessions. Great for founders, devs, and investors looking to connect in Cyprus.' },
+  { id: 5,  city: 'Paphos',   type: 'official',   title: 'Sunset Hike to Troodos',               time: 'Sat, 07:00',     distance: '8km',   category: 'sports',  gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'],          seekingCount: 9,  participantsCount: 14, maxParticipants: 20,  organizer: { name: 'Paphos Outdoor Club',          emoji: '🥾' }, ticketLink: null,                                  source: 'Official Website', description: 'Guided 12km trail through pine forest with panoramic summit views. Moderate difficulty. Bring water, snacks, and layers — it gets cool at the top.' },
+  { id: 3,  city: 'Limassol', type: 'community',  title: 'Morning Coffee & Chat',               time: 'Today, 09:30',   distance: '0.5km', category: 'coffee',  gradient: ['#4facfe', '#00c6fb'], seekerColors: ['#FF9800', '#03A9F4', '#8BC34A', '#FF5722'], seekingCount: 4,  participantsCount: 8,  maxParticipants: 8,  description: 'Casual meetup at a specialty café near the marina. No agenda, just good coffee and good conversation. Perfect for remote workers and people new to the city.' },
+  { id: 4,  city: 'Nicosia',  type: 'community',  title: 'Board Games Night',                   time: 'Fri, 19:00',     distance: '3km',   category: 'gaming',  gradient: ['#43e97b', '#38f9d7'], seekerColors: ['#FF5722', '#9C27B0'],                     seekingCount: 2,  participantsCount: 3,  maxParticipants: 10, description: 'Friendly evening of strategy and party games — Catan, Codenames, Ticket to Ride and more. All experience levels welcome. Snacks provided, BYO drinks.' },
+  { id: 6,  city: 'Nicosia',  type: 'community',  title: 'Specialty Coffee Tour',               time: 'Sun, 11:00',     distance: '1km',   category: 'coffee',  gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 2,  participantsCount: 6,  maxParticipants: 6,  description: 'Walk through 3 of Nicosia\'s best third-wave coffee spots. Each stop features a different brew method. Great way to explore the old city on foot.' },
+  { id: 7,  city: 'Larnaca',  type: 'community',  title: 'Beach Volleyball',                    time: 'Today, 17:00',   distance: '4km',   category: 'sports',  gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'],          seekingCount: 3,  participantsCount: 12, maxParticipants: 12, description: 'Casual 3v3 volleyball on Mackenzie Beach. All skill levels welcome — we play for fun, not for points. Bring sunscreen, we\'re usually there till sunset.' },
+  { id: 8,  city: 'Larnaca',  type: 'community',  title: 'Wine & Jazz Evening',                 time: 'Sat, 20:00',     distance: '2km',   category: 'wine',    gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'],                     seekingCount: 5,  participantsCount: 8,  maxParticipants: 20, description: 'Laid-back evening with live jazz duo, Cypriot wines, and a selection of local cheeses. Held in a rooftop bar overlooking the salt lake. No reservation needed.' },
+  { id: 10, city: 'Limassol', type: 'community',  title: 'Sunset Picnic at Dasoudi Beach',      time: 'Today, 17:30',   distance: '1.5km', category: 'outdoors',gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'],          seekingCount: 6,  participantsCount: 9,  maxParticipants: 15, description: 'Bring a blanket and something to share — we\'ll have music, golden hour views, and good company on the beachfront. It\'s a vibe, not an event.' },
+  { id: 11, city: 'Limassol', type: 'official',   title: 'Mediterranean Food Festival',         time: 'Tomorrow, 12:00',distance: '0.8km', category: 'food',    gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'],          seekingCount: 19, participantsCount: 55, maxParticipants: 500, organizer: { name: 'Limassol Municipality',      emoji: '🍕' }, ticketLink: 'https://limassol.gov.cy/food-fest',   source: 'Official Website', description: 'Two-day street food festival celebrating Mediterranean cuisine. 60+ food stalls, cooking demos, and live folk music from Greece, Lebanon, and Cyprus.' },
+  { id: 12, city: 'Limassol', type: 'community',  title: 'Photography Walk — Old Port',         time: 'Sun, 09:00',     distance: '1km',   category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 3,  participantsCount: 7,  maxParticipants: 10, description: 'Slow morning walk through the old port and castle district. Shoot on any camera or phone. We share and discuss photos over coffee at the end.' },
+  { id: 13, city: 'Nicosia',  type: 'official',   title: 'Open Air Cinema Night',               time: 'Sat, 21:00',     distance: '2km',   category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'],          seekingCount: 11, participantsCount: 30, maxParticipants: 50,  organizer: { name: 'Coca-Cola Arena Nicosia',      emoji: '🎬' }, ticketLink: 'https://tickets.cy/cinema-night',     source: 'Coca-Cola Arena',  description: 'Classic film screening under the stars in the courtyard of the Nicosia Municipal Garden. Bring a picnic blanket. This week\'s film announced on the day.' },
 ]
 
 // Maps INTERESTS_LIST labels → event categories for Data Matching
@@ -2542,7 +2542,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
     const FORMAT_EMOJI: Record<string, string> = { '1+1': '👥', squad: '🫂', party: '🎉' }
     const TRANSPORT_EMOJI: Record<string, string> = { car: '🚗', lift: '🙋', meet: '📍' }
     const parts = [FORMAT_EMOJI[format] || '👥', TRANSPORT_EMOJI[transport] || '📍'].filter(Boolean)
-    showToast(`You're going! ${parts.join(' · ')}`)
+    showToast(`${parts.join(' · ')}`)
   }
 
   // Match animation refs
@@ -2777,46 +2777,50 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
               <SafeAreaView style={s.fill}>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {/* Header */}
-                  <LinearGradient colors={eventDetail.gradient as any} style={{ minHeight: 200, padding: 20, paddingTop: 52, justifyContent: 'flex-end' }}>
-                    <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { top: 16 }]}>
+                  <LinearGradient colors={eventDetail.gradient as any} style={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
+                    <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { alignSelf: 'flex-start', marginBottom: 16 }]}>
                       <Ionicons name="chevron-back" size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
                       {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()} · {eventDetail.distance}
                     </Text>
-                    <Text style={{ fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 30 }}>{eventDetail.title}</Text>
+                    <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28 }}>{eventDetail.title}</Text>
                   </LinearGradient>
 
-                  <View style={{ padding: 16, gap: 12 }}>
-                    {/* Time + Location card */}
-                    <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, gap: 14 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                          <Feather name="clock" size={18} color="#6366F1" />
+                  <View style={{ padding: 16, gap: 10 }}>
+                    {/* Time + Location + Address link — one compact card */}
+                    <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, gap: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="clock" size={16} color="#6366F1" />
                         </View>
                         <View>
                           <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date & Time</Text>
-                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>{eventDetail.time}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{eventDetail.time}</Text>
                         </View>
                       </View>
                       <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                          <Feather name="map-pin" size={18} color="#6366F1" />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="map-pin" size={16} color="#6366F1" />
                         </View>
-                        <View>
+                        <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Location</Text>
-                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>{eventDetail.city}</Text>
-                          <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>{eventDetail.distance} from you</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{eventDetail.city} · {eventDetail.distance} from you</Text>
                         </View>
+                        <TouchableOpacity onPress={() => Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(eventDetail.city)}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Open</Text>
+                          <Feather name="external-link" size={12} color="#6366F1" />
+                        </TouchableOpacity>
                       </View>
                     </View>
 
-                    {/* Map placeholder */}
-                    <View style={{ backgroundColor: '#E2E8F0', borderRadius: 16, height: 130, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      <Feather name="map" size={30} color="#94A3B8" />
-                      <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 6, fontWeight: '600' }}>Map coming soon</Text>
-                    </View>
+                    {/* Description */}
+                    {eventDetail.description && (
+                      <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14 }}>
+                        <Text style={{ fontSize: 14, color: '#334155', lineHeight: 21 }}>{eventDetail.description}</Text>
+                      </View>
+                    )}
 
                     {/* Participants */}
                     <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -3072,14 +3076,14 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
       {/* Toast notification */}
       {toast.visible && (
         <Animated.View pointerEvents="none" style={{
-          position: 'absolute', bottom: 110, left: 24, right: 24, zIndex: 9999,
+          position: 'absolute', top: 60, left: 24, right: 24, zIndex: 9999,
           opacity: toastAnim,
-          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
         }}>
           <View style={{ backgroundColor: '#1E1B4B', borderRadius: 20, paddingHorizontal: 22, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20, elevation: 16 }}>
-            <Text style={{ fontSize: 22 }}>🎉</Text>
+            <Text style={{ fontSize: 22 }}>🔍</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>All set!</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>Finding your crew...</Text>
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{toast.text}</Text>
             </View>
           </View>
