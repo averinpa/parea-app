@@ -1731,13 +1731,32 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   <View style={[s.chatAvatar, { backgroundColor: chat.color, alignItems: 'center', justifyContent: 'center' }]}>
                     {chat.photo ? <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%', borderRadius: 28 }} /> : <Text style={{ fontSize: 22 }}>👤</Text>}
                   </View>
-                ) : (
-                  <View style={{ width: 56, height: 42 }}>
-                    {chat.avatars.slice(0, 3).map((av: string, ai: number) => (
-                      <Image key={ai} source={{ uri: av }} style={[s.chatAvatarOverlap, { left: ai * 15, backgroundColor: chat.colors[ai] }]} />
-                    ))}
-                  </View>
-                )}
+                ) : (() => {
+                  const shown = (chat.avatars || []).slice(0, 3)
+                  const extra = (chat.members || 1) - 1 - shown.length
+                  const cols = (chat.colors || ['#818CF8', '#6366F1', '#4F46E5'])
+                  return (
+                    <View style={{ width: 64, height: 42, position: 'relative' }}>
+                      {shown.length > 0
+                        ? shown.map((av: string, ai: number) => (
+                            <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
+                              <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
+                            </View>
+                          ))
+                        : [0,1,2].map(ai => (
+                            <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', backgroundColor: cols[ai] || '#818CF8', alignItems: 'center', justifyContent: 'center', zIndex: 3 - ai }}>
+                              <Text style={{ fontSize: 14 }}>👤</Text>
+                            </View>
+                          ))
+                      }
+                      {extra > 0 && (
+                        <View style={{ position: 'absolute', right: -2, bottom: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff' }}>
+                          <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )
+                })()}
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                     <Text style={[{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }, chat.isNew && { color: '#4338CA' }]}>
@@ -2632,6 +2651,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
   const [chatInput, setChatInput] = useState('')
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
+  const [groupMembersOpen, setGroupMembersOpen] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
@@ -2794,23 +2814,25 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                 setChatList(prev => {
                   const existingIdx = prev.findIndex(c => c.hostEventId === eventId)
                   if (existingIdx >= 0) {
-                    // Update existing group chat
                     const updated = [...prev]
                     updated[existingIdx] = {
                       ...updated[existingIdx],
                       members: newApproved.length + 1,
+                      avatars: newApproved.map((p: any) => p.photo).filter(Boolean),
                       colors: newApproved.map((p: any) => p.color),
+                      memberProfiles: newApproved,
                       lastMsg: `✅ ${joiner.name} joined the group`,
                       time: 'now', isNew: true,
                     }
                     return updated
                   } else {
-                    // Create new group chat
                     return [{
                       id: Date.now(), type: 'group', hostEventId: eventId,
                       event: ev?.title || 'Your Social', eventEmoji: CATEGORY_EMOJI[ev?.category || ''] || '🎉',
                       members: newApproved.length + 1,
-                      avatars: [], colors: newApproved.map((p: any) => p.color),
+                      avatars: newApproved.map((p: any) => p.photo).filter(Boolean),
+                      colors: newApproved.map((p: any) => p.color),
+                      memberProfiles: newApproved,
                       lastMsg: `✅ ${joiner.name} was approved to join!`,
                       time: 'now', isNew: true, expiresIn: 24,
                     }, ...prev]
@@ -3498,19 +3520,31 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     </View>
                   </TouchableOpacity>
                 ) : (
-                  <>
-                    <View style={{ width: 44, height: 40, marginLeft: 10 }}>
-                      {openChat.avatars?.slice(0, 2).map((av: string, ai: number) => (
-                        <Image key={ai} source={{ uri: av }} style={[s.chatAvatarOverlap, { left: ai * 16, zIndex: 2 - ai }]} />
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 4 }}
+                    onPress={() => { setGroupMembersOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+                    activeOpacity={0.7}
+                  >
+                    {/* Overlapping avatars */}
+                    <View style={{ width: 54, height: 36, position: 'relative', marginRight: 10 }}>
+                      {(openChat.avatars || []).slice(0, 3).map((av: string, ai: number) => (
+                        <View key={ai} style={{ position: 'absolute', left: ai * 16, top: 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: (openChat.colors || [])[ai] || '#818CF8', zIndex: 3 - ai }}>
+                          <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
+                        </View>
+                      ))}
+                      {(openChat.avatars || []).length === 0 && [0,1].map(ai => (
+                        <View key={ai} style={{ position: 'absolute', left: ai * 16, top: 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', backgroundColor: (openChat.colors || ['#818CF8','#6366F1'])[ai] || '#818CF8', alignItems: 'center', justifyContent: 'center', zIndex: 2 - ai }}>
+                          <Text style={{ fontSize: 14 }}>👤</Text>
+                        </View>
                       ))}
                     </View>
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }}>{openChat.event}</Text>
-                      <Text style={{ fontSize: 12, color: '#64748B' }}>
-                        {openChat.eventEmoji} {openChat.members} members
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }} numberOfLines={1}>{openChat.event}</Text>
+                      <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>
+                        {openChat.eventEmoji} {openChat.members} members · tap to see all
                       </Text>
                     </View>
-                  </>
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -3598,6 +3632,77 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
       )}
 
       {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
+
+      {/* Group members sheet */}
+      {groupMembersOpen && openChat && (
+        <Modal transparent animationType="slide" onRequestClose={() => setGroupMembersOpen(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setGroupMembersOpen(false)} />
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%', paddingBottom: 32 }}>
+              {/* Handle */}
+              <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+              </View>
+              {/* Header */}
+              <View style={{ paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.08)' }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B' }}>{openChat.event}</Text>
+                <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '600', marginTop: 2 }}>
+                  {openChat.eventEmoji} {openChat.members} members
+                </Text>
+              </View>
+              <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+                {/* You — host */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.06)', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.15)' }}>
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 24 }}>😊</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>You</Text>
+                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#6366F1' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#64748B' }}>That's you 👋</Text>
+                  </View>
+                </View>
+                {/* Approved members */}
+                {(openChat.memberProfiles || []).map((p: any, i: number) => (
+                  <TouchableOpacity key={i} activeOpacity={0.8}
+                    onPress={() => {
+                      setChatPartnerPreview({
+                        ...p,
+                        colors: [p.color, '#1E1B4B'],
+                        flag: FLAG_MAP[p.langs?.[0]] || '🌍',
+                        langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                        interests: [], goal: 'chill', emoji: '👤',
+                      })
+                      setGroupMembersOpen(false)
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 20, backgroundColor: `${p.color}0D`, borderWidth: 1.5, borderColor: `${p.color}25` }}>
+                    <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: p.color }}>
+                      {p.photo
+                        ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} />
+                        : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}, {p.age}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
+                      <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                        {(p.langs || []).map((l: string) => (
+                          <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌐'}</Text>
+                        ))}
+                      </View>
+                    </View>
+                    <Feather name="chevron-right" size={16} color="#CBD5E1" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Toast notification */}
       {toast.visible && (
