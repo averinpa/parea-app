@@ -2778,7 +2778,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                 {createStep === 2 && (
                   <View style={{ paddingBottom: 8 }}>
                     <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 16 }}>What's the vibe? 🎯</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                       {CREATE_EVENT_TYPES.map(t => (
                         <TouchableOpacity key={t.id} onPress={() => setCreateType(t.id)} activeOpacity={0.8}
                           style={[s.createTypeCard, createType === t.id && s.createTypeCardOn]}>
@@ -2795,11 +2795,16 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                   <View style={{ paddingBottom: 8 }}>
                     <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 16 }}>When & Where? 📍</Text>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>When</Text>
-                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-                      {['Today', 'Tomorrow', 'Weekend'].map(d => (
-                        <TouchableOpacity key={d} onPress={() => setCreateDay(d)} activeOpacity={0.8}
-                          style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: createDay === d ? '#6366F1' : '#F1F5F9' }}>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: createDay === d ? '#fff' : '#334155' }}>{d}</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                      {Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date(); d.setDate(d.getDate() + i)
+                        const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+                        const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : `${dayNames[d.getDay()]} ${d.getDate()}`
+                        return { label, key: label }
+                      }).map(({ label, key }) => (
+                        <TouchableOpacity key={key} onPress={() => setCreateDay(label)} activeOpacity={0.8}
+                          style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: createDay === label ? '#6366F1' : '#F1F5F9' }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: createDay === label ? '#fff' : '#334155' }}>{label}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
