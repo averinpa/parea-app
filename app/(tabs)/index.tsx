@@ -2728,298 +2728,324 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
         </View>
 
         {/* Create event modal */}
-        <Modal visible={createOpen} transparent animationType="slide" onRequestClose={() => { setCreateOpen(false); setCreateStep(1) }}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(15,12,41,0.65)', justifyContent: 'flex-end' }}>
-            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => { setCreateOpen(false); setCreateStep(1) }} />
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={[s.createSheet, { maxHeight: '90%' }]}>
-              <View style={s.bentoSheetHandle} />
+        <Modal visible={createOpen} animationType="slide" onRequestClose={() => {
+          setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
+          setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
+          setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+          setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
+        }}>
+          <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
+            <SafeAreaView style={s.fill}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-              {/* Header: step indicator + back + close */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {createStep > 1 && (
-                    <TouchableOpacity onPress={() => setCreateStep(cs => cs - 1)}
-                      style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                      <Feather name="chevron-left" size={16} color="#64748B" />
-                    </TouchableOpacity>
-                  )}
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                {/* Header row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (createStep > 1) {
+                        setCreateStep(cs => cs - 1);
+                      } else {
+                        setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
+                        setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
+                        setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+                        setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
+                      }
+                    }}
+                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="chevron-left" size={18} color="#64748B" />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1.2, textTransform: 'uppercase', flex: 1, textAlign: 'center' }}>
                     {['Who\'s coming?','What activity?','When & where?','Last details'][createStep - 1]}
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
+                      setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
+                      setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+                      setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
+                    }}
+                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="x" size={16} color="#64748B" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => { setCreateOpen(false); setCreateStep(1) }}
-                  style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                  <Feather name="x" size={15} color="#64748B" />
-                </TouchableOpacity>
-              </View>
 
-              {/* Progress dots */}
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 20 }}>
-                {[1,2,3,4].map(i => (
-                  <View key={i} style={{ height: 4, borderRadius: 99, flex: i === createStep ? 2 : 1,
-                    backgroundColor: i <= createStep ? '#6366F1' : '#E2E8F0' }} />
-                ))}
-              </View>
-
-              {/* ── Step 1: Pod Size ── */}
-              {createStep === 1 && (
-                <View style={{ gap: 10 }}>
-                  {[
-                    { id: 'duo',   emoji: '👥', label: 'Duo',   sub: '1-on-1 — most personal', color: '#EEF2FF', accent: '#6366F1' },
-                    { id: 'squad', emoji: '🫂', label: 'Squad', sub: 'Small group vibe, up to 5', color: '#F0FDF4', accent: '#22c55e' },
-                    { id: 'party', emoji: '🎉', label: 'Party', sub: 'Large gathering, up to 20', color: '#FFF7ED', accent: '#f97316' },
-                  ].map(opt => (
-                    <TouchableOpacity key={opt.id} onPress={() => setCreateSize(opt.id)} activeOpacity={0.8}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 20,
-                        backgroundColor: createSize === opt.id ? opt.color : '#F8FAFC',
-                        borderWidth: 2, borderColor: createSize === opt.id ? opt.accent : 'transparent' }}>
-                      <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: createSize === opt.id ? '#fff' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 17, fontWeight: '800', color: '#1E1B4B' }}>{opt.label}</Text>
-                        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{opt.sub}</Text>
-                      </View>
-                      <View style={{ width: 22, height: 22, borderRadius: 11,
-                        backgroundColor: createSize === opt.id ? opt.accent : '#E2E8F0',
-                        alignItems: 'center', justifyContent: 'center' }}>
-                        {createSize === opt.id && <Feather name="check" size={12} color="#fff" />}
-                      </View>
-                    </TouchableOpacity>
+                {/* Progress dots */}
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 20, paddingHorizontal: 20 }}>
+                  {[1,2,3,4].map(i => (
+                    <View key={i} style={{ height: 4, borderRadius: 99, flex: i === createStep ? 2 : 1,
+                      backgroundColor: i <= createStep ? '#6366F1' : '#E2E8F0' }} />
                   ))}
                 </View>
-              )}
 
-              {/* ── Step 2: Activity with category tabs ── */}
-              {createStep === 2 && (() => {
-                const CATS: Record<string, { emoji: string; items: { id: string; emoji: string; label: string }[] }> = {
-                  'Sport':  { emoji: '🏃', items: [{ id:'padel', emoji:'🏓', label:'Padel' },{ id:'tennis', emoji:'🎾', label:'Tennis' },{ id:'yoga', emoji:'🧘', label:'Yoga' },{ id:'gym', emoji:'💪', label:'Gym' },{ id:'water', emoji:'🏄', label:'Water Sports' }] },
-                  'Food':   { emoji: '🍽️', items: [{ id:'coffee', emoji:'☕', label:'Coffee' },{ id:'meze', emoji:'🥘', label:'Meze' },{ id:'wine', emoji:'🍷', label:'Wine' },{ id:'brunch', emoji:'🥂', label:'Brunch' },{ id:'sunset', emoji:'🌅', label:'Sunset' }] },
-                  'Work':   { emoji: '💼', items: [{ id:'networking', emoji:'🤝', label:'Networking' },{ id:'crypto', emoji:'🪙', label:'Crypto' },{ id:'cowork', emoji:'💻', label:'Co-working' }] },
-                  'Relax':  { emoji: '🌿', items: [{ id:'beach', emoji:'🏖️', label:'Beach' },{ id:'hiking', emoji:'🥾', label:'Hiking' },{ id:'boat', emoji:'⛵', label:'Boat' },{ id:'boardgames', emoji:'🎲', label:'Board Games' }] },
-                }
-                const catItems = [...(CATS[createCategory]?.items || []), { id: 'other', emoji: '✏️', label: 'Other' }]
-                const cardW = (W - 40 - 20) / 3
-                return (
-                  <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                    {/* Category tabs */}
-                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-                      {Object.entries(CATS).map(([cat, { emoji }]) => (
-                        <TouchableOpacity key={cat} onPress={() => setCreateCategory(cat)} activeOpacity={0.8}
-                          style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 14,
-                            backgroundColor: createCategory === cat ? '#6366F1' : '#F1F5F9' }}>
-                          <Text style={{ fontSize: 16 }}>{emoji}</Text>
-                          <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 2, color: createCategory === cat ? '#fff' : '#64748B' }}>{cat}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    {/* Activity grid */}
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' }}>
-                      {catItems.map(t => (
-                        <TouchableOpacity key={t.id} onPress={() => { setCreateType(t.id); if (t.id !== 'other') setCreateCustom('') }} activeOpacity={0.8}
-                          style={{ width: cardW, aspectRatio: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-                            backgroundColor: createType === t.id ? '#EEF2FF' : '#F8FAFC',
-                            borderWidth: 2, borderColor: createType === t.id ? '#6366F1' : 'transparent' }}>
-                          <Text style={{ fontSize: 28, marginBottom: 4 }}>{t.emoji}</Text>
-                          <Text style={{ fontSize: 11, fontWeight: createType === t.id ? '700' : '500',
-                            color: createType === t.id ? '#6366F1' : '#64748B', textAlign: 'center' }}>{t.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    {/* Custom name input if Other selected */}
-                    {createType === 'other' && (
-                      <View style={{ marginTop: 14, backgroundColor: '#EEF2FF', borderRadius: 18, padding: 16 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1', marginBottom: 10 }}>What are you planning?</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
-                          backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-                          borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#E2E8F0' }}>
-                          <Feather name="edit-2" size={15} color="#6366F1" />
-                          <TextInput value={createCustom} onChangeText={setCreateCustom}
-                            placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
-                            autoFocus returnKeyType="done"
-                            style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
-                          {createCustom.length > 0 && (
-                            <TouchableOpacity onPress={() => setCreateCustom('')}>
-                              <Feather name="x-circle" size={16} color="#94A3B8" />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      </View>
-                    )}
-                  </ScrollView>
-                )
-              })()}
+                {/* Step content in ScrollView */}
+                <ScrollView
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  style={{ flex: 1 }}>
 
-              {/* ── Step 3: Calendar + Time + Location ── */}
-              {createStep === 3 && (() => {
-                const today = new Date(); today.setHours(0,0,0,0)
-                const firstDay = new Date(calViewYear, calViewMonth, 1)
-                const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate()
-                const startDow = (firstDay.getDay() + 6) % 7
-                const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
-                const DAY_LABELS = ['M','T','W','T','F','S','S']
-                const cells: (number | null)[] = []
-                for (let i = 0; i < startDow; i++) cells.push(null)
-                for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-                while (cells.length % 7 !== 0) cells.push(null)
-                const cellW = (W - 40) / 7
-                return (
-                  <View>
-                    {/* Calendar card */}
-                    <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 14, marginBottom: 14 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                        <TouchableOpacity onPress={() => { const d = new Date(calViewYear, calViewMonth - 1); setCalViewMonth(d.getMonth()); setCalViewYear(d.getFullYear()) }}
-                          style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
-                          <Feather name="chevron-left" size={15} color="#334155" />
-                        </TouchableOpacity>
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B' }}>{MONTHS[calViewMonth]} {calViewYear}</Text>
-                        <TouchableOpacity onPress={() => { const d = new Date(calViewYear, calViewMonth + 1); setCalViewMonth(d.getMonth()); setCalViewYear(d.getFullYear()) }}
-                          style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
-                          <Feather name="chevron-right" size={15} color="#334155" />
-                        </TouchableOpacity>
-                      </View>
-                      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
-                        {DAY_LABELS.map((l, i) => (
-                          <View key={i} style={{ width: cellW, alignItems: 'center' }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: i >= 5 ? '#818CF8' : '#94A3B8' }}>{l}</Text>
+                  {/* ── Step 1: Pod Size ── */}
+                  {createStep === 1 && (
+                    <View style={{ gap: 10 }}>
+                      {[
+                        { id: 'duo',   emoji: '👥', label: 'Duo',   sub: '1-on-1 — most personal', color: '#EEF2FF', accent: '#6366F1' },
+                        { id: 'squad', emoji: '🫂', label: 'Squad', sub: 'Small group vibe, up to 5', color: '#F0FDF4', accent: '#22c55e' },
+                        { id: 'party', emoji: '🎉', label: 'Party', sub: 'Large gathering, up to 20', color: '#FFF7ED', accent: '#f97316' },
+                      ].map(opt => (
+                        <TouchableOpacity key={opt.id} onPress={() => setCreateSize(opt.id)} activeOpacity={0.8}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 20,
+                            backgroundColor: createSize === opt.id ? opt.color : '#F8FAFC',
+                            borderWidth: 2, borderColor: createSize === opt.id ? opt.accent : 'transparent' }}>
+                          <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: createSize === opt.id ? '#fff' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
                           </View>
-                        ))}
-                      </View>
-                      {Array.from({ length: cells.length / 7 }, (_, row) => (
-                        <View key={row} style={{ flexDirection: 'row', marginBottom: 1 }}>
-                          {cells.slice(row * 7, row * 7 + 7).map((day, col) => {
-                            if (!day) return <View key={col} style={{ width: cellW, height: 32 }} />
-                            const thisDate = new Date(calViewYear, calViewMonth, day)
-                            const isPast = thisDate < today
-                            const isToday = thisDate.getTime() === today.getTime()
-                            const selStr = `${calViewYear}-${String(calViewMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-                            const isSelected = createDay === selStr
-                            const isWeekend = col >= 5
-                            return (
-                              <TouchableOpacity key={col} disabled={isPast} onPress={() => setCreateDay(selStr)} activeOpacity={0.7}
-                                style={{ width: cellW, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-                                <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                                  backgroundColor: isSelected ? '#6366F1' : isToday ? '#fff' : 'transparent',
-                                  borderWidth: isToday && !isSelected ? 1.5 : 0, borderColor: '#6366F1',
-                                  shadowColor: isSelected ? '#6366F1' : 'transparent', shadowOpacity: 0.35, shadowRadius: 6, elevation: isSelected ? 4 : 0 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: isSelected || isToday ? '800' : '400',
-                                    color: isSelected ? '#fff' : isPast ? '#CBD5E1' : isWeekend ? '#818CF8' : '#1E1B4B' }}>
-                                    {day}
-                                  </Text>
-                                </View>
-                              </TouchableOpacity>
-                            )
-                          })}
-                        </View>
-                      ))}
-                    </View>
-
-                    {/* Time chips */}
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Time</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
-                      {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => (
-                        <TouchableOpacity key={h} onPress={() => setCreateHour(h)} activeOpacity={0.8}
-                          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
-                            backgroundColor: createHour === h ? '#6366F1' : '#F1F5F9' }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: createHour === h ? '#fff' : '#64748B' }}>{h}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 17, fontWeight: '800', color: '#1E1B4B' }}>{opt.label}</Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{opt.sub}</Text>
+                          </View>
+                          <View style={{ width: 22, height: 22, borderRadius: 11,
+                            backgroundColor: createSize === opt.id ? opt.accent : '#E2E8F0',
+                            alignItems: 'center', justifyContent: 'center' }}>
+                            {createSize === opt.id && <Feather name="check" size={12} color="#fff" />}
+                          </View>
                         </TouchableOpacity>
                       ))}
                     </View>
+                  )}
 
-                    {/* Location */}
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Location</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
-                      paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1.5,
-                      borderColor: createLocation.length > 0 ? '#6366F1' : 'transparent' }}>
-                      <Feather name="map-pin" size={15} color="#6366F1" />
-                      <TextInput value={createLocation} onChangeText={setCreateLocation}
-                        placeholder="Café, beach, address..." placeholderTextColor="#94A3B8"
-                        style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
-                    </View>
-                  </View>
-                )
-              })()}
-
-              {/* ── Step 4: Vibe + Language + Driving ── */}
-              {createStep === 4 && (
-                <View style={{ gap: 16 }}>
-                  {/* Vibe */}
-                  <View>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Vibe</Text>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {[{ id:'chill', emoji:'😌', label:'Chill' },{ id:'active', emoji:'⚡', label:'Active' },{ id:'professional', emoji:'🤝', label:'Professional' }].map(v => (
-                        <TouchableOpacity key={v.id} onPress={() => setCreateVibe(v.id)} activeOpacity={0.8}
-                          style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 16,
-                            backgroundColor: createVibe === v.id ? '#EEF2FF' : '#F8FAFC',
-                            borderWidth: 2, borderColor: createVibe === v.id ? '#6366F1' : 'transparent' }}>
-                          <Text style={{ fontSize: 22 }}>{v.emoji}</Text>
-                          <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 4, color: createVibe === v.id ? '#6366F1' : '#64748B' }}>{v.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  {/* Languages */}
-                  <View>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Languages</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {LANGUAGES_LIST.map((l: any) => (
-                        <TouchableOpacity key={l.code} onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])} activeOpacity={0.8}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 99,
-                            backgroundColor: createLangs.includes(l.code) ? '#EEF2FF' : '#F8FAFC',
-                            borderWidth: 1.5, borderColor: createLangs.includes(l.code) ? '#6366F1' : 'transparent' }}>
-                          <Text style={{ fontSize: 15 }}>{l.flag || '🌐'}</Text>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: createLangs.includes(l.code) ? '#6366F1' : '#64748B' }}>{l.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  {/* Driving */}
-                  <TouchableOpacity onPress={() => setCreateDriving(v => !v)} activeOpacity={0.85}
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                      backgroundColor: createDriving ? '#EEF2FF' : '#F8FAFC', borderRadius: 16, padding: 14,
-                      borderWidth: 1.5, borderColor: createDriving ? '#6366F1' : 'transparent' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <Text style={{ fontSize: 22 }}>🚗</Text>
+                  {/* ── Step 2: Activity with category tabs ── */}
+                  {createStep === 2 && (() => {
+                    const CATS: Record<string, { emoji: string; items: { id: string; emoji: string; label: string }[] }> = {
+                      'Sport':  { emoji: '🏃', items: [{ id:'padel', emoji:'🏓', label:'Padel' },{ id:'tennis', emoji:'🎾', label:'Tennis' },{ id:'yoga', emoji:'🧘', label:'Yoga' },{ id:'gym', emoji:'💪', label:'Gym' },{ id:'water', emoji:'🏄', label:'Water Sports' }] },
+                      'Food':   { emoji: '🍽️', items: [{ id:'coffee', emoji:'☕', label:'Coffee' },{ id:'meze', emoji:'🥘', label:'Meze' },{ id:'wine', emoji:'🍷', label:'Wine' },{ id:'brunch', emoji:'🥂', label:'Brunch' },{ id:'sunset', emoji:'🌅', label:'Sunset' }] },
+                      'Work':   { emoji: '💼', items: [{ id:'networking', emoji:'🤝', label:'Networking' },{ id:'crypto', emoji:'🪙', label:'Crypto' },{ id:'cowork', emoji:'💻', label:'Co-working' }] },
+                      'Relax':  { emoji: '🌿', items: [{ id:'beach', emoji:'🏖️', label:'Beach' },{ id:'hiking', emoji:'🥾', label:'Hiking' },{ id:'boat', emoji:'⛵', label:'Boat' },{ id:'boardgames', emoji:'🎲', label:'Board Games' }] },
+                    }
+                    const catItems = [...(CATS[createCategory]?.items || []), { id: 'other', emoji: '✏️', label: 'Other' }]
+                    const cardW = (W - 40 - 20) / 3
+                    return (
                       <View>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B' }}>I can give a lift</Text>
-                        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>Others can ride with you</Text>
+                        {/* Category tabs */}
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                          {Object.entries(CATS).map(([cat, { emoji }]) => (
+                            <TouchableOpacity key={cat} onPress={() => setCreateCategory(cat)} activeOpacity={0.8}
+                              style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 14,
+                                backgroundColor: createCategory === cat ? '#6366F1' : '#F1F5F9' }}>
+                              <Text style={{ fontSize: 16 }}>{emoji}</Text>
+                              <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 2, color: createCategory === cat ? '#fff' : '#64748B' }}>{cat}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        {/* Activity grid */}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' }}>
+                          {catItems.map(t => (
+                            <TouchableOpacity key={t.id} onPress={() => { setCreateType(t.id); if (t.id !== 'other') setCreateCustom('') }} activeOpacity={0.8}
+                              style={{ width: cardW, aspectRatio: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+                                backgroundColor: createType === t.id ? '#EEF2FF' : '#F8FAFC',
+                                borderWidth: 2, borderColor: createType === t.id ? '#6366F1' : 'transparent' }}>
+                              <Text style={{ fontSize: 28, marginBottom: 4 }}>{t.emoji}</Text>
+                              <Text style={{ fontSize: 11, fontWeight: createType === t.id ? '700' : '500',
+                                color: createType === t.id ? '#6366F1' : '#64748B', textAlign: 'center' }}>{t.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        {/* Custom name input if Other selected */}
+                        {createType === 'other' && (
+                          <View style={{ marginTop: 14, backgroundColor: '#EEF2FF', borderRadius: 18, padding: 16 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1', marginBottom: 10 }}>What are you planning?</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
+                              backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+                              borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#E2E8F0' }}>
+                              <Feather name="edit-2" size={15} color="#6366F1" />
+                              <TextInput value={createCustom} onChangeText={setCreateCustom}
+                                placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
+                                autoFocus returnKeyType="done"
+                                style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
+                              {createCustom.length > 0 && (
+                                <TouchableOpacity onPress={() => setCreateCustom('')}>
+                                  <Feather name="x-circle" size={16} color="#94A3B8" />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          </View>
+                        )}
                       </View>
-                    </View>
-                    <Switch value={createDriving} onValueChange={setCreateDriving} trackColor={{ false: '#E2E8F0', true: '#818CF8' }} thumbColor={createDriving ? '#6366F1' : '#f4f3f4'} />
-                  </TouchableOpacity>
-                </View>
-              )}
+                    )
+                  })()}
 
-              {/* Bottom button */}
-              <View style={{ backgroundColor: '#fff', marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 14, paddingBottom: Platform.OS === 'ios' ? 36 : 72 }}>
-                {createStep < 4 ? (
-                  <TouchableOpacity
-                    style={[s.btnPrimary,
-                      (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
-                        ? { opacity: 0.35, backgroundColor: '#6366F1' }
-                        : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
-                    ]}
-                    disabled={(createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))}
-                    onPress={() => setCreateStep(cs => cs + 1)}>
-                    <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue →</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
-                    onPress={() => {
-                      setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null)
-                      setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false)
-                      setCreateLangs([]); setCreateVibe(null); setCreateCustom('')
-                      showToast('Event created! 🎉')
-                    }}>
-                    <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Social 🚀</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-            </KeyboardAvoidingView>
-          </View>
+                  {/* ── Step 3: Calendar + Time + Location ── */}
+                  {createStep === 3 && (() => {
+                    const today = new Date(); today.setHours(0,0,0,0)
+                    const firstDay = new Date(calViewYear, calViewMonth, 1)
+                    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate()
+                    const startDow = (firstDay.getDay() + 6) % 7
+                    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+                    const DAY_LABELS = ['M','T','W','T','F','S','S']
+                    const cells: (number | null)[] = []
+                    for (let i = 0; i < startDow; i++) cells.push(null)
+                    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+                    while (cells.length % 7 !== 0) cells.push(null)
+                    const cellW = (W - 40) / 7
+                    return (
+                      <View>
+                        {/* Calendar card */}
+                        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 14, marginBottom: 14 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <TouchableOpacity onPress={() => { const d = new Date(calViewYear, calViewMonth - 1); setCalViewMonth(d.getMonth()); setCalViewYear(d.getFullYear()) }}
+                              style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+                              <Feather name="chevron-left" size={15} color="#334155" />
+                            </TouchableOpacity>
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B' }}>{MONTHS[calViewMonth]} {calViewYear}</Text>
+                            <TouchableOpacity onPress={() => { const d = new Date(calViewYear, calViewMonth + 1); setCalViewMonth(d.getMonth()); setCalViewYear(d.getFullYear()) }}
+                              style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+                              <Feather name="chevron-right" size={15} color="#334155" />
+                            </TouchableOpacity>
+                          </View>
+                          <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                            {DAY_LABELS.map((l, i) => (
+                              <View key={i} style={{ width: cellW, alignItems: 'center' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: i >= 5 ? '#818CF8' : '#94A3B8' }}>{l}</Text>
+                              </View>
+                            ))}
+                          </View>
+                          {Array.from({ length: cells.length / 7 }, (_, row) => (
+                            <View key={row} style={{ flexDirection: 'row', marginBottom: 1 }}>
+                              {cells.slice(row * 7, row * 7 + 7).map((day, col) => {
+                                if (!day) return <View key={col} style={{ width: cellW, height: 32 }} />
+                                const thisDate = new Date(calViewYear, calViewMonth, day)
+                                const isPast = thisDate < today
+                                const isToday = thisDate.getTime() === today.getTime()
+                                const selStr = `${calViewYear}-${String(calViewMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+                                const isSelected = createDay === selStr
+                                const isWeekend = col >= 5
+                                return (
+                                  <TouchableOpacity key={col} disabled={isPast} onPress={() => setCreateDay(selStr)} activeOpacity={0.7}
+                                    style={{ width: cellW, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+                                    <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+                                      backgroundColor: isSelected ? '#6366F1' : isToday ? '#fff' : 'transparent',
+                                      borderWidth: isToday && !isSelected ? 1.5 : 0, borderColor: '#6366F1',
+                                      shadowColor: isSelected ? '#6366F1' : 'transparent', shadowOpacity: 0.35, shadowRadius: 6, elevation: isSelected ? 4 : 0 }}>
+                                      <Text style={{ fontSize: 13, fontWeight: isSelected || isToday ? '800' : '400',
+                                        color: isSelected ? '#fff' : isPast ? '#CBD5E1' : isWeekend ? '#818CF8' : '#1E1B4B' }}>
+                                        {day}
+                                      </Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                )
+                              })}
+                            </View>
+                          ))}
+                        </View>
+
+                        {/* Time chips */}
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Time</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
+                          {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => (
+                            <TouchableOpacity key={h} onPress={() => setCreateHour(h)} activeOpacity={0.8}
+                              style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
+                                backgroundColor: createHour === h ? '#6366F1' : '#F1F5F9' }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: createHour === h ? '#fff' : '#64748B' }}>{h}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        {/* Location */}
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Location</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
+                          paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1.5,
+                          borderColor: createLocation.length > 0 ? '#6366F1' : 'transparent' }}>
+                          <Feather name="map-pin" size={15} color="#6366F1" />
+                          <TextInput value={createLocation} onChangeText={setCreateLocation}
+                            placeholder="Café, beach, address..." placeholderTextColor="#94A3B8"
+                            style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
+                        </View>
+                      </View>
+                    )
+                  })()}
+
+                  {/* ── Step 4: Vibe + Language + Driving ── */}
+                  {createStep === 4 && (
+                    <View style={{ gap: 16 }}>
+                      {/* Vibe */}
+                      <View>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Vibe</Text>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          {[{ id:'chill', emoji:'😌', label:'Chill' },{ id:'active', emoji:'⚡', label:'Active' },{ id:'professional', emoji:'🤝', label:'Professional' }].map(v => (
+                            <TouchableOpacity key={v.id} onPress={() => setCreateVibe(v.id)} activeOpacity={0.8}
+                              style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 16,
+                                backgroundColor: createVibe === v.id ? '#EEF2FF' : '#F8FAFC',
+                                borderWidth: 2, borderColor: createVibe === v.id ? '#6366F1' : 'transparent' }}>
+                              <Text style={{ fontSize: 22 }}>{v.emoji}</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 4, color: createVibe === v.id ? '#6366F1' : '#64748B' }}>{v.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                      {/* Languages */}
+                      <View>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Languages</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                          {LANGUAGES_LIST.map((l: any) => (
+                            <TouchableOpacity key={l.code} onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])} activeOpacity={0.8}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 99,
+                                backgroundColor: createLangs.includes(l.code) ? '#EEF2FF' : '#F8FAFC',
+                                borderWidth: 1.5, borderColor: createLangs.includes(l.code) ? '#6366F1' : 'transparent' }}>
+                              <Text style={{ fontSize: 15 }}>{l.flag || '🌐'}</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: createLangs.includes(l.code) ? '#6366F1' : '#64748B' }}>{l.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                      {/* Driving */}
+                      <TouchableOpacity onPress={() => setCreateDriving(v => !v)} activeOpacity={0.85}
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                          backgroundColor: createDriving ? '#EEF2FF' : '#F8FAFC', borderRadius: 16, padding: 14,
+                          borderWidth: 1.5, borderColor: createDriving ? '#6366F1' : 'transparent' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <Text style={{ fontSize: 22 }}>🚗</Text>
+                          <View>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B' }}>I can give a lift</Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>Others can ride with you</Text>
+                          </View>
+                        </View>
+                        <Switch value={createDriving} onValueChange={setCreateDriving} trackColor={{ false: '#E2E8F0', true: '#818CF8' }} thumbColor={createDriving ? '#6366F1' : '#f4f3f4'} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* Bottom button — inside ScrollView so keyboard never covers it */}
+                  <View style={{ paddingTop: 16, paddingBottom: 8 }}>
+                  {createStep < 4 ? (
+                    <TouchableOpacity
+                      style={[s.btnPrimary,
+                        (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
+                          ? { opacity: 0.35, backgroundColor: '#6366F1' }
+                          : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
+                      ]}
+                      disabled={(createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))}
+                      onPress={() => setCreateStep(cs => cs + 1)}>
+                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue →</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
+                      onPress={() => {
+                        setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
+                        setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
+                        setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+                        setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
+                        showToast('Event created! 🎉')
+                      }}>
+                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Social 🚀</Text>
+                    </TouchableOpacity>
+                  )}
+                  </View>
+
+                </ScrollView>
+
+              </KeyboardAvoidingView>
+            </SafeAreaView>
+          </LinearGradient>
         </Modal>
       </SafeAreaView>
 
