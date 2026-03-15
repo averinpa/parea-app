@@ -2839,8 +2839,10 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
 
   const handleSend = () => {
     if (!chatInput.trim() || !openChat) return
-    const newMsg = { from: 'me', text: chatInput.trim(), time: 'now' }
+    const text = chatInput.trim()
+    const newMsg = { from: 'me', text, time: 'now' }
     setChatMessages(prev => ({ ...prev, [openChat.id]: [...(prev[openChat.id] || []), newMsg] }))
+    setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: 'now' } : c))
     setChatInput('')
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
   }
