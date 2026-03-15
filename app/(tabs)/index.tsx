@@ -1060,8 +1060,13 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed }: any) {
-  const allCityEvents = MOCK_EVENTS.filter(e => e.city === city)
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents }: any) {
+  const now = Date.now()
+  const allCityEvents = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
+    if (e.city !== city) return false
+    if (e.isHosted && e.expiresAt && e.expiresAt < now) return false
+    return true
+  })
 
   // Data Matching: events whose category matches user interests float to top
   const userCategories = (userInterests as string[]).map((i: string) => INTEREST_TO_CATEGORY[i]).filter(Boolean)
@@ -1446,11 +1451,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [] }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
-  initialSubTab?: 'going' | 'messages';
+  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[];
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
@@ -1465,7 +1470,9 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
     Animated.timing(crewSheetAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setCrewSheet(null))
   }
 
+  const now = Date.now()
   const myEvents = MOCK_EVENTS.filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
+  const activeHostedEvents = hostedEvents.filter(ev => !ev.expiresAt || ev.expiresAt > now)
 
   const FORMAT_CHIP: Record<string, { emoji: string; label: string; color: string }> = {
     '1+1':   { emoji: '👥', label: 'Duo',   color: '#f472b6' },
@@ -1502,7 +1509,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
         {/* Pill switcher */}
         <View style={{ flexDirection: 'row', backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 99, padding: 4, marginBottom: 16 }}>
           {([
-            { id: 'going',    label: `🎪 Going${myEvents.length > 0 ? ` (${myEvents.length})` : ''}` },
+            { id: 'going',    label: `🎪 Plans${myEvents.length + activeHostedEvents.length > 0 ? ` (${myEvents.length + activeHostedEvents.length})` : ''}` },
             { id: 'messages', label: `💬 Chats${chatList.length > 0 ? ` (${chatList.length})` : ''}` },
           ] as const).map(t => (
             <TouchableOpacity key={t.id} activeOpacity={0.8}
@@ -1518,7 +1525,42 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
       {/* Going tab */}
       {subTab === 'going' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 14 }}>
-          {myEvents.length === 0 ? (
+          {/* Hosted events section */}
+          {activeHostedEvents.length > 0 && (
+            <View style={{ gap: 10 }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4 }}>Hosting 👑</Text>
+              {activeHostedEvents.map((ev: any) => (
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 2, borderColor: 'rgba(99,102,241,0.25)', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 3 }}>
+                  <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
+                  <View style={{ padding: 16, gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                      <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.1)' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1' }}>Host 👑</Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>📅 {ev.time}</Text>
+                      </View>
+                      {ev.location ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
+                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>📍 {ev.location}</Text>
+                        </View>
+                      ) : null}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {ev.participantsCount}/{ev.maxParticipants}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+              {myEvents.length > 0 && (
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4, marginTop: 4 }}>Attending</Text>
+              )}
+            </View>
+          )}
+          {myEvents.length === 0 && activeHostedEvents.length === 0 ? (
             <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 }}>
               <Text style={{ fontSize: 44, marginBottom: 14 }}>🎪</Text>
               <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 8 }}>No plans yet</Text>
@@ -2112,8 +2154,10 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner }: any) {
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed')
+  const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
+  const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
   const [previewProfile, setPreviewProfile] = useState<any>(null)
 
   // aurora blob animations
@@ -2162,7 +2206,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     </View>
   )
 
-  if (myEvents.length === 0) {
+  if (myEvents.length === 0 && !hasHostActivity) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
@@ -2203,11 +2247,56 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-            {myEvents.length} event{myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew
+            {hasHostActivity ? '👑 You have join requests' : `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew`}
           </Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 32 }}>
+          {/* Host approval section */}
+          {activeHosted.map((ev: any) => {
+            const requests: any[] = pendingJoinRequests[ev.id] || []
+            if (requests.length === 0) return null
+            return (
+              <View key={`host-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 5 }} />
+                <View style={{ padding: 16, gap: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST 👑</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>
+                    {requests.length} request{requests.length > 1 ? 's' : ''} to join
+                  </Text>
+                  {requests.map((req: any) => (
+                    <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
+                      <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
+                        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
+                        <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                          {req.langs.map((l: string) => (
+                            <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
+                          ))}
+                        </View>
+                      </View>
+                      <View style={{ gap: 8 }}>
+                        <TouchableOpacity onPress={() => onApproveJoiner?.(ev.id, req)} activeOpacity={0.8}
+                          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(67,233,123,0.2)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 18 }}>✓</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => onRejectJoiner?.(ev.id, req)} activeOpacity={0.8}
+                          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(239,68,68,0.15)', borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 18 }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )
+          })}
           {myEvents.map((ev: any) => {
             const format     = userEventFormat?.[ev.id]    || 'squad'
             const transport  = userEventTransport?.[ev.id] || 'meet'
@@ -2537,6 +2626,8 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
+  const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
+  const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [toast, setToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
   const toastAnim = useRef(new Animated.Value(0)).current
 
@@ -2618,7 +2709,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} />}
           {activeTab === 'vibecheck' && <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={MOCK_EVENTS}
@@ -2656,11 +2747,41 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               showToast("We let them know your plans changed 📅")
             }}
+            hostedEvents={userCreatedEvents}
+            pendingJoinRequests={pendingJoinRequests}
+            onApproveJoiner={(eventId: number, joiner: any) => {
+              setPendingJoinRequests(prev => ({
+                ...prev,
+                [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
+              }))
+              // Create a direct chat with the approved person
+              const ev = userCreatedEvents.find(e => e.id === eventId)
+              const newChat = {
+                id: Date.now(), type: 'duo',
+                name: joiner.name, age: joiner.age,
+                transport: joiner.transport, color: joiner.color,
+                photo: joiner.photo, lastMsg: `✅ ${joiner.name} was approved to join!`,
+                time: 'now', isNew: true, expiresIn: 24,
+                event: ev?.title || 'Your Social', eventEmoji: '🎉',
+                partnerProfile: joiner,
+              }
+              setChatList(prev => [newChat, ...prev])
+              showToast(`${joiner.name} approved! ✅`)
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+            }}
+            onRejectJoiner={(eventId: number, joiner: any) => {
+              setPendingJoinRequests(prev => ({
+                ...prev,
+                [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
+              }))
+              showToast(`Request declined`)
+            }}
           />}
           {activeTab === 'messages' && <MessagesTab
             initialSubTab={messagesInitialSubTab}
             chatList={chatList}
             onOpenChat={setOpenChat}
+            hostedEvents={userCreatedEvents}
             onLeaveChat={(id, addSystemMsg) => {
               if (addSystemMsg) {
                 setChatMessages(prev => ({
@@ -2702,8 +2823,8 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
           <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('vibecheck')}>
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
-              {Object.keys(joinedEvents).length > 0 && (
-                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+              {(Object.keys(joinedEvents).length > 0 || Object.values(pendingJoinRequests).some(r => r.length > 0)) && (
+                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: Object.values(pendingJoinRequests).some(r => r.length > 0) ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
             <Text style={[s.navLabel, activeTab === 'vibecheck' && { color: '#6366F1' }]}>Vibe</Text>
@@ -3030,11 +3151,69 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     <TouchableOpacity
                       style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
                       onPress={() => {
+                        // Build a proper event object
+                        const TYPE_TO_CAT: Record<string, string> = {
+                          padel:'sports',tennis:'sports',yoga:'sports',gym:'sports',water:'sports',
+                          coffee:'coffee',meze:'food',wine:'wine',brunch:'food',sunset:'outdoors',
+                          networking:'tech',crypto:'tech',coworking:'tech',
+                          beach:'outdoors',hiking:'outdoors',boat:'outdoors',boardgames:'gaming',
+                        }
+                        const SIZE_MAX: Record<string, number> = { duo: 2, squad: 5, party: 20 }
+                        const GRAD_POOL: [string,string][] = [
+                          ['#6366F1','#8B5CF6'],['#EC4899','#F43F5E'],
+                          ['#10B981','#059669'],['#F59E0B','#F97316'],
+                        ]
+                        const newId = Date.now()
+                        const grad = GRAD_POOL[newId % GRAD_POOL.length]
+                        const actLabel = createCustom.trim() || createType || 'Social'
+
+                        // Build expiry timestamp from selected date + time
+                        let expiresAt = 0
+                        if (createDay && createHour) {
+                          const [h, m] = createHour.split(':').map(Number)
+                          const d = new Date(createDay)
+                          d.setHours(h, m, 0, 0)
+                          expiresAt = d.getTime()
+                        }
+
+                        const newEvent: any = {
+                          id: newId,
+                          city,
+                          type: 'community',
+                          title: actLabel,
+                          time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
+                          distance: '0km',
+                          category: TYPE_TO_CAT[createType || ''] || 'outdoors',
+                          gradient: grad,
+                          seekerColors: ['#818CF8'],
+                          seekingCount: 0,
+                          participantsCount: 1,
+                          maxParticipants: SIZE_MAX[createSize || 'squad'] || 5,
+                          description: `A ${createSize || 'squad'} ${actLabel} gathering. ${createLocation ? '📍 ' + createLocation : ''} ${createDriving ? '🚗 Host can give a lift.' : ''}`.trim(),
+                          location: createLocation,
+                          isHosted: true,
+                          hostDriving: createDriving,
+                          hostLangs: createLangs,
+                          hostVibe: createVibe,
+                          expiresAt,
+                        }
+                        setUserCreatedEvents(prev => [...prev, newEvent])
+
+                        // Simulate a join request arriving after 3 seconds (demo)
+                        const requester = MOCK_SEEKERS[newId % MOCK_SEEKERS.length]
+                        setTimeout(() => {
+                          setPendingJoinRequests(prev => ({
+                            ...prev,
+                            [newId]: [...(prev[newId] || []), { ...requester, requestId: `${newId}-${requester.id}` }],
+                          }))
+                        }, 3000)
+
+                        // Reset form
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
-                        showToast('Event created! 🎉')
+                        showToast('Your social is live! 🎉')
                       }}>
                       <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Social 🚀</Text>
                     </TouchableOpacity>
