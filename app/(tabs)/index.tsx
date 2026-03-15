@@ -27,6 +27,7 @@ const LANDING_SLIDES = [
     sub: 'Events are happening around you right now. Find people who want to go together.',
     bg: ['#F5F3FF', '#EDE9FE', '#DDD6FE'],
     accent: '#6366F1', titleColor: '#1E1B4B', subColor: '#475569',
+    imgScale: 0.78,
   },
   {
     img: require('../../assets/images/Gemini_Generated_Image_55nnbe55nnbe55nn-removebg-preview.png'),
@@ -34,6 +35,7 @@ const LANDING_SLIDES = [
     sub: "Like profiles of people going to the same event. Match — and you're in a group.",
     bg: ['#FFF0F9', '#FCE7F3', '#FBCFE8'],
     accent: '#EC4899', titleColor: '#1E1B4B', subColor: '#475569',
+    imgScale: 1.0,
   },
   {
     img: require('../../assets/images/unnamed__2_-removebg-preview.png'),
@@ -41,6 +43,7 @@ const LANDING_SLIDES = [
     sub: 'Coffee on the beach, a board game evening, a concert — find your people.',
     bg: ['#F0FDF4', '#DCFCE7', '#BBF7D0'],
     accent: '#10B981', titleColor: '#1E1B4B', subColor: '#475569',
+    imgScale: 1.0,
   },
 ]
 
@@ -177,7 +180,7 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
         </View>
 
         <Animated.View style={[s.slideImgWrap, { transform: [{ translateX: slideAnim }] }]}>
-          <Image source={cur.img} style={s.slideImg} resizeMode="contain" />
+          <Image source={cur.img} style={[s.slideImg, { width: W * 0.88 * (cur.imgScale ?? 1), height: W * 0.88 * (cur.imgScale ?? 1) }]} resizeMode="contain" />
         </Animated.View>
 
         <Animated.View style={[s.slideTextWrap, { transform: [{ translateX: slideAnim }] }]}>
