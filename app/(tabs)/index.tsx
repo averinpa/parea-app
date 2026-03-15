@@ -2933,7 +2933,10 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
           {activeTab === 'messages' && <MessagesTab
             initialSubTab={messagesInitialSubTab}
             chatList={chatList}
-            onOpenChat={setOpenChat}
+            onOpenChat={(chat) => {
+              setOpenChat(chat)
+              setChatList(prev => prev.map(c => c.id === chat.id ? { ...c, isNew: false } : c))
+            }}
             hostedEvents={userCreatedEvents}
             onLeaveChat={(id, addSystemMsg) => {
               if (addSystemMsg) {
