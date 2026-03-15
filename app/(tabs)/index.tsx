@@ -1194,10 +1194,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               <Text style={s.cityBtnTxt}>{city}</Text>
               <Ionicons name="chevron-down" size={13} color="#4338CA" />
             </TouchableOpacity>
-            <TouchableOpacity style={s.bellBtn}>
-              <Ionicons name="notifications-outline" size={22} color="#1E1B4B" />
-              <View style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
-            </TouchableOpacity>
           </View>
           <View style={{ height: 52 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterContent}>
@@ -3771,14 +3767,14 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
             style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
               shadowColor: '#6366F1', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
             <Ionicons name="notifications-outline" size={22} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
-            {unreadCount > 0 && (
-              <View style={{ position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8,
-                backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
-                paddingHorizontal: 3, borderWidth: 1.5, borderColor: '#fff' }}>
-                <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
           </TouchableOpacity>
+          {unreadCount > 0 && (
+            <View style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
+              backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
+              paddingHorizontal: 4, borderWidth: 2, borderColor: '#F5F3FF' }}>
+              <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
         </Animated.View>
       )}
 
