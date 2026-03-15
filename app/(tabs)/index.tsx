@@ -3435,6 +3435,44 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     )}
                   </View>
                 </ScrollView>
+
+                {/* Sticky Join button */}
+                {!eventDetail.isHosted && (() => {
+                  const joined = joinedEvents[eventDetail.id]
+                  const isFull = evIsFull
+                  return (
+                    <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, backgroundColor: 'rgba(245,243,255,0.96)', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)' }}>
+                      {joined ? (
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            handleJoinEvent(eventDetail)
+                            setEventDetail(null)
+                          }}
+                          style={{ borderRadius: 18, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0fdf4', borderWidth: 2, borderColor: '#22c55e' }}>
+                          <Text style={{ fontSize: 16, fontWeight: '800', color: '#16a34a' }}>✓ Joined — tap to leave</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          disabled={isFull}
+                          onPress={() => {
+                            setEventDetail(null)
+                            setPendingJoinEv(eventDetail)
+                            setActiveTab('home')
+                          }}
+                          style={[s.btnPrimary, isFull
+                            ? { backgroundColor: '#E2E8F0', shadowOpacity: 0 }
+                            : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
+                          ]}>
+                          <Text style={[s.btnPrimaryText, { color: isFull ? '#94A3B8' : '#fff' }]}>
+                            {isFull ? 'Event is full' : 'Join this Social →'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )
+                })()}
               </SafeAreaView>
             </LinearGradient>
           </Modal>
