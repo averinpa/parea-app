@@ -1696,7 +1696,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 
       {/* Chats tab */}
       {subTab === 'messages' && (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 24 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, gap: 10, paddingBottom: 32 }}>
           {chatList.length === 0 && (
             <View style={{ alignItems: 'center', paddingTop: 60 }}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>💬</Text>
@@ -1707,28 +1707,37 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
           {chatList.map(chat => (
             <TouchableOpacity
               key={chat.id}
-              style={[s.chatCard, chat.isNew && { borderColor: 'rgba(99,102,241,0.4)', borderWidth: 2, shadowColor: '#6366F1', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 }]}
               onPress={() => onOpenChat(chat)}
               onLongPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                const msg = chat.type === 'duo'
-                  ? `${chat.name} will see that your plans changed 📅`
-                  : `The group will see you've left. Your spot will be freed.`
                 Alert.alert(
                   chat.type === 'duo' ? `Leave chat with ${chat.name}?` : `Leave "${chat.event}"?`,
-                  msg,
+                  chat.type === 'duo' ? `${chat.name} will see that your plans changed 📅` : `The group will see you've left.`,
                   [
                     { text: 'Leave', style: 'destructive', onPress: () => onLeaveChat?.(chat.id, true) },
                     { text: 'Cancel', style: 'cancel' },
                   ]
                 )
               }}
-              activeOpacity={0.8}>
-              {chat.expiresIn <= 6 && <View style={{ height: 3, backgroundColor: '#EF4444', borderRadius: 99 }} />}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13 }}>
+              activeOpacity={0.88}
+              style={{ borderRadius: 24, overflow: 'hidden' }}>
+              {/* Card background — gradient tint for unread, plain for read */}
+              <LinearGradient
+                colors={chat.isNew
+                  ? ['#EEF2FF', '#F5F0FF']
+                  : ['#fff', '#FAFAFA']}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
+                  borderWidth: chat.isNew ? 1.5 : 1,
+                  borderColor: chat.isNew ? 'rgba(99,102,241,0.25)' : 'rgba(0,0,0,0.05)',
+                  borderRadius: 24 }}>
+
+                {/* Avatar */}
                 {chat.type === 'duo' ? (
-                  <View style={[s.chatAvatar, { backgroundColor: chat.color, alignItems: 'center', justifyContent: 'center' }]}>
-                    {chat.photo ? <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%', borderRadius: 28 }} /> : <Text style={{ fontSize: 22 }}>👤</Text>}
+                  <View style={{ width: 54, height: 54, borderRadius: 27, overflow: 'hidden', backgroundColor: chat.color,
+                    shadowColor: chat.color, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 }}>
+                    {chat.photo
+                      ? <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%' }} />
+                      : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
                   </View>
                 ) : (() => {
                   const shown = (chat.avatars || []).slice(0, 3)
@@ -1738,42 +1747,58 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     const gc0 = (cols[0] && typeof cols[0] === 'string') ? cols[0] : '#818CF8'
                     const gc1 = (cols[1] && typeof cols[1] === 'string') ? cols[1] : '#6366F1'
                     return (
-                      <LinearGradient
-                        colors={[gc0, gc1]}
-                        style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 24 }}>{chat.eventEmoji || '🎉'}</Text>
+                      <LinearGradient colors={[gc0, gc1]}
+                        style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center',
+                          shadowColor: gc0, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }}>
+                        <Text style={{ fontSize: 26 }}>{chat.eventEmoji || '🎉'}</Text>
                       </LinearGradient>
                     )
                   }
                   return (
-                    <View style={{ width: 64, height: 42, position: 'relative' }}>
+                    <View style={{ width: 66, height: 44, position: 'relative' }}>
                       {shown.map((av: string, ai: number) => (
-                        <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
+                        <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
                           <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
                         </View>
                       ))}
                       {extra > 0 && (
-                        <View style={{ position: 'absolute', right: -2, bottom: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff' }}>
+                        <View style={{ position: 'absolute', right: -4, bottom: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' }}>
                           <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
                         </View>
                       )}
                     </View>
                   )
                 })()}
+
+                {/* Text content */}
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <Text style={[{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }, chat.isNew && { color: '#4338CA' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: chat.isNew ? '#4338CA' : '#1E1B4B', letterSpacing: -0.2 }} numberOfLines={1}>
                       {chat.type === 'duo' ? `${chat.name}, ${chat.age}` : chat.event}
                     </Text>
-                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>{chat.time}</Text>
+                    <Text style={{ fontSize: 11, color: chat.isNew ? '#818CF8' : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8 }}>{chat.time}</Text>
                   </View>
-                  <Text style={{ fontSize: 11, color: '#818CF8', marginBottom: 2 }}>
-                    {chat.eventEmoji || ''} {chat.type === 'duo' ? chat.event : `${chat.members} members`}
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>{chat.lastMsg}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 13 }}>{chat.eventEmoji || '📍'}</Text>
+                    <Text style={{ fontSize: 11, color: '#818CF8', fontWeight: '600' }} numberOfLines={1}>
+                      {chat.type === 'duo' ? chat.event : `${chat.members} members`}
+                    </Text>
+                    {chat.expiresIn <= 6 && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
+                        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#EF4444' }} />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>Expiring</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 13, color: chat.isNew ? '#475569' : '#94A3B8', fontWeight: chat.isNew ? '500' : '400' }} numberOfLines={1}>{chat.lastMsg}</Text>
                 </View>
-                {chat.isNew && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#6366F1' }} />}
-              </View>
+
+                {/* Unread dot */}
+                {chat.isNew && (
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#6366F1',
+                    shadowColor: '#6366F1', shadowOpacity: 0.6, shadowRadius: 4, elevation: 3 }} />
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           ))}
         </ScrollView>
