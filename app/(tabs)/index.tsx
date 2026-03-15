@@ -2729,8 +2729,9 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
 
         {/* Create event modal */}
         <Modal visible={createOpen} transparent animationType="slide" onRequestClose={() => { setCreateOpen(false); setCreateStep(1) }}>
-          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,12,41,0.55)' }} activeOpacity={1} onPress={() => { setCreateOpen(false); setCreateStep(1) }} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(15,12,41,0.65)', justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => { setCreateOpen(false); setCreateStep(1) }} />
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <View style={[s.createSheet, { maxHeight: '90%' }]}>
               <View style={s.bentoSheetHandle} />
 
@@ -2801,7 +2802,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                 const catItems = [...(CATS[createCategory]?.items || []), { id: 'other', emoji: '✏️', label: 'Other' }]
                 const cardW = (W - 40 - 20) / 3
                 return (
-                  <View>
+                  <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                     {/* Category tabs */}
                     <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                       {Object.entries(CATS).map(([cat, { emoji }]) => (
@@ -2828,16 +2829,25 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     </View>
                     {/* Custom name input if Other selected */}
                     {createType === 'other' && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12,
-                        backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11,
-                        borderWidth: 1.5, borderColor: '#6366F1' }}>
-                        <Feather name="edit-2" size={15} color="#6366F1" />
-                        <TextInput value={createCustom} onChangeText={setCreateCustom}
-                          placeholder="Describe your activity..." placeholderTextColor="#94A3B8"
-                          style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
+                      <View style={{ marginTop: 14, backgroundColor: '#EEF2FF', borderRadius: 18, padding: 16 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1', marginBottom: 10 }}>What are you planning?</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
+                          backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+                          borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#E2E8F0' }}>
+                          <Feather name="edit-2" size={15} color="#6366F1" />
+                          <TextInput value={createCustom} onChangeText={setCreateCustom}
+                            placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
+                            autoFocus returnKeyType="done"
+                            style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
+                          {createCustom.length > 0 && (
+                            <TouchableOpacity onPress={() => setCreateCustom('')}>
+                              <Feather name="x-circle" size={16} color="#94A3B8" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     )}
-                  </View>
+                  </ScrollView>
                 )
               })()}
 
@@ -3008,7 +3018,8 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                 )}
               </View>
             </View>
-          </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+          </View>
         </Modal>
       </SafeAreaView>
 
