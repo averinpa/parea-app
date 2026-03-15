@@ -2271,16 +2271,21 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </Text>
                   {requests.map((req: any) => (
                     <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
-                      <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
-                        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
-                        <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                          {req.langs.map((l: string) => (
-                            <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
-                          ))}
+                      <TouchableOpacity onPress={() => { setPreviewProfile(req); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                        <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
+                            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>tap to view →</Text>
+                          </View>
+                          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
+                          <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                            {req.langs.map((l: string) => (
+                              <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
+                            ))}
+                          </View>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                       <View style={{ gap: 8 }}>
                         <TouchableOpacity onPress={() => onApproveJoiner?.(ev.id, req)} activeOpacity={0.8}
                           style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(67,233,123,0.2)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
