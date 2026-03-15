@@ -2271,7 +2271,18 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </Text>
                   {requests.map((req: any) => (
                     <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
-                      <TouchableOpacity onPress={() => { setPreviewProfile(req); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <TouchableOpacity onPress={() => {
+                        setPreviewProfile({
+                          ...req,
+                          colors: [req.color, '#1E1B4B'],
+                          flag: FLAG_MAP[req.langs?.[0]] || '🌍',
+                          langs: (req.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                          interests: [],
+                          goal: 'chill',
+                          emoji: '👤',
+                        })
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      }} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                         <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -2633,6 +2644,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
+  const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
   const [toast, setToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
   const toastAnim = useRef(new Animated.Value(0)).current
 
@@ -2759,18 +2771,52 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                 ...prev,
                 [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
               }))
-              // Create a direct chat with the approved person
               const ev = userCreatedEvents.find(e => e.id === eventId)
-              const newChat = {
-                id: Date.now(), type: 'duo',
-                name: joiner.name, age: joiner.age,
-                transport: joiner.transport, color: joiner.color,
-                photo: joiner.photo, lastMsg: `✅ ${joiner.name} was approved to join!`,
-                time: 'now', isNew: true, expiresIn: 24,
-                event: ev?.title || 'Your Social', eventEmoji: '🎉',
-                partnerProfile: joiner,
+              const isDuo = (ev?.maxParticipants || 5) <= 2
+
+              if (isDuo) {
+                // 1-on-1 event → direct chat
+                const newChat = {
+                  id: Date.now(), type: 'duo',
+                  name: joiner.name, age: joiner.age,
+                  transport: joiner.transport, color: joiner.color,
+                  photo: joiner.photo, lastMsg: `✅ You approved ${joiner.name}!`,
+                  time: 'now', isNew: true, expiresIn: 24,
+                  event: ev?.title || 'Your Social', eventEmoji: '🎉',
+                  partnerProfile: joiner,
+                }
+                setChatList(prev => [newChat, ...prev])
+              } else {
+                // Squad/Party → find or create one group chat for this event
+                const newApproved = [...(approvedJoiners[eventId] || []), joiner]
+                setApprovedJoiners(prev => ({ ...prev, [eventId]: newApproved }))
+
+                setChatList(prev => {
+                  const existingIdx = prev.findIndex(c => c.hostEventId === eventId)
+                  if (existingIdx >= 0) {
+                    // Update existing group chat
+                    const updated = [...prev]
+                    updated[existingIdx] = {
+                      ...updated[existingIdx],
+                      members: newApproved.length + 1,
+                      colors: newApproved.map((p: any) => p.color),
+                      lastMsg: `✅ ${joiner.name} joined the group`,
+                      time: 'now', isNew: true,
+                    }
+                    return updated
+                  } else {
+                    // Create new group chat
+                    return [{
+                      id: Date.now(), type: 'group', hostEventId: eventId,
+                      event: ev?.title || 'Your Social', eventEmoji: CATEGORY_EMOJI[ev?.category || ''] || '🎉',
+                      members: newApproved.length + 1,
+                      avatars: [], colors: newApproved.map((p: any) => p.color),
+                      lastMsg: `✅ ${joiner.name} was approved to join!`,
+                      time: 'now', isNew: true, expiresIn: 24,
+                    }, ...prev]
+                  }
+                })
               }
-              setChatList(prev => [newChat, ...prev])
               showToast(`${joiner.name} approved! ✅`)
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
             }}
