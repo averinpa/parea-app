@@ -1,6 +1,7 @@
 // App.js — Parea Mobile (Expo)
 // npx expo install expo-image-picker expo-linear-gradient expo-blur @expo/vector-icons
 
+import NotificationBell from './components/NotificationBell'
 import { Feather, Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -483,15 +484,25 @@ function OnboardingScreen({ onFinish }) {
 
 function FeedScreen() {
   return (
-    <LinearGradient colors={['#1a0533', '#050509']} style={[s.fill, s.center]}>
+    <LinearGradient colors={['#1a0533', '#050509']} style={s.fill}>
       <StatusBar style="light" />
-      <Image source={require('./assets/logo.png')} style={{ width: 160, height: 50 }} resizeMode="contain" />
-      <Text style={{ color: '#BB86FC', fontSize: 20, fontWeight: '800', marginTop: 28 }}>
-        You're in! 🎉
-      </Text>
-      <Text style={{ color: 'rgba(255,255,255,0.45)', marginTop: 10, textAlign: 'center', paddingHorizontal: 48, lineHeight: 22 }}>
-        Feed is coming. The hard part is done.
-      </Text>
+      <SafeAreaView style={s.fill}>
+        {/* Top bar */}
+        <View style={s.feedTopBar}>
+          <Image source={require('./assets/logo.png')} style={s.feedLogo} resizeMode="contain" />
+          <NotificationBell />
+        </View>
+
+        {/* Placeholder content */}
+        <View style={[s.fill, s.center]}>
+          <Text style={{ color: '#BB86FC', fontSize: 20, fontWeight: '800' }}>
+            You're in! 🎉
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.45)', marginTop: 10, textAlign: 'center', paddingHorizontal: 48, lineHeight: 22 }}>
+            Feed is coming. The hard part is done.
+          </Text>
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   )
 }
@@ -641,4 +652,15 @@ const s = StyleSheet.create({
   // ── Bottom bar
   bottomBar: { paddingHorizontal: 24, paddingBottom: 36, paddingTop: 8, gap: 10 },
   stepCounter: { textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.28)', fontWeight: '600' },
+
+  // ── Feed top bar
+  feedTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  feedLogo: { width: 110, height: 34 },
 })
