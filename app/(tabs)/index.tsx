@@ -3816,33 +3816,52 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
                     <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>Notifications will appear here{'\n'}when something happens</Text>
                   </View>
                 ) : (
-                  notifications.map(n => (
-                    <View key={n.id} style={{
-                      flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-                      backgroundColor: n.read ? '#FAFAFA' : '#F5F3FF',
-                      borderRadius: 18, padding: 14,
-                      borderLeftWidth: 3, borderLeftColor: n.read ? '#E2E8F0' : n.color,
-                      shadowColor: n.read ? 'transparent' : n.color,
-                      shadowOpacity: n.read ? 0 : 0.12, shadowRadius: 8, elevation: n.read ? 0 : 2,
-                    }}>
-                      {/* Emoji icon */}
-                      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${n.color}18`,
-                        alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Text style={{ fontSize: 20 }}>{n.emoji}</Text>
-                      </View>
-                      {/* Text */}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: n.read ? '600' : '800', color: '#1E1B4B', marginBottom: 2 }}>{n.title}</Text>
-                        <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }}>{n.body}</Text>
-                        <Text style={{ fontSize: 11, color: n.color, fontWeight: '600', marginTop: 5 }}>{timeAgo(n.time)}</Text>
-                      </View>
-                      {/* Dismiss */}
-                      <TouchableOpacity onPress={() => dismissNotif(n.id)} activeOpacity={0.7}
-                        style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-                        <Feather name="x" size={13} color="#94A3B8" />
+                  notifications.map(n => {
+                    const handleNotifTap = () => {
+                      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+                      closeNotifPanel()
+                      if (n.type === 'join_request') {
+                        setActiveTab('vibecheck')
+                      } else if (n.type === 'match' || n.type === 'group_chat') {
+                        setMessagesInitialSubTab('messages')
+                        setActiveTab('messages')
+                      } else if (n.type === 'confirmed') {
+                        setMessagesInitialSubTab('going')
+                        setActiveTab('messages')
+                      }
+                    }
+                    return (
+                      <TouchableOpacity key={n.id} activeOpacity={0.8} onPress={handleNotifTap}
+                        style={{
+                          flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+                          backgroundColor: n.read ? '#FAFAFA' : '#F5F3FF',
+                          borderRadius: 18, padding: 14,
+                          borderLeftWidth: 3, borderLeftColor: n.read ? '#E2E8F0' : n.color,
+                          shadowColor: n.read ? 'transparent' : n.color,
+                          shadowOpacity: n.read ? 0 : 0.12, shadowRadius: 8, elevation: n.read ? 0 : 2,
+                        }}>
+                        {/* Emoji icon */}
+                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${n.color}18`,
+                          alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Text style={{ fontSize: 20 }}>{n.emoji}</Text>
+                        </View>
+                        {/* Text */}
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: n.read ? '600' : '800', color: '#1E1B4B', marginBottom: 2 }}>{n.title}</Text>
+                          <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }}>{n.body}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 }}>
+                            <Text style={{ fontSize: 11, color: n.color, fontWeight: '600' }}>{timeAgo(n.time)}</Text>
+                            {!n.read && <Text style={{ fontSize: 11, color: '#94A3B8' }}>· tap to open →</Text>}
+                          </View>
+                        </View>
+                        {/* Dismiss */}
+                        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); dismissNotif(n.id) }} activeOpacity={0.7}
+                          style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                          <Feather name="x" size={13} color="#94A3B8" />
+                        </TouchableOpacity>
                       </TouchableOpacity>
-                    </View>
-                  ))
+                    )
+                  })
                 )}
               </ScrollView>
             </Animated.View>
