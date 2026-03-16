@@ -3237,6 +3237,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       +{allRequests.length - 12} more hidden · approve or pass to see them
                     </Text>
                   )}
+                  {/* Searching for replacement */}
+                  {slotsLeft > 0 && approvedCount > 0 && allRequests.length === 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' }}>
+                      <Text style={{ fontSize: 20 }}>🔍</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#A5B4FC' }}>Looking for {slotsLeft} replacement{slotsLeft !== 1 ? 's' : ''}...</Text>
+                        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>New requests will appear here shortly</Text>
+                      </View>
+                    </View>
+                  )}
                   {/* Group full state */}
                   {slotsLeft <= 0 && approvedCount > 0 && (
                     <View style={{ gap: 10, paddingTop: 4 }}>
