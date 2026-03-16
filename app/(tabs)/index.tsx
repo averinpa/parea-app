@@ -1670,7 +1670,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
     return (
       <TouchableOpacity
-        onPress={() => { if (!isFull && state === 'none') { if (ev.type === 'official') openJoinSheet(ev); else onJoin(ev) } else if (!isFull) onJoin(ev) }}
+        onPress={() => { if (!isFull && state === 'none') openJoinSheet(ev); else if (!isFull) onJoin(ev) }}
         activeOpacity={isFull ? 1 : 0.75}
         style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1, borderColor: onDark ? 'rgba(255,255,255,0.4)' : 'transparent' }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
         <Text style={{ fontSize: large ? 14 : 11, fontWeight: '700', color: textColor }}>{label}</Text>
@@ -2034,7 +2034,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} going</Text>
                         </View>
                         <TouchableOpacity
-                          onPress={() => { const st = getJoinState(ev); if (st === 'none') { if (ev.type === 'official') openJoinSheet(ev); else onJoin(ev) } else if (st !== 'full') onJoin(ev) }}
+                          onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
                           activeOpacity={getJoinState(ev) === 'full' ? 1 : 0.75}
                           style={{ backgroundColor: getJoinState(ev) === 'full' ? 'rgba(100,116,139,0.1)' : getJoinState(ev) === 'joined' ? 'rgba(34,197,94,0.12)' : getJoinState(ev) === 'pending' ? 'rgba(251,191,36,0.15)' : '#6366F1', borderRadius: 99, paddingHorizontal: 9, paddingVertical: 4, opacity: getJoinState(ev) === 'full' ? 0.55 : 1 }}>
                           <Text style={{ fontSize: 10, fontWeight: '700', color: getJoinState(ev) === 'full' ? '#94A3B8' : getJoinState(ev) === 'joined' ? '#16a34a' : getJoinState(ev) === 'pending' ? '#d97706' : '#fff' }}>
@@ -5164,14 +5164,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           activeOpacity={0.85}
                           disabled={isFull}
                           onPress={() => {
-                            if (eventDetail.type === 'official') {
-                              setEventDetail(null)
-                              setPendingJoinEv(eventDetail)
-                              setActiveTab('home')
-                            } else {
-                              handleJoinEvent(eventDetail)
-                              setEventDetail(null)
-                            }
+                            setEventDetail(null)
+                            setPendingJoinEv(eventDetail)
+                            setActiveTab('home')
                           }}
                           style={[s.btnPrimary, isFull
                             ? { backgroundColor: '#E2E8F0', shadowOpacity: 0 }
