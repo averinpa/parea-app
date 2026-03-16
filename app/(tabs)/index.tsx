@@ -848,8 +848,6 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
 
-    if (__DEV__) Alert.alert('Moderation', ANTHROPIC_KEY ? `✅ Key active\nbase64: ${asset.base64 ? asset.base64.length + ' chars' : '❌ missing'}` : '❌ No API key — moderation disabled')
-
     setPhotos(p => { const n = [...p]; n[idx] = null; return n })
     setPhotoStatus(s => { const n = [...s]; n[idx] = 'idle'; return n })
     setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
