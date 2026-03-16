@@ -3761,6 +3761,7 @@ const CREATE_EVENT_TYPES = [
 ]
 
 function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
+  const insets = useSafeAreaInsets()
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
@@ -4867,7 +4868,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
             <StatusBar style="dark" />
             <SafeAreaView style={s.fill}>
-              <View style={s.chatHeader}>
+              <View style={[s.chatHeader, { paddingTop: Math.max(insets.top, 12) }]}>
                 <TouchableOpacity onPress={() => setOpenChat(null)}>
                   <Ionicons name="chevron-back" size={24} color="#1E1B4B" />
                 </TouchableOpacity>
