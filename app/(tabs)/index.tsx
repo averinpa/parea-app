@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
+import { supabase } from '../../lib/supabase'
 
 const { width: W } = Dimensions.get('window')
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY || ''
@@ -2646,12 +2647,12 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
   )
 }
 
-function SeekersListWithProfile({ vibeResults, onPass, onLike }: { vibeResults: Record<number, string>; onPass: (id: number) => void; onLike: (sk: any) => void }) {
+function SeekersListWithProfile({ vibeResults, onPass, onLike, seekers }: { vibeResults: Record<number, string>; onPass: (id: number) => void; onLike: (sk: any) => void; seekers: any[] }) {
   const [preview, setPreview] = useState<any>(null)
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        {MOCK_SEEKERS.map(sk => {
+        {seekers.map(sk => {
           const result = vibeResults[sk.id]
           return (
             <View key={sk.id} style={[s.seekerCard, result === 'vibe' && { borderColor: '#818CF8', borderWidth: 2 }, result === 'pass' && { opacity: 0.35 }]}>
@@ -3849,7 +3850,33 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
-  const evHost = eventDetail?.type === 'community' ? MOCK_SEEKERS[(eventDetail.id - 1) % MOCK_SEEKERS.length] : null
+  const [dbSeekers, setDbSeekers] = useState<any[]>([])
+
+  // Load profiles from DB, fall back to MOCK_SEEKERS if empty
+  useEffect(() => {
+    supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(50)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setDbSeekers(data.map((p, i) => ({
+            id: p.id,
+            name: p.name || 'User',
+            age: p.age || 25,
+            langs: p.langs || [],
+            transport: p.transport || 'meet',
+            format: p.format || 'group',
+            color: p.color || '#6366F1',
+            photo: p.photos?.[0] || `https://i.pravatar.cc/300?img=${(i % 70) + 1}`,
+            bio: p.bio || '',
+            interests: p.interests || [],
+            drinksPref: p.drinks_pref || '',
+            smokingPref: p.smoking_pref || '',
+          })))
+        }
+      })
+  }, [])
+
+  const allSeekers = dbSeekers.length > 0 ? dbSeekers : MOCK_SEEKERS
+  const evHost = eventDetail?.type === 'community' ? allSeekers[(eventDetail.id - 1) % allSeekers.length] : null
   const evSpotsLeft = eventDetail?.maxParticipants ? eventDetail.maxParticipants - eventDetail.participantsCount : null
   const evIsFull = evSpotsLeft !== null && evSpotsLeft <= 0
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
@@ -4634,7 +4661,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                         // Simulate 8 staggered join requests arriving (demo)
                         ;[0, 1, 2, 3, 4, 5, 6, 7].forEach((i) => {
-                          const requester = MOCK_SEEKERS[(newId + i) % MOCK_SEEKERS.length]
+                          const requester = allSeekers[(newId + i) % allSeekers.length]
                           const delay = 2500 + i * 1800
                           setTimeout(() => {
                             setPendingJoinRequests(prev => ({
@@ -5305,10 +5332,43 @@ export default function App() {
   const [screen, setScreen] = useState<'landing' | 'register' | 'otp' | 'onboarding' | 'feed'>('landing')
   const [userData, setUserData] = useState<any>({})
 
+  const saveProfileToDB = async (data: any) => {
+    try {
+      const PROFILE_COLORS = ['#6366F1','#EC4899','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
+      const color = PROFILE_COLORS[Math.floor(Math.random() * PROFILE_COLORS.length)]
+      const { data: row, error } = await supabase.from('profiles').insert({
+        name: data.name,
+        age: parseInt(data.age) || null,
+        bio: data.bio,
+        photos: data.photos?.filter(Boolean) || [],
+        langs: data.langs || [],
+        interests: data.interests || [],
+        social_energy: data.socialEnergy,
+        drinks_pref: data.drinksPref,
+        smoking_pref: data.smokingPref,
+        music_genres: data.musicGenres || [],
+        transport: data.transport,
+        format: data.format,
+        color,
+      }).select().single()
+      if (error) console.warn('Supabase save error:', error.message)
+      return row
+    } catch (e) {
+      console.warn('Supabase error:', e)
+      return null
+    }
+  }
+
+  const handleFinishOnboarding = async (data: any) => {
+    const row = await saveProfileToDB(data)
+    setUserData({ ...data, dbId: row?.id })
+    setScreen('feed')
+  }
+
   if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('feed')} />
   if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onContinue={() => setScreen('otp')} />
   if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} onVerify={() => setScreen('onboarding')} />
-  if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={data => { setUserData(data); setScreen('feed') }} />
+  if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} />
   return <FeedScreen userData={userData} onUpdateUserData={(patch: any) => setUserData((prev: any) => ({ ...prev, ...patch }))} onLogOut={() => { setUserData({}); setScreen('register') }} />
 }
 
