@@ -5574,7 +5574,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 // Remove from approvedJoiners so slot opens up for refill
                                 setApprovedJoiners(prev => ({
                                   ...prev,
-                                  [openChat.hostEventId]: (prev[openChat.hostEventId] || []).filter((a: any) => a.id !== p.id),
+                                  [openChat.hostEventId]: (prev[openChat.hostEventId] || []).filter((_: any, idx: number) => idx !== i),
                                 }))
                                 // Remove from memberProfiles + avatars in chatList
                                 setChatList(prev => prev.map(c => {
