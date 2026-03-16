@@ -2997,14 +2997,13 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, dismissedFullEvents = new Set(), onDismissFullEvent }: any) {
   // Official/open events the user joined — shown as crew-finding cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted)
   // User-created socials the user requested to join — shown as "awaiting approval"
   const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted)
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
-  const [dismissedFullEvents, setDismissedFullEvents] = useState<Set<number>>(new Set())
   const [previewProfile, setPreviewProfile] = useState<any>(null)
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([])
   const [aiLoading, setAiLoading] = useState(false)
@@ -3262,7 +3261,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       </View>
                       <TouchableOpacity
                         onPress={() => {
-                          setDismissedFullEvents(prev => new Set([...prev, ev.id]))
+                          onDismissFullEvent?.(ev.id)
                           onGoToMessages?.()
                         }}
                         activeOpacity={0.85}
@@ -4054,6 +4053,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
   const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
+  const [dismissedFullEvents, setDismissedFullEvents] = useState<Set<number>>(new Set())
 
   // ── Persist & restore state ───────────────────────────────────────────────
   const PERSIST_KEY = `parea_feed_${userData?.authId || 'local'}`
@@ -4515,6 +4515,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
             }}
+            dismissedFullEvents={dismissedFullEvents}
+            onDismissFullEvent={(id: number) => setDismissedFullEvents(prev => new Set([...prev, id]))}
           />}
           {activeTab === 'messages' && <MessagesTab
             initialSubTab={messagesInitialSubTab}
