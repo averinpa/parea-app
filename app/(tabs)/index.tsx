@@ -50,8 +50,16 @@ const LANDING_SLIDES = [
 const INTERESTS_LIST = [
   '☕ Coffee', '🍷 Wine', '🎾 Tennis', '🎬 Movies', '🥾 Hiking',
   '🍕 Foodie', '🧘 Yoga', '🎨 Art', '🎸 Music', '✈️ Travel',
-  '💃 Dance', '📚 Books', '💻 Tech', '🎮 Gaming', '📷 Photography',
+  '💃 Dance', '📚 Books', '💻 IT', '🎮 Gaming', '📷 Photography',
   '🎭 Theatre', '🏖️ Beach', '🎲 Board Games', '🎤 Concerts', '🏊 Swimming',
+  '🏓 Padel', '✂️ Crafts', '👗 Fashion', '🏄 Water Sports',
+]
+
+const INTERESTS_BY_CATEGORY = [
+  { id: 'social',  label: 'Social & Style',     emoji: '🌙', items: ['🍷 Wine', '🎤 Concerts', '💃 Dance', '☕ Coffee', '🍕 Foodie', '👗 Fashion'] },
+  { id: 'active',  label: 'Sport & Outdoors',   emoji: '🌿', items: ['🏓 Padel', '🎾 Tennis', '🥾 Hiking', '🧘 Yoga', '🏊 Swimming', '🏄 Water Sports'] },
+  { id: 'creative',label: 'Creative',           emoji: '🎨', items: ['🎨 Art', '✂️ Crafts', '📷 Photography', '🎸 Music', '📚 Books'] },
+  { id: 'tech',    label: 'Tech & Culture',     emoji: '💡', items: ['💻 IT', '🎮 Gaming', '🎬 Movies', '🎭 Theatre', '🎲 Board Games'] },
 ]
 
 const LANGUAGES_LIST = [
@@ -86,7 +94,8 @@ const MOCK_EVENTS = [
 const INTEREST_TO_CATEGORY: Record<string, string> = {
   '☕ Coffee': 'coffee', '🍷 Wine': 'wine', '🎾 Tennis': 'sports', '🎬 Movies': 'culture',
   '🥾 Hiking': 'outdoors', '🍕 Foodie': 'food', '🧘 Yoga': 'sports', '🎨 Art': 'culture',
-  '🎸 Music': 'music', '✈️ Travel': 'outdoors',
+  '🎸 Music': 'music', '✈️ Travel': 'outdoors', '🏓 Padel': 'sports', '✂️ Crafts': 'culture',
+  '👗 Fashion': 'culture', '💻 IT': 'tech', '🏄 Water Sports': 'outdoors',
 }
 
 const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵' }
@@ -122,6 +131,57 @@ const FORMAT_BADGE: Record<string, { color: string; label: string }> = {
 const MOCK_CHATS: any[] = []
 
 const MOCK_MESSAGES: Record<number, Array<{ from: string; text: string; time: string; senderName?: string; senderPhoto?: string; senderColor?: string }>> = {}
+
+// ─── AI COMPANION MATCHING ────────────────────────────────────────────────────
+
+type MatchResult = { id: number; score: number; reason: string }
+
+async function aiMatchCompanions(
+  user: { interests: string[]; bio: string; age: string | number; langs: string[] },
+  candidates: Array<{ id: number; name: string; age: number; bio: string; interests: string[]; langs: string[] }>
+): Promise<MatchResult[]> {
+  if (!ANTHROPIC_KEY || candidates.length === 0) {
+    return candidates.map(c => ({ id: c.id, score: 50, reason: 'Ready to connect' }))
+  }
+  try {
+    const candidatesList = candidates.map((c, i) =>
+      `${i + 1}. ${c.name} (${c.age}): interests=[${c.interests.join(', ')}], bio="${c.bio}", langs=[${c.langs.join(', ')}]`
+    ).join('\n')
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages: [{
+          role: 'user',
+          content: `You are an AI companion matching system for Parea, a social app in Cyprus.
+
+User profile:
+- Interests: ${user.interests.join(', ') || 'not set'}
+- Bio: "${user.bio || 'no bio'}"
+- Age: ${user.age}
+- Languages: ${user.langs.join(', ') || 'en'}
+
+Candidates:
+${candidatesList}
+
+Rank ALL candidates by compatibility. Return ONLY valid JSON array, no other text:
+[{"id": <number>, "score": <0-100>, "reason": "<max 5 words, warm tone>"}]
+
+Higher score = better match. Consider shared interests, language overlap, age proximity, vibe.`,
+        }],
+      }),
+    })
+    const data = await res.json()
+    const text = data?.content?.[0]?.text?.trim() || '[]'
+    const parsed: MatchResult[] = JSON.parse(text)
+    return parsed.sort((a, b) => b.score - a.score)
+  } catch {
+    return candidates.map(c => ({ id: c.id, score: 50, reason: 'Ready to connect' }))
+  }
+}
 
 // ─── IMAGE SAFETY ─────────────────────────────────────────────────────────────
 
@@ -593,7 +653,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) a--
     return a
   })()
-  const dobValid = dobFilled && dobAgeNum >= 18 && dobAgeNum <= 100
+  const dobValid = dobFilled && dobAgeNum >= 18 && dobAgeNum <= 99
 
   const handleGender = (g: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -895,8 +955,10 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                         />
                       </View>
                     </View>
-                    {dobFilled && dobAgeNum < 18 && (
-                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 8 }}>You must be 18 or older</Text>
+                    {dobFilled && (dobAgeNum < 18 || dobAgeNum > 99) && (
+                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 8 }}>
+                        {dobAgeNum < 18 ? 'You must be 18 or older' : 'Please enter a valid age'}
+                      </Text>
                     )}
                   </View>
 
@@ -1030,22 +1092,68 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                 )
               })()}
 
-              {step === 3 && (
-                <View>
-                  <Text style={s.stepTitle}>What are you into?</Text>
-                  <Text style={s.stepSub}>Select at least 1 interest to help us find your people</Text>
-                  <View style={s.chipsWrap}>
-                    {INTERESTS_LIST.map(item => (
-                      <TouchableOpacity key={item} onPress={() => setInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])} style={[s.chip, interests.includes(item) && s.chipOn]}>
-                        <Text style={[s.chipTxt, interests.includes(item) && s.chipTxtOn]}>{item}</Text>
-                      </TouchableOpacity>
+              {step === 3 && (() => {
+                const count = interests.length
+                const aiLevel = count === 0 ? 0 : count === 1 ? 20 : count === 2 ? 40 : count === 3 ? 60 : count <= 5 ? 80 : 100
+                const aiMsg = count === 0
+                  ? 'Pick at least 3 for smart matching'
+                  : count < 3
+                  ? `${3 - count} more for better matches`
+                  : count < 6
+                  ? 'Good! Adding more improves accuracy'
+                  : 'Your AI is ready to find your people ✦'
+                const aiColor = count >= 6 ? '#22c55e' : count >= 3 ? '#818CF8' : '#CBD5E1'
+
+                return (
+                  <View>
+                    {/* Header */}
+                    <View style={{ marginBottom: 28 }}>
+                      <Text style={{ fontSize: 32, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 38 }}>
+                        What's your{'\n'}vibe? ✦
+                      </Text>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8 }}>
+                        AI uses this to find your perfect companion
+                      </Text>
+                    </View>
+
+                    {/* Categories */}
+                    {INTERESTS_BY_CATEGORY.map(cat => (
+                      <View key={cat.id} style={{ marginBottom: 20 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                          <Text style={{ fontSize: 15 }}>{cat.emoji}</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.8 }}>{cat.label}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                          {cat.items.map(item => {
+                            const on = interests.includes(item)
+                            return (
+                              <TouchableOpacity
+                                key={item}
+                                onPress={() => setInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])}
+                                style={[s.chip, on && s.chipOn]}
+                                activeOpacity={0.75}>
+                                <Text style={[s.chipTxt, on && s.chipTxtOn]}>{item}</Text>
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
+                      </View>
                     ))}
+
+                    {/* AI confidence bar */}
+                    <View style={{ marginTop: 8, padding: 16, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>🤖 AI Match Accuracy</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: aiColor }}>{aiLevel}%</Text>
+                      </View>
+                      <View style={{ height: 6, backgroundColor: 'rgba(203,213,225,0.5)', borderRadius: 99, overflow: 'hidden' }}>
+                        <View style={{ height: 6, width: `${aiLevel}%` as any, backgroundColor: aiColor, borderRadius: 99 }} />
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 8 }}>{aiMsg}</Text>
+                    </View>
                   </View>
-                  <Text style={{ textAlign: 'center', fontSize: 13, color: interests.length > 0 ? '#22c55e' : '#94A3B8', marginTop: 4 }}>
-                    {interests.length === 0 ? 'Pick at least one' : `${interests.length} selected ✓`}
-                  </Text>
-                </View>
-              )}
+                )
+              })()}
 
               {step === 4 && (
                 <View>
@@ -2033,22 +2141,22 @@ const QUEUE_PROFILES = [
   { id: 1,  name: 'Alex',    age: 29, flag: '🇬🇧', color: '#818CF8', colors: ['#818CF8','#6366F1'], emoji: '🎾',
     photo: 'https://i.pravatar.cc/400?img=11',
     bio: 'Tennis addict & coffee snob. Love meeting new people over a good game.',
-    interests: ['Tennis','Coffee','Tech','Travel'], langs: ['🇬🇧','🇷🇺'], transport: 'car',  goal: 'networking' },
+    interests: ['🎾 Tennis','☕ Coffee','💻 IT','✈️ Travel'], langs: ['en','ru'], transport: 'car',  goal: 'networking' },
   { id: 2,  name: 'Maya',    age: 26, flag: '🇷🇺', color: '#4CAF50', colors: ['#43E97B','#38f9d7'], emoji: '📚',
     bio: 'Book lover, yoga fan. Looking for chill hangouts with good vibes.',
-    interests: ['Yoga','Books','Art','Wine'],       langs: ['🇷🇺','🇬🇧','🇩🇪'], transport: 'meet', goal: 'chill' },
+    interests: ['🧘 Yoga','📚 Books','🎨 Art','🍷 Wine'], langs: ['ru','en','de'], transport: 'meet', goal: 'chill' },
   { id: 3,  name: 'Luca',    age: 32, flag: '🇮🇹', color: '#FF9800', colors: ['#f97316','#fbbf24'], emoji: '🍕',
     bio: 'Italian who takes food seriously. Can talk for hours about pasta.',
-    interests: ['Food','Football','Music','Wine'],  langs: ['🇮🇹','🇬🇧'], transport: 'car',  goal: 'chill' },
+    interests: ['🍕 Foodie','🎸 Music','🍷 Wine','🎬 Movies'], langs: ['it','en'], transport: 'car',  goal: 'chill' },
   { id: 4,  name: 'Sara',    age: 27, flag: '🇩🇪', color: '#2196F3', colors: ['#667eea','#764ba2'], emoji: '💻',
-    bio: 'Product designer at a startup. Into hiking and craft beer.',
-    interests: ['Design','Hiking','Beer','Tech'],   langs: ['🇩🇪','🇬🇧','🇫🇷'], transport: 'meet', goal: 'networking' },
+    bio: 'Product designer at a startup. Into hiking and padel.',
+    interests: ['✂️ Crafts','🥾 Hiking','🏓 Padel','🖥️ Tech'], langs: ['de','en','fr'], transport: 'meet', goal: 'networking' },
   { id: 5,  name: 'Noa',     age: 24, flag: '🇮🇱', color: '#E91E63', colors: ['#f093fb','#f5576c'], emoji: '🎵',
     bio: 'Music producer by night, beach person by day. Always down for adventures.',
-    interests: ['Music','Beach','Photography'],     langs: ['🇮🇱','🇬🇧'], transport: 'lift', goal: 'activity' },
+    interests: ['🎸 Music','🏖️ Beach','📷 Photography','👗 Fashion'], langs: ['he','en'], transport: 'lift', goal: 'activity' },
   { id: 6,  name: 'Chris',   age: 31, flag: '🇨🇾', color: '#22c55e', colors: ['#134e5e','#71b280'], emoji: '🏄',
     bio: 'Local Cypriot. I know every hidden beach spot on the island.',
-    interests: ['Surfing','Diving','Outdoors'],     langs: ['🇨🇾','🇬🇧','🇬🇷'], transport: 'car',  goal: 'activity' },
+    interests: ['🏄 Water Sports','🏓 Padel','🥾 Hiking','☕ Coffee'], langs: ['el','en'], transport: 'car',  goal: 'activity' },
 ]
 
 const VIBE_FORMAT_MAX: Record<string, number>       = { '1+1': 2, squad: 5, party: 20 }
@@ -2160,6 +2268,21 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
                 ))}
               </View>
             </>
+          )}
+
+          {/* AI Match badge */}
+          {profile.aiScore != null && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, padding: 12, borderRadius: 16, backgroundColor: 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: 'rgba(129,140,248,0.25)' }}>
+              <Text style={{ fontSize: 18 }}>🤖</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
+                  {profile.aiScore}% AI Match
+                </Text>
+                {profile.aiReason && (
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{profile.aiReason}</Text>
+                )}
+              </View>
+            </View>
           )}
 
           {/* Interests */}
@@ -2334,11 +2457,32 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner, userData }: any) {
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed')
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
   const [previewProfile, setPreviewProfile] = useState<any>(null)
+  const [aiMatches, setAiMatches] = useState<MatchResult[]>([])
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiRankedProfiles = aiMatches.length > 0
+    ? [...QUEUE_PROFILES].sort((a, b) => {
+        const sa = aiMatches.find(m => m.id === a.id)?.score ?? 0
+        const sb = aiMatches.find(m => m.id === b.id)?.score ?? 0
+        return sb - sa
+      })
+    : QUEUE_PROFILES
+
+  useEffect(() => {
+    if (!userData?.interests?.length) return
+    setAiLoading(true)
+    aiMatchCompanions(
+      { interests: userData.interests, bio: userData.bio || '', age: userData.age || '', langs: userData.langs || ['en'] },
+      QUEUE_PROFILES
+    ).then(results => {
+      setAiMatches(results)
+      setAiLoading(false)
+    })
+  }, [])
 
   // aurora blob animations
   const blob1 = useRef(new Animated.Value(0)).current
@@ -2504,7 +2648,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const partnersFound = Math.min(cap - 1, (ev.id % Math.max(1, threshold - 1)) + 1)
             const found      = 1 + partnersFound   // me + partners
             const isActive   = found >= threshold
-            const partners   = QUEUE_PROFILES.slice(0, partnersFound) // only partners, not me
+            const partners   = aiRankedProfiles.slice(0, partnersFound) // AI-ranked partners
 
             // Status label
             const statusLabel = isActive
@@ -2586,14 +2730,24 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <Text style={{ fontSize: 10, color: '#818CF8', textAlign: 'center', marginTop: 4, fontWeight: '700' }}>You</Text>
                       </View>
                       {/* Partners */}
-                      {partners.map((p, i) => (
-                        <TouchableOpacity key={i} onPress={() => { setPreviewProfile(p); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
-                          <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
-                            <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
-                          </LinearGradient>
-                          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 4, fontWeight: '600' }}>{p.name}</Text>
-                        </TouchableOpacity>
-                      ))}
+                      {partners.map((p, i) => {
+                        const match = aiMatches.find(m => m.id === p.id)
+                        return (
+                          <TouchableOpacity key={i} onPress={() => { setPreviewProfile({ ...p, aiScore: match?.score, aiReason: match?.reason }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
+                            <View style={{ alignItems: 'center' }}>
+                              <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                                <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
+                              </LinearGradient>
+                              {match && (
+                                <View style={{ marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: match.score >= 75 ? 'rgba(67,233,123,0.2)' : 'rgba(129,140,248,0.2)' }}>
+                                  <Text style={{ fontSize: 9, fontWeight: '800', color: match.score >= 75 ? '#43E97B' : '#818CF8' }}>{match.score}%</Text>
+                                </View>
+                              )}
+                              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2, fontWeight: '600' }}>{p.name}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        )
+                      })}
                       {/* Empty slots = cap - found (me already counted in found) */}
                       {found < cap && (
                         <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }}>
@@ -2991,6 +3145,7 @@ function FeedScreen({ userData = {}, onLogOut }: { userData?: any; onLogOut?: ()
             allEvents={MOCK_EVENTS}
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
+            userData={userData}
             onGoHome={() => setActiveTab('home')}
             onConfirm={(ev: any, partners: any[], format: string) => {
               const isGroup = format !== '1+1'
