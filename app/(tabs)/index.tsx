@@ -1562,8 +1562,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const JoinButton = ({ ev, large, onDark = false }: { ev: any; large?: boolean; onDark?: boolean }) => {
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const joinLabel = ev.type === 'official' ? "I'm Going" : 'Join →'
-    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Pending…' : joinLabel
+    const joinLabel = ev.type === 'official' ? "I'm Going" : ev.isHosted ? 'Request →' : 'Join →'
+    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : joinLabel
 
     // onDark=true (featured card): white translucent. onDark=false (list cards): solid colors
     let bg: string, textColor: string
@@ -1798,6 +1798,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>★</Text>
                         </View>
                       )}
+                      {ev.isHosted && (
+                        <View style={{ position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: '#F59E0B' }}>
+                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>👤</Text>
+                        </View>
+                      )}
                     </LinearGradient>
                     <View style={s.compactCardBody}>
                       <Text style={s.compactCardTitle} numberOfLines={2}>{ev.title}</Text>
@@ -1814,7 +1819,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           activeOpacity={getJoinState(ev) === 'full' ? 1 : 0.75}
                           style={{ backgroundColor: getJoinState(ev) === 'full' ? 'rgba(100,116,139,0.1)' : getJoinState(ev) === 'joined' ? 'rgba(34,197,94,0.12)' : getJoinState(ev) === 'pending' ? 'rgba(251,191,36,0.15)' : '#6366F1', borderRadius: 99, paddingHorizontal: 9, paddingVertical: 4, opacity: getJoinState(ev) === 'full' ? 0.55 : 1 }}>
                           <Text style={{ fontSize: 10, fontWeight: '700', color: getJoinState(ev) === 'full' ? '#94A3B8' : getJoinState(ev) === 'joined' ? '#16a34a' : getJoinState(ev) === 'pending' ? '#d97706' : '#fff' }}>
-                            {getJoinState(ev) === 'full' ? 'Full' : getJoinState(ev) === 'joined' ? 'Joined ✓' : getJoinState(ev) === 'pending' ? 'Pending…' : ev.type === 'official' ? "Going →" : 'Join →'}
+                            {getJoinState(ev) === 'full' ? 'Full' : getJoinState(ev) === 'joined' ? 'Joined ✓' : getJoinState(ev) === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : ev.type === 'official' ? "Going →" : ev.isHosted ? 'Request →' : 'Join →'}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -1844,6 +1849,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         {ev.type === 'official' && (
                           <View style={[s.officialBadge, { paddingHorizontal: 7, paddingVertical: 2 }]}>
                             <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>OFFICIAL</Text>
+                          </View>
+                        )}
+                        {ev.isHosted && (
+                          <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#F59E0B' }}>
+                            <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>👤 SOCIAL</Text>
                           </View>
                         )}
                         <Text style={{ fontSize: 11, color: '#94A3B8' }}>{ev.distance}</Text>
@@ -1955,12 +1965,18 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   )
                 })}
               </View>
+              {joinSheet.ev?.isHosted && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 12, marginTop: 16, marginBottom: -4, borderWidth: 1, borderColor: 'rgba(245,158,11,0.25)' }}>
+                  <Text style={{ fontSize: 15 }}>👤</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: '#92400E', lineHeight: 17 }}>Community social — the host reviews and approves requests.</Text>
+                </View>
+              )}
               <TouchableOpacity
                 style={[s.joinSheetNext, !joinSheet.transport && { opacity: 0.4 }, joinSheet.transport && { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 }]}
                 disabled={!joinSheet.transport}
                 onPress={confirmJoin}>
                 <Text style={s.joinSheetNextTxt}>
-                  {joinSheet.ev?.type === 'official' ? "I'm Going 🎉" : "Join Event →"}
+                  {joinSheet.ev?.isHosted ? 'Send Request →' : joinSheet.ev?.type === 'official' ? "I'm Going 🎉" : "Join Event →"}
                 </Text>
               </TouchableOpacity>
             </>
@@ -2748,7 +2764,10 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
 }
 
 function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner, userData, tonightVibe }: any) {
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed')
+  // Official/open events the user joined — shown as crew-finding cards
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted)
+  // User-created socials the user requested to join — shown as "awaiting approval"
+  const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted)
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
   const [previewProfile, setPreviewProfile] = useState<any>(null)
@@ -2835,7 +2854,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     </View>
   )
 
-  if (myEvents.length === 0 && !hasHostActivity) {
+  if (myEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
@@ -2876,7 +2895,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-            {hasHostActivity ? '👑 You have join requests' : `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew`}
+            {hasHostActivity ? '👑 You have join requests' : myEvents.length > 0 ? `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew` : `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`}
           </Text>
         </View>
 
@@ -3085,6 +3104,36 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
               </View>
             )
           })}
+
+          {/* Pending approval cards for user-created socials */}
+          {pendingHostedEvents.map((ev: any) => (
+            <View key={`hosted-pending-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+              <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+              <View style={{ padding: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
+                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}</Text>
+                  </View>
+                  <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.15)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#F59E0B' }}>👤 SOCIAL</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)' }}>
+                  <Text style={{ fontSize: 22 }}>⏳</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
+                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>The organizer will review your request and let you know</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => onLeave?.(ev)}
+                  style={{ marginTop: 14, borderRadius: 99, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Cancel request</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
         </ScrollView>
       </SafeAreaView>
 
