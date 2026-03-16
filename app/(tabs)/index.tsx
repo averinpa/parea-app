@@ -1510,7 +1510,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={[s.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 24 }]}>
+        <View style={[s.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 40 }]}>
           {step === TOTAL ? (
             <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
               <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
