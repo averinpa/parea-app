@@ -115,12 +115,46 @@ const FLAG_MAP: Record<string, string> = { en: '🇬🇧', ru: '🇷🇺', el: '
 const TRANSPORT_LABEL: Record<string, string> = { car: '🚗 Can give a lift', lift: '🙋 Needs a lift', meet: '📍 Meeting there' }
 
 const MOCK_SEEKERS = [
-  { id: 1, name: 'Elena',  age: 27, langs: ['en', 'el'], transport: 'car',  format: '1+1',   color: '#818CF8', photo: 'https://i.pravatar.cc/300?img=47', bio: 'Love exploring local spots 🌿 Cyprus local, always up for something new' },
-  { id: 2, name: 'Dmitri', age: 31, langs: ['ru', 'en'], transport: 'lift', format: 'squad', color: '#4CAF50', photo: 'https://i.pravatar.cc/300?img=12', bio: 'IT engineer, moved here from Moscow 🇷🇺 Looking for people to explore the island' },
-  { id: 3, name: 'Sarah',  age: 24, langs: ['en', 'de'], transport: 'meet', format: '1+1',   color: '#2196F3', photo: 'https://i.pravatar.cc/300?img=32', bio: 'Expat from Berlin 🌊 Obsessed with sunsets and good coffee' },
-  { id: 4, name: 'Yael',   age: 29, langs: ['he', 'en'], transport: 'car',  format: 'party', color: '#9C27B0', photo: 'https://i.pravatar.cc/300?img=25', bio: 'Tel Aviv → Limassol 🌞 Digital nomad, loves big groups and good vibes' },
-  { id: 5, name: 'Marcus', age: 34, langs: ['de', 'en'], transport: 'lift', format: 'squad', color: '#FF9800', photo: 'https://i.pravatar.cc/300?img=8',  bio: 'Freelance designer from Hamburg 🎨 Here for the winter, looking for adventure' },
+  { id: 1,  name: 'Elena',   age: 27, langs: ['en', 'el'], transport: 'car',  format: '1+1',   color: '#818CF8', photo: 'https://i.pravatar.cc/300?img=47', bio: 'Love exploring local spots 🌿 Cyprus local, always up for something new',          interests: ['outdoors', 'food', 'culture'], drinksPref: 'Social drinker', smokingPref: 'Non-smoker' },
+  { id: 2,  name: 'Dmitri',  age: 31, langs: ['ru', 'en'], transport: 'lift', format: 'squad', color: '#4CAF50', photo: 'https://i.pravatar.cc/300?img=12', bio: 'IT engineer, moved here from Moscow 🇷🇺 Looking for people to explore the island', interests: ['tech', 'gaming', 'food'],     drinksPref: 'Social drinker', smokingPref: 'Non-smoker' },
+  { id: 3,  name: 'Sarah',   age: 24, langs: ['en', 'de'], transport: 'meet', format: '1+1',   color: '#2196F3', photo: 'https://i.pravatar.cc/300?img=32', bio: 'Expat from Berlin 🌊 Obsessed with sunsets and good coffee',                       interests: ['coffee', 'culture', 'music'], drinksPref: 'Non-drinker',    smokingPref: 'Non-smoker' },
+  { id: 4,  name: 'Yael',    age: 29, langs: ['he', 'en'], transport: 'car',  format: 'party', color: '#9C27B0', photo: 'https://i.pravatar.cc/300?img=25', bio: 'Tel Aviv → Limassol 🌞 Digital nomad, loves big groups and good vibes',           interests: ['music', 'food', 'outdoors'], drinksPref: 'Social drinker', smokingPref: 'Social' },
+  { id: 5,  name: 'Marcus',  age: 34, langs: ['de', 'en'], transport: 'lift', format: 'squad', color: '#FF9800', photo: 'https://i.pravatar.cc/300?img=8',  bio: 'Freelance designer from Hamburg 🎨 Here for the winter, looking for adventure',  interests: ['culture', 'outdoors', 'wine'], drinksPref: 'Wine lover',   smokingPref: 'Non-smoker' },
+  { id: 6,  name: 'Anya',    age: 26, langs: ['ru', 'uk'], transport: 'car',  format: 'squad', color: '#EC4899', photo: 'https://i.pravatar.cc/300?img=5',  bio: 'Ukrainian in Limassol 🌻 Love cozy places and spontaneous adventures',           interests: ['food', 'coffee', 'culture'],  drinksPref: 'Social drinker', smokingPref: 'Non-smoker' },
+  { id: 7,  name: 'Tom',     age: 28, langs: ['en'],       transport: 'meet', format: '1+1',   color: '#0EA5E9', photo: 'https://i.pravatar.cc/300?img=15', bio: 'British expat, been here 2 years 🇬🇧 Gym, beaches, and brunch',                  interests: ['sports', 'food', 'outdoors'], drinksPref: 'Social drinker', smokingPref: 'Non-smoker' },
+  { id: 8,  name: 'Naomi',   age: 32, langs: ['en', 'he'], transport: 'car',  format: 'squad', color: '#10B981', photo: 'https://i.pravatar.cc/300?img=56', bio: 'Product manager, yoga enthusiast 🧘 Looking for mindful connections',            interests: ['sports', 'culture', 'coffee'], drinksPref: 'Non-drinker', smokingPref: 'Non-smoker' },
+  { id: 9,  name: 'Luca',    age: 23, langs: ['en', 'de'], transport: 'meet', format: 'party', color: '#F59E0B', photo: 'https://i.pravatar.cc/300?img=3',  bio: 'Student exchange in Nicosia 🎓 Party animal, always up for fun',               interests: ['music', 'gaming', 'food'],    drinksPref: 'Party drinker',  smokingPref: 'Social' },
+  { id: 10, name: 'Marina',  age: 30, langs: ['ru', 'el'], transport: 'lift', format: 'squad', color: '#8B5CF6', photo: 'https://i.pravatar.cc/300?img=44', bio: 'Half Greek half Russian, born in Paphos 🌊 Love my island life',                 interests: ['outdoors', 'food', 'wine'],   drinksPref: 'Wine lover',    smokingPref: 'Non-smoker' },
 ]
+
+// Score a join requester's compatibility with the host (0–100)
+function scoreRequesterForHost(
+  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[] },
+  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[] },
+  eventCategory?: string
+): number {
+  let score = 0
+  // Language overlap (30 pts)
+  const reqLangs = req.langs || []
+  const hostLangs = host.langs || []
+  const langOverlap = reqLangs.filter(l => hostLangs.includes(l)).length
+  score += Math.min(30, langOverlap * 18)
+  // Age proximity (25 pts)
+  const hAge = typeof host.age === 'string' ? parseInt(host.age || '25') : (host.age || 25)
+  const ageDiff = Math.abs((req.age || 25) - hAge)
+  score += ageDiff <= 3 ? 25 : ageDiff <= 7 ? 18 : ageDiff <= 12 ? 10 : 3
+  // Lifestyle match (25 pts)
+  if (!host.drinksPref || req.drinksPref === host.drinksPref) score += 13
+  if (!host.smokingPref || req.smokingPref === host.smokingPref) score += 12
+  // Interests overlap (20 pts)
+  const reqI = req.interests || []
+  const hostI = host.interests || []
+  const overlap = reqI.filter(i => hostI.includes(i)).length
+  if (overlap >= 2) score += 20
+  else if (overlap === 1) score += 12
+  else if (eventCategory && reqI.includes(eventCategory)) score += 8
+  return Math.min(100, score)
+}
 
 const FORMAT_BADGE: Record<string, { color: string; label: string }> = {
   '1+1':   { color: '#f472b6', label: '1+1' },
@@ -2763,7 +2797,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner, userData, tonightVibe }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages }: any) {
   // Official/open events the user joined — shown as crew-finding cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted)
   // User-created socials the user requested to join — shown as "awaiting approval"
@@ -2900,63 +2934,139 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 32 }}>
-          {/* Host approval section */}
+          {/* Host approval section — AI-ranked */}
           {activeHosted.map((ev: any) => {
-            const requests: any[] = pendingJoinRequests[ev.id] || []
-            if (requests.length === 0) return null
+            const allRequests: any[] = pendingJoinRequests[ev.id] || []
+            const approvedCount = (approvedJoiners?.[ev.id] || []).length
+            const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
+            const slotsLeft = slotsTotal - approvedCount
+            if (allRequests.length === 0 && approvedCount === 0) return null
+            // Score + sort, show top 12
+            const scored = allRequests
+              .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
+              .sort((a, b) => b._score - a._score)
+              .slice(0, 12)
+            const autoFillCount = Math.min(slotsLeft, scored.length)
             return (
               <View key={`host-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' }}>
                 <LinearGradient colors={ev.gradient as any} style={{ height: 5 }} />
                 <View style={{ padding: 16, gap: 12 }}>
+                  {/* Header */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
                     <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)' }}>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST 👑</Text>
                     </View>
                   </View>
-                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>
-                    {requests.length} request{requests.length > 1 ? 's' : ''} to join
-                  </Text>
-                  {requests.map((req: any) => (
-                    <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
-                      <TouchableOpacity onPress={() => {
-                        setPreviewProfile({
-                          ...req,
-                          colors: [req.color, '#1E1B4B'],
-                          flag: FLAG_MAP[req.langs?.[0]] || '🌍',
-                          langs: (req.langs || []).map((l: string) => FLAG_MAP[l] || l),
-                          interests: [],
-                          goal: 'chill',
-                          emoji: '👤',
-                        })
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                      }} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                        <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
-                            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>tap to view →</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>
+                      {allRequests.length} request{allRequests.length > 1 ? 's' : ''} · {slotsLeft} spot{slotsLeft !== 1 ? 's' : ''} left · AI-ranked ✨
+                    </Text>
+                  </View>
+                  {/* Auto-fill button */}
+                  {slotsLeft > 0 && scored.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        scored.slice(0, autoFillCount).forEach(req => onApproveJoiner?.(ev.id, req))
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                      }}
+                      activeOpacity={0.8}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(99,102,241,0.25)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.5)' }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#A5B4FC' }}>⚡ Auto-fill {autoFillCount} best match{autoFillCount !== 1 ? 'es' : ''}</Text>
+                    </TouchableOpacity>
+                  )}
+                  {/* Ranked request cards */}
+                  {scored.map((req: any, idx: number) => {
+                    const score = req._score as number
+                    const scoreColor = score >= 75 ? '#43E97B' : score >= 50 ? '#FBBF24' : '#F87171'
+                    return (
+                      <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
+                        {/* Rank indicator */}
+                        {idx === 0 && <Text style={{ position: 'absolute', top: 8, left: 10, fontSize: 11 }}>🏆</Text>}
+                        <TouchableOpacity onPress={() => {
+                          setPreviewProfile({
+                            ...req,
+                            colors: [req.color, '#1E1B4B'],
+                            flag: FLAG_MAP[req.langs?.[0]] || '🌍',
+                            langs: (req.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                            interests: req.interests || [],
+                            goal: 'chill',
+                            emoji: '👤',
+                            aiScore: score,
+                            aiReason: score >= 75 ? 'Great match for your vibe' : score >= 50 ? 'Could be a good fit' : 'Some differences in style',
+                          })
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                        }} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                          <View>
+                            <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
+                            {/* Score ring */}
+                            <View style={{ position: 'absolute', bottom: -4, right: -6, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 8, backgroundColor: '#1A1730', borderWidth: 1, borderColor: scoreColor }}>
+                              <Text style={{ fontSize: 9, fontWeight: '900', color: scoreColor }}>{score}%</Text>
+                            </View>
                           </View>
-                          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
-                          <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                            {req.langs.map((l: string) => (
-                              <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
-                            ))}
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
+                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>tap →</Text>
+                            </View>
+                            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
+                            <View style={{ flexDirection: 'row', gap: 4, marginTop: 5 }}>
+                              {(req.langs || []).map((l: string) => (
+                                <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
+                              ))}
+                            </View>
                           </View>
+                        </TouchableOpacity>
+                        {/* Action buttons */}
+                        <View style={{ gap: 6 }}>
+                          <TouchableOpacity onPress={() => onApproveJoiner?.(ev.id, req)} activeOpacity={0.8}
+                            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(67,233,123,0.2)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 18 }}>✓</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => onPassJoiner?.(ev.id, req)} activeOpacity={0.8}
+                            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(148,163,184,0.12)', borderWidth: 1.5, borderColor: 'rgba(148,163,184,0.3)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>–</Text>
+                          </TouchableOpacity>
                         </View>
-                      </TouchableOpacity>
-                      <View style={{ gap: 8 }}>
-                        <TouchableOpacity onPress={() => onApproveJoiner?.(ev.id, req)} activeOpacity={0.8}
-                          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(67,233,123,0.2)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 18 }}>✓</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => onRejectJoiner?.(ev.id, req)} activeOpacity={0.8}
-                          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(239,68,68,0.15)', borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 18 }}>✕</Text>
-                        </TouchableOpacity>
                       </View>
+                    )
+                  })}
+                  {allRequests.length > 12 && (
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', textAlign: 'center', paddingTop: 4 }}>
+                      +{allRequests.length - 12} more hidden · approve or pass to see them
+                    </Text>
+                  )}
+                  {/* Group full state */}
+                  {slotsLeft <= 0 && approvedCount > 0 && (
+                    <View style={{ gap: 10, paddingTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.12)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)' }}>
+                        <Text style={{ fontSize: 22 }}>🎉</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: '#43E97B' }}>All {slotsTotal} spots filled!</Text>
+                          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Your social is complete. Time to chat!</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => onGoToMessages?.()}
+                        activeOpacity={0.85}
+                        style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Go to group chat 💬</Text>
+                      </TouchableOpacity>
                     </View>
-                  ))}
+                  )}
+                  {/* Approved members count (while still collecting) */}
+                  {approvedCount > 0 && slotsLeft > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.12)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.25)' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#43E97B' }}>✓ {approvedCount} approved</Text>
+                      </View>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>{slotsLeft} spot{slotsLeft !== 1 ? 's' : ''} left</Text>
+                      <TouchableOpacity onPress={() => onGoToMessages?.()} style={{ marginLeft: 'auto' as any }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8' }}>Open chat →</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
             )
@@ -3106,34 +3216,51 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
           })}
 
           {/* Pending approval cards for user-created socials */}
-          {pendingHostedEvents.map((ev: any) => (
-            <View key={`hosted-pending-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-              <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
-              <View style={{ padding: 20 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <View style={{ flex: 1, marginRight: 10 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
-                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}</Text>
+          {pendingHostedEvents.map((ev: any) => {
+            // Rough compatibility hint: lang overlap + category interest
+            const userLangs: string[] = userData?.langs || []
+            const hostLangs: string[] = ev.hostLangs || []
+            const langMatch = userLangs.some(l => hostLangs.includes(l))
+            const interestMatch = (userData?.interests || []).includes(ev.category)
+            const compatScore = (langMatch ? 40 : 10) + (interestMatch ? 35 : 5) + 20
+            const compatColor = compatScore >= 70 ? '#43E97B' : compatScore >= 50 ? '#FBBF24' : '#94A3B8'
+            const compatLabel = compatScore >= 70 ? 'Strong match' : compatScore >= 50 ? 'Good fit' : 'Different vibes'
+            return (
+              <View key={`hosted-pending-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+                <View style={{ padding: 20 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 5 }}>
+                      <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.15)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#F59E0B' }}>👤 SOCIAL</Text>
+                      </View>
+                      <View style={{ paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: `${compatColor}18`, borderWidth: 1, borderColor: `${compatColor}40` }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: compatColor }}>{compatScore}% · {compatLabel}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.15)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#F59E0B' }}>👤 SOCIAL</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)' }}>
+                    <Text style={{ fontSize: 22 }}>⏳</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                        {langMatch ? `Host speaks your language 🌍` : 'The organizer reviews all requests'}
+                      </Text>
+                    </View>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => onLeave?.(ev)}
+                    style={{ marginTop: 14, borderRadius: 99, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Cancel request</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)' }}>
-                  <Text style={{ fontSize: 22 }}>⏳</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
-                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>The organizer will review your request and let you know</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => onLeave?.(ev)}
-                  style={{ marginTop: 14, borderRadius: 99, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Cancel request</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-          ))}
+            )
+          })}
         </ScrollView>
       </SafeAreaView>
 
@@ -3547,6 +3674,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
+  const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
 
   // ── Tonight's Vibe ────────────────────────────────────────────────────────
   const [tonightVibe, setTonightVibe] = useState({
@@ -3615,6 +3743,24 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
     prevPendingRef.current = pendingJoinRequests
   }, [pendingJoinRequests])
+
+  // Watch for host's group becoming full → auto-navigate to chat
+  const prevFullHostEventsRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    userCreatedEvents.forEach(ev => {
+      const approved = approvedJoiners[ev.id] || []
+      const slotsTotal = (ev.maxParticipants || 5) - 1
+      const isFull = approved.length >= slotsTotal && slotsTotal > 0
+      if (isFull && !prevFullHostEventsRef.current.has(ev.id)) {
+        prevFullHostEventsRef.current.add(ev.id)
+        addNotif({ type: 'host_full', emoji: '🎉', color: '#10B981', title: 'Your social is complete!', body: `All spots filled for "${ev.title}"` })
+        setTimeout(() => {
+          setMessagesInitialSubTab('messages')
+          setActiveTab('messages')
+        }, 1200)
+      }
+    })
+  }, [approvedJoiners, userCreatedEvents])
 
   // Watch for crew/partner found on joined events
   const prevActiveEventsRef = useRef<Set<number>>(new Set())
@@ -3790,6 +3936,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }}
             hostedEvents={userCreatedEvents}
             pendingJoinRequests={pendingJoinRequests}
+            approvedJoiners={approvedJoiners}
             onApproveJoiner={(eventId: number, joiner: any) => {
               setPendingJoinRequests(prev => ({
                 ...prev,
@@ -3799,7 +3946,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               const isDuo = (ev?.maxParticipants || 5) <= 2
 
               if (isDuo) {
-                // 1-on-1 event → direct chat
+                // 1-on-1 event → direct chat + auto-navigate
                 const newChat = {
                   id: Date.now(), type: 'duo',
                   name: joiner.name, age: joiner.age,
@@ -3810,6 +3957,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   partnerProfile: joiner,
                 }
                 setChatList(prev => [newChat, ...prev])
+                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `It's a date with ${joiner.name}!`, body: ev?.title || 'Check your chats' })
+                setTimeout(() => {
+                  setMessagesInitialSubTab('messages')
+                  setActiveTab('messages')
+                }, 900)
               } else {
                 // Squad/Party → find or create one group chat for this event
                 const newApproved = [...(approvedJoiners[eventId] || []), joiner]
@@ -3852,6 +4004,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
               }))
               showToast(`Request declined`)
+            }}
+            passedRequests={passedRequests}
+            onPassJoiner={(eventId: number, joiner: any) => {
+              setPendingJoinRequests(prev => ({
+                ...prev,
+                [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
+              }))
+              setPassedRequests(prev => ({
+                ...prev,
+                [eventId]: [...(prev[eventId] || []), joiner.requestId],
+              }))
+            }}
+            onGoToMessages={() => {
+              setMessagesInitialSubTab('messages')
+              setActiveTab('messages')
             }}
           />}
           {activeTab === 'messages' && <MessagesTab
@@ -4279,14 +4446,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         }
                         setUserCreatedEvents(prev => [...prev, newEvent])
 
-                        // Simulate a join request arriving after 3 seconds (demo)
-                        const requester = MOCK_SEEKERS[newId % MOCK_SEEKERS.length]
-                        setTimeout(() => {
-                          setPendingJoinRequests(prev => ({
-                            ...prev,
-                            [newId]: [...(prev[newId] || []), { ...requester, requestId: `${newId}-${requester.id}` }],
-                          }))
-                        }, 3000)
+                        // Simulate 8 staggered join requests arriving (demo)
+                        ;[0, 1, 2, 3, 4, 5, 6, 7].forEach((i) => {
+                          const requester = MOCK_SEEKERS[(newId + i) % MOCK_SEEKERS.length]
+                          const delay = 2500 + i * 1800
+                          setTimeout(() => {
+                            setPendingJoinRequests(prev => ({
+                              ...prev,
+                              [newId]: [...(prev[newId] || []), { ...requester, requestId: `${newId}-${requester.id}` }],
+                            }))
+                          }, delay)
+                        })
 
                         // Reset form
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
