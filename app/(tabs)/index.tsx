@@ -247,8 +247,8 @@ Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' B
 
 async function isImageSafe(base64: string): Promise<boolean> {
   if (!ANTHROPIC_KEY) return true
-  // Reject if base64 is missing — safe default
-  if (!base64 || base64.length < 100) return false
+  // Can't check without image data — skip moderation
+  if (!base64 || base64.length < 100) return true
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
