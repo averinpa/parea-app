@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
 
 const { width: W } = Dimensions.get('window')
@@ -3808,6 +3809,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
+  const persistLoaded = useRef(false)
 
   // Load profiles from DB, fall back to MOCK_SEEKERS if empty
   useEffect(() => {
@@ -3843,6 +3845,34 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
   const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
+
+  // ── Persist & restore state ───────────────────────────────────────────────
+  const PERSIST_KEY = `parea_feed_${userData?.authId || 'local'}`
+
+  useEffect(() => {
+    AsyncStorage.getItem(PERSIST_KEY).then(raw => {
+      if (!raw) { persistLoaded.current = true; return }
+      try {
+        const saved = JSON.parse(raw)
+        if (saved.joinedEvents) setJoinedEvents(saved.joinedEvents)
+        if (saved.userCreatedEvents) setUserCreatedEvents(saved.userCreatedEvents)
+        if (saved.pendingJoinRequests) setPendingJoinRequests(saved.pendingJoinRequests)
+        if (saved.approvedJoiners) setApprovedJoiners(saved.approvedJoiners)
+        if (saved.passedRequests) setPassedRequests(saved.passedRequests)
+        if (saved.chatList) setChatList(saved.chatList)
+        if (saved.chatMessages) setChatMessages(saved.chatMessages)
+      } catch {}
+      persistLoaded.current = true
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!persistLoaded.current) return
+    AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
+      joinedEvents, userCreatedEvents, pendingJoinRequests,
+      approvedJoiners, passedRequests, chatList, chatMessages,
+    }))
+  }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages])
 
   // ── Tonight's Vibe ────────────────────────────────────────────────────────
   const [tonightVibe, setTonightVibe] = useState({
@@ -4616,9 +4646,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         }
                         setUserCreatedEvents(prev => [...prev, newEvent])
 
-                        // Simulate 8 staggered join requests arriving (demo)
-                        ;[0, 1, 2, 3, 4, 5, 6, 7].forEach((i) => {
-                          const requester = allSeekers[(newId + i) % allSeekers.length]
+                        // Simulate staggered join requests (demo) — exclude self, no duplicates
+                        const candidatePool = allSeekers.filter((s: any) =>
+                          s.id !== userData?.dbId && s.id !== userData?.id
+                        )
+                        const uniqueCandidates = candidatePool.slice(0, 8)
+                        uniqueCandidates.forEach((requester: any, i: number) => {
                           const delay = 2500 + i * 1800
                           setTimeout(() => {
                             setPendingJoinRequests(prev => ({
