@@ -1533,7 +1533,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, tonightVibe, setTonightVibe }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake }: any) {
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [draftVibe, setDraftVibe] = useState(tonightVibe)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -1689,29 +1689,44 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
         {/* ── STICKY: Header + Filter chips ── */}
         <View style={{ backgroundColor: '#F8F7FF', zIndex: 600 }}>
-          {/* Top row: city + calendar */}
+          {/* Top row: city + calendar + bell */}
           <View style={[s.feedHeader, { justifyContent: 'space-between' }]}>
             <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
               <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
               <Text style={s.cityBtnTxt}>{city}</Text>
               <Ionicons name="chevron-down" size={13} color="#4338CA" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-                backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#EEF2FF' }}>
-              <Feather name="calendar" size={14} color={calendarOpen || selectedDate ? '#fff' : '#6366F1'} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: calendarOpen || selectedDate ? '#fff' : '#6366F1' }}>
-                {selectedDate
-                  ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' })
-                  : 'Calendar'}
-              </Text>
-              {selectedDate && (
-                <TouchableOpacity onPress={() => { setSelectedDate(null); setCalendarOpen(false) }} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-                  <Feather name="x" size={12} color="#fff" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* Calendar button */}
+              <TouchableOpacity
+                onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                  backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#EEF2FF' }}>
+                <Feather name="calendar" size={14} color={calendarOpen || selectedDate ? '#fff' : '#6366F1'} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: calendarOpen || selectedDate ? '#fff' : '#6366F1' }}>
+                  {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
+                </Text>
+                {selectedDate && (
+                  <TouchableOpacity onPress={() => { setSelectedDate(null); setCalendarOpen(false) }} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+                    <Feather name="x" size={12} color="#fff" />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+              {/* Bell */}
+              <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
+                <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
+                  style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+                    shadowColor: '#6366F1', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 }}>
+                  <Ionicons name="notifications-outline" size={20} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
                 </TouchableOpacity>
-              )}
-            </TouchableOpacity>
+                {unreadCount > 0 && (
+                  <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8,
+                    backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: '#F8F7FF' }}>
+                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#fff' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  </View>
+                )}
+              </Animated.View>
+            </View>
           </View>
 
           {/* Inline Calendar */}
@@ -4231,7 +4246,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} />}
           {activeTab === 'vibecheck' && <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={MOCK_EVENTS}
@@ -5197,8 +5212,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
       {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
 
-      {/* ── Floating Bell ──────────────────────────────────────────────────── */}
-      {activeTab === 'home' && !createOpen && !eventDetail && !openChat && (
+      {/* ── Floating Bell (non-home tabs only) ─────────────────────────────── */}
+      {activeTab !== 'home' && !createOpen && !eventDetail && !openChat && (
         <Animated.View style={{
           position: 'absolute', top: 52, right: 20, zIndex: 500,
           transform: [{ rotate: bellShake.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) }],
