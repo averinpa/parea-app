@@ -5140,16 +5140,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           activeOpacity={0.85}
                           disabled={isFull}
                           onPress={() => {
-                            setEventDetail(null)
-                            setPendingJoinEv(eventDetail)
-                            setActiveTab('home')
+                            if (eventDetail.type === 'official') {
+                              setEventDetail(null)
+                              setPendingJoinEv(eventDetail)
+                              setActiveTab('home')
+                            } else {
+                              handleJoinEvent(eventDetail)
+                              setEventDetail(null)
+                            }
                           }}
                           style={[s.btnPrimary, isFull
                             ? { backgroundColor: '#E2E8F0', shadowOpacity: 0 }
                             : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
                           ]}>
                           <Text style={[s.btnPrimaryText, { color: isFull ? '#94A3B8' : '#fff' }]}>
-                            {isFull ? 'Event is full' : 'Join this Social →'}
+                            {isFull ? 'Event is full' : eventDetail.type === 'official' ? "I'm Going →" : 'Join this Social →'}
                           </Text>
                         </TouchableOpacity>
                       )}
