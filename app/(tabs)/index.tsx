@@ -1536,10 +1536,32 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, tonightVibe, setTonightVibe }: any) {
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [draftVibe, setDraftVibe] = useState(tonightVibe)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [calYear, setCalYear] = useState(new Date().getFullYear())
+  const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const now = Date.now()
+
+  // Parse event time string → Date (for calendar matching)
+  const parseEventDate = (timeStr: string): Date | null => {
+    if (!timeStr) return null
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const lower = timeStr.toLowerCase()
+    if (lower.startsWith('today')) return today
+    if (lower.startsWith('tomorrow')) { const d = new Date(today); d.setDate(d.getDate() + 1); return d }
+    const dayMap: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 }
+    const prefix = lower.slice(0, 3)
+    if (prefix in dayMap) {
+      const d = new Date(today)
+      const diff = ((dayMap[prefix] - d.getDay()) + 7) % 7 || 7
+      d.setDate(d.getDate() + diff)
+      return d
+    }
+    return null
+  }
   const allCityEvents = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
     if (e.city !== city) return false
-    if (e.isHosted && e.expiresAt && e.expiresAt < now) return false
+    if (e.isHosted) return false  // host doesn't join their own event
     return true
   })
 
@@ -1547,19 +1569,26 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const userCategories = (userInterests as string[]).map((i: string) => INTEREST_TO_CATEGORY[i]).filter(Boolean)
 
   const FILTERS = [
-    { id: 'all', label: '✦ All' },
-    { id: 'official', label: '🌟 Events' },
-    { id: 'outdoors', label: '🌿 Outdoors' },
-    { id: 'coffee', label: '☕ Social' },
-    { id: 'food', label: '🍕 Food' },
-    { id: 'culture', label: '🎨 Culture' },
-    { id: 'sports', label: '🎾 Sports' },
+    { id: 'all',       label: '✦ All' },
+    { id: 'official',  label: '🌟 Official' },
+    { id: 'community', label: '👥 Socials' },
+    { id: 'outdoors',  label: '🌿 Outdoors' },
+    { id: 'coffee',    label: '☕ Coffee' },
+    { id: 'food',      label: '🍕 Food' },
+    { id: 'culture',   label: '🎨 Culture' },
+    { id: 'sports',    label: '🎾 Sports' },
   ]
 
   const filteredEvents = allCityEvents.filter(ev => {
-    if (feedFilter === 'all') return true
-    if (feedFilter === 'official') return ev.type === 'official'
-    return ev.category === feedFilter
+    if (feedFilter === 'official')  { if (ev.type !== 'official')   return false }
+    else if (feedFilter === 'community') { if (!ev.isHosted && ev.type !== 'community') return false }
+    else if (feedFilter !== 'all')  { if (ev.category !== feedFilter) return false }
+    if (selectedDate) {
+      const evDate = parseEventDate(ev.time)
+      if (!evDate) return false
+      return evDate.toDateString() === selectedDate.toDateString()
+    }
+    return true
   })
 
   // Sort: matching interests first, then rest
@@ -1660,21 +1689,119 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
         {/* ── STICKY: Header + Filter chips ── */}
         <View style={{ backgroundColor: '#F8F7FF' }}>
-          <View style={s.feedHeader}>
+          {/* Top row: city + calendar */}
+          <View style={[s.feedHeader, { justifyContent: 'space-between' }]}>
             <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
               <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
               <Text style={s.cityBtnTxt}>{city}</Text>
               <Ionicons name="chevron-down" size={13} color="#4338CA" />
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+                backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#EEF2FF' }}>
+              <Feather name="calendar" size={14} color={calendarOpen || selectedDate ? '#fff' : '#6366F1'} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: calendarOpen || selectedDate ? '#fff' : '#6366F1' }}>
+                {selectedDate
+                  ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' })
+                  : 'Calendar'}
+              </Text>
+              {selectedDate && (
+                <TouchableOpacity onPress={() => { setSelectedDate(null); setCalendarOpen(false) }} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+                  <Feather name="x" size={12} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
           </View>
+
+          {/* Inline Calendar */}
+          {calendarOpen && (() => {
+            const today = new Date(); today.setHours(0,0,0,0)
+            const firstDay = new Date(calYear, calMonth, 1).getDay()
+            const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+            const monthName = new Date(calYear, calMonth).toLocaleDateString('en', { month: 'long', year: 'numeric' })
+            // Collect event dates for dots
+            const eventDates = new Set(allCityEvents.map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
+            const officialDates = new Set(allCityEvents.filter(ev => ev.type === 'official').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
+            const socialDates = new Set(allCityEvents.filter(ev => ev.isHosted || ev.type === 'community').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
+            const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+            while (cells.length % 7 !== 0) cells.push(null)
+            return (
+              <View style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff', borderRadius: 20, padding: 14, shadowColor: '#6366F1', shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
+                {/* Month nav */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <TouchableOpacity onPress={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) } else setCalMonth(m => m - 1) }}
+                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="chevron-left" size={16} color="#475569" />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B' }}>{monthName}</Text>
+                  <TouchableOpacity onPress={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
+                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="chevron-right" size={16} color="#475569" />
+                  </TouchableOpacity>
+                </View>
+                {/* Day labels */}
+                <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                  {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                    <Text key={d} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '700', color: '#94A3B8' }}>{d}</Text>
+                  ))}
+                </View>
+                {/* Cells */}
+                {Array.from({ length: cells.length / 7 }, (_, row) => (
+                  <View key={row} style={{ flexDirection: 'row', marginBottom: 2 }}>
+                    {cells.slice(row * 7, row * 7 + 7).map((day, col) => {
+                      if (!day) return <View key={col} style={{ flex: 1, height: 36 }} />
+                      const d = new Date(calYear, calMonth, day); d.setHours(0,0,0,0)
+                      const ds = d.toDateString()
+                      const isSelected = selectedDate?.toDateString() === ds
+                      const isToday = today.toDateString() === ds
+                      const isPast = d < today
+                      const hasOfficial = officialDates.has(ds)
+                      const hasSocial = socialDates.has(ds)
+                      return (
+                        <TouchableOpacity key={col} onPress={() => { if (!isPast) { setSelectedDate(isSelected ? null : d); setCalendarOpen(false) } }}
+                          style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10,
+                            backgroundColor: isSelected ? '#6366F1' : isToday ? '#EEF2FF' : 'transparent' }}>
+                          <Text style={{ fontSize: 13, fontWeight: isSelected || isToday ? '800' : '500', color: isSelected ? '#fff' : isPast ? '#CBD5E1' : isToday ? '#6366F1' : '#334155' }}>{day}</Text>
+                          {(hasOfficial || hasSocial) && !isPast && (
+                            <View style={{ flexDirection: 'row', gap: 2, position: 'absolute', bottom: 3 }}>
+                              {hasOfficial && <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isSelected ? '#fff' : '#F59E0B' }} />}
+                              {hasSocial && <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isSelected ? '#fff' : '#6366F1' }} />}
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                ))}
+                {/* Legend */}
+                <View style={{ flexDirection: 'row', gap: 14, marginTop: 10, justifyContent: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
+                    <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Official event</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366F1' }} />
+                    <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Social</Text>
+                  </View>
+                </View>
+              </View>
+            )
+          })()}
+
+          {/* Filter chips */}
           <View style={{ height: 52 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterContent}>
-              {FILTERS.map(f => (
-                <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
-                  style={[s.filterTab, feedFilter === f.id && s.filterTabOn]}>
-                  <Text style={[s.filterTabTxt, feedFilter === f.id && s.filterTabTxtOn]}>{f.label}</Text>
-                </TouchableOpacity>
-              ))}
+              {FILTERS.map(f => {
+                const isType = f.id === 'official' || f.id === 'community'
+                const isOn = feedFilter === f.id
+                return (
+                  <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
+                    style={[s.filterTab, isOn && s.filterTabOn, isType && !isOn && { borderWidth: 1.5, borderColor: f.id === 'official' ? '#F59E0B' : '#6366F1', backgroundColor: f.id === 'official' ? '#FFFBEB' : '#EEF2FF' }]}>
+                    <Text style={[s.filterTabTxt, isOn && s.filterTabTxtOn, isType && !isOn && { color: f.id === 'official' ? '#D97706' : '#4338CA', fontWeight: '700' }]}>{f.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
             </ScrollView>
           </View>
         </View>
@@ -1894,15 +2021,23 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <Text style={{ fontSize: 24 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
                     </LinearGradient>
                     <View style={s.listCardBody}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                         {ev.type === 'official' && (
-                          <View style={[s.officialBadge, { paddingHorizontal: 7, paddingVertical: 2 }]}>
-                            <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>OFFICIAL</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FCD34D' }}>
+                            <Text style={{ fontSize: 9 }}>🌟</Text>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#D97706' }}>OFFICIAL EVENT</Text>
                           </View>
                         )}
                         {ev.isHosted && (
-                          <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#F59E0B' }}>
-                            <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>👤 SOCIAL</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#A5B4FC' }}>
+                            <Text style={{ fontSize: 9 }}>👥</Text>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#4338CA' }}>COMMUNITY SOCIAL</Text>
+                          </View>
+                        )}
+                        {!ev.type || ev.type === 'community' && !ev.isHosted && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#86EFAC' }}>
+                            <Text style={{ fontSize: 9 }}>👥</Text>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#16A34A' }}>COMMUNITY</Text>
                           </View>
                         )}
                         <Text style={{ fontSize: 11, color: '#94A3B8' }}>{ev.distance}</Text>
