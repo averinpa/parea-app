@@ -1,6 +1,7 @@
 -- ─── PROFILES ────────────────────────────────────────────────────────────────
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
+  auth_id uuid unique,
   name text,
   age integer,
   bio text,
@@ -17,6 +18,9 @@ create table if not exists profiles (
   color text default '#6366F1',
   created_at timestamptz default now()
 );
+
+-- Add auth_id if upgrading existing table
+alter table profiles add column if not exists auth_id uuid unique;
 
 -- ─── EVENTS ──────────────────────────────────────────────────────────────────
 create table if not exists events (

@@ -1510,7 +1510,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={[s.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
+        <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 24 : insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
           {step === TOTAL ? (
             <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
               <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
@@ -3278,13 +3278,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
 function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
+  const insets = useSafeAreaInsets()
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
   const userPhotos: string[] = (userData?.photos || []).filter(Boolean)
   const [previewIdx, setPreviewIdx] = useState<number | null>(null)
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [langEditOpen, setLangEditOpen] = useState(false)
+  const [interestsEditOpen, setInterestsEditOpen] = useState(false)
   const [draftLangs, setDraftLangs] = useState<string[]>([])
+  const [draftInterests, setDraftInterests] = useState<string[]>([])
   const [draft, setDraft] = useState<any>({})
 
   // Per-slot status: null = idle, 'checking' = moderation running, 'rejected' = failed
@@ -3559,138 +3562,148 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </View>
       </Modal>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+      {/* Interests edit modal */}
+      <Modal visible={interestsEditOpen} transparent animationType="slide" onRequestClose={() => setInterestsEditOpen(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setInterestsEditOpen(false)} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}>
+          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Your interests</Text>
+            <TouchableOpacity onPress={() => setInterestsEditOpen(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="x" size={16} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+            {INTERESTS_BY_CATEGORY.map(cat => (
+              <View key={cat.id} style={{ marginBottom: 20 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>{cat.emoji} {cat.label}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {cat.items.map(item => {
+                    const on = draftInterests.includes(item)
+                    return (
+                      <TouchableOpacity key={item} onPress={() => {
+                        setDraftInterests(prev => on ? prev.filter(x => x !== item) : [...prev, item])
+                        Haptics.selectionAsync()
+                      }} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : '#E2E8F0' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#4338CA' : '#64748B' }}>{item}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </View>
+            ))}
+            <TouchableOpacity onPress={() => { onUpdateUserData?.({ interests: draftInterests }); setInterestsEditOpen(false) }}
+              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save{draftInterests.length > 0 ? ` (${draftInterests.length})` : ''}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+
       {/* Header */}
-      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ paddingTop: Math.max(insets.top, 20) + 8, paddingHorizontal: 20, paddingBottom: 12 }}>
         <Text style={{ fontSize: 22, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.4 }}>My Profile</Text>
       </View>
 
-      {/* Photo grid — editable, 1 row of 3 slots max */}
+      {/* Photo + info row */}
       {(() => {
-        const CELL_W = (W - 40 - 16) / 3  // 3 equal columns
-        const CELL_H = CELL_W * (4 / 3)
-        // Show filled photos + 1 empty add-slot (if < 3), always 3 cells total
+        const MAIN_W = 110
+        const MAIN_H = Math.round(MAIN_W * (4 / 3))
+        const SMALL = 68
+
+        const renderSlot = (i: number, w: number, h: number) => {
+          const uri = userPhotos[i]
+          const isMain = i === 0
+          const status = slotStatus[i] ?? null
+          const isChecking = status === 'checking'
+          const isRejected = status === 'rejected'
+          if (uri) {
+            return (
+              <TouchableOpacity key={i} activeOpacity={isChecking ? 1 : 0.85}
+                onPress={() => {
+                  if (isChecking || isRejected) return
+                  const acts: any[] = [{ text: '📷  Replace', onPress: () => pickProfilePhoto(i) }]
+                  if (!(isMain && userPhotos.length === 1)) acts.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
+                  acts.push({ text: 'Cancel', style: 'cancel' })
+                  Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, acts)
+                }}
+                style={{ width: w, height: h, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E2E8F0', borderWidth: isRejected ? 2 : 0, borderColor: '#EF4444' }}>
+                <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                {isChecking && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(99,102,241,0.7)', alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#fff" size="small" /></View>}
+                {isRejected && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(239,68,68,0.75)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20 }}>🚫</Text></View>}
+                {isMain && !isChecking && !isRejected && <View style={{ position: 'absolute', top: 6, left: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.55)' }}><Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>Main ★</Text></View>}
+                {!isChecking && !isRejected && <View style={{ position: 'absolute', bottom: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}><Feather name="edit-2" size={10} color="#fff" /></View>}
+              </TouchableOpacity>
+            )
+          }
+          if (i === userPhotos.length) {
+            return (
+              <TouchableOpacity key={i} onPress={() => pickProfilePhoto()}
+                style={{ width: w, height: h, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: i === 0 ? '#6366F1' : '#E2E8F0', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <Feather name="plus" size={16} color={i === 0 ? '#6366F1' : '#94A3B8'} />
+                <Text style={{ fontSize: 10, color: i === 0 ? '#6366F1' : '#94A3B8', fontWeight: '700' }}>Add</Text>
+              </TouchableOpacity>
+            )
+          }
+          return <View key={i} style={{ width: w, height: h, borderRadius: 14, backgroundColor: '#F1F5F9', opacity: 0.4 }} />
+        }
+
         return (
-          <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {[0, 1, 2].map(i => {
-                const uri = userPhotos[i]
-                const isMain = i === 0
-                const status = slotStatus[i] ?? null
-                if (uri) {
-                  const isChecking = status === 'checking'
-                  const isRejected = status === 'rejected'
-                  return (
-                    <View key={i} style={{ width: CELL_W }}>
-                      <TouchableOpacity activeOpacity={isChecking ? 1 : 0.85}
-                        onPress={() => {
-                          if (isChecking || isRejected) return
-                          const actions: any[] = [
-                            { text: '📷  Replace', onPress: () => pickProfilePhoto(i) },
-                          ]
-                          if (!(isMain && userPhotos.length === 1)) {
-                            actions.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
-                          }
-                          actions.push({ text: 'Cancel', style: 'cancel' })
-                          Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, actions)
-                        }}
-                        style={{ width: CELL_W, height: CELL_H, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0',
-                          borderWidth: isRejected ? 2 : 0, borderColor: isRejected ? '#EF4444' : 'transparent' }}>
-                        <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                        {/* Checking overlay */}
-                        {isChecking && (
-                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(99,102,241,0.7)', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                            <ActivityIndicator color="#fff" size="small" />
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Checking…</Text>
-                          </View>
-                        )}
-                        {/* Rejected overlay */}
-                        {isRejected && (
-                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(239,68,68,0.75)', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                            <Text style={{ fontSize: 22 }}>🚫</Text>
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>Not allowed</Text>
-                          </View>
-                        )}
-                        {/* Edit button (only when idle) */}
-                        {!isChecking && !isRejected && (
-                          <View style={{ position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                            <Feather name="edit-2" size={12} color="#fff" />
-                          </View>
-                        )}
-                        {isMain && !isChecking && !isRejected && (
-                          <View style={{ position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>Main ★</Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                      {/* Status label below slot */}
-                      {isChecking && <Text style={{ fontSize: 10, color: '#6366F1', fontWeight: '700', textAlign: 'center', marginTop: 4 }}>Checking…</Text>}
-                      {isRejected && <Text style={{ fontSize: 10, color: '#EF4444', fontWeight: '700', textAlign: 'center', marginTop: 4 }}>Removed</Text>}
-                    </View>
-                  )
-                }
-                // Empty slot — only show if it's the next available slot
-                if (i === userPhotos.length) {
-                  return (
-                    <TouchableOpacity key={i} activeOpacity={0.8}
-                      onPress={() => pickProfilePhoto()}
-                      style={{ width: CELL_W, height: CELL_H, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: i === 0 ? '#6366F1' : '#E2E8F0', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' }}>
-                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: i === 0 ? '#EEF2FF' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                        <Feather name="plus" size={20} color={i === 0 ? '#6366F1' : '#94A3B8'} />
-                      </View>
-                      <Text style={{ fontSize: 11, color: i === 0 ? '#6366F1' : '#94A3B8', fontWeight: '700', marginTop: 6 }}>{i === 0 ? 'Add main' : 'Add photo'}</Text>
-                    </TouchableOpacity>
-                  )
-                }
-                // Future locked slot (grey, not tappable)
-                return (
-                  <View key={i} style={{ width: CELL_W, height: CELL_H, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-                    <Feather name="image" size={20} color="#CBD5E1" />
-                  </View>
-                )
-              })}
+          <View style={{ paddingHorizontal: 20, flexDirection: 'row', gap: 12, marginBottom: 14 }}>
+            <TouchableOpacity activeOpacity={0.9} onPress={() => userPhotos[0] && setPreviewIdx(0)}>
+              {renderSlot(0, MAIN_W, MAIN_H)}
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 19, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
+              {userData?.bio ? <Text style={{ fontSize: 13, color: '#64748B', marginTop: 3, lineHeight: 18 }} numberOfLines={3}>{userData.bio}</Text> : null}
+              <View style={{ flex: 1 }} />
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {renderSlot(1, SMALL, SMALL)}
+                {renderSlot(2, SMALL, SMALL)}
+              </View>
             </View>
-            <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 8, textAlign: 'center' }}>
-              Tap to edit · main photo is required · max 3
-            </Text>
           </View>
         )
       })()}
 
-      {/* Name + bio compact */}
-      <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
-        {userData?.bio ? <Text style={{ fontSize: 14, color: '#64748B', marginTop: 4, lineHeight: 20 }}>{userData.bio}</Text> : null}
-      </View>
-
       {/* Interests */}
-      {(userData?.interests || []).length > 0 && (
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Interests</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+      <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Interests</Text>
+          <TouchableOpacity onPress={() => { setDraftInterests(userData?.interests || []); setInterestsEditOpen(true) }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+            <Feather name="edit-2" size={11} color="#6366F1" />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+        {(userData?.interests || []).length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             {(userData.interests as string[]).map((item: string) => (
               <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 }}>
                 <Text style={{ fontSize: 13, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
               </View>
             ))}
-          </View>
-        </View>
-      )}
-
+          </ScrollView>
+        ) : (
+          <TouchableOpacity onPress={() => { setDraftInterests([]); setInterestsEditOpen(true) }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>✨ Add interests</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Languages */}
-      <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
-          <TouchableOpacity
-            onPress={() => { setDraftLangs(userData?.langs || []); setLangEditOpen(true) }}
+      <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
+          <TouchableOpacity onPress={() => { setDraftLangs(userData?.langs || []); setLangEditOpen(true) }}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
             <Feather name="edit-2" size={11} color="#6366F1" />
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
           </TouchableOpacity>
         </View>
         {(userData?.langs || []).length > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {(userData.langs as string[]).map((code: string) => {
               const l = LANGUAGES_LIST.find(x => x.code === code)
               return l ? (
@@ -3700,45 +3713,45 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 </View>
               ) : null
             })}
-          </View>
+          </ScrollView>
         ) : (
-          <TouchableOpacity
-            onPress={() => { setDraftLangs([]); setLangEditOpen(true) }}
-            style={{ borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 18 }}>🌍</Text>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#94A3B8' }}>Add languages</Text>
+          <TouchableOpacity onPress={() => { setDraftLangs([]); setLangEditOpen(true) }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>🌍 Add languages</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {[
-        { icon: 'settings', label: 'Settings' },
-        { icon: 'shield', label: 'Privacy Policy' },
-        { icon: 'file-text', label: 'Terms of Service' },
-        { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
-        { icon: 'trash-2', label: 'Delete Account', color: '#EF4444' },
-      ].map(item => (
-        <TouchableOpacity key={item.label} style={s.profileActionRow} onPress={() => {
-          if (item.label === 'Log Out') { onLogOut?.(); return }
-          if (item.label === 'Delete Account') {
-            Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: async () => {
-                if (userData?.dbId) {
-                  await supabase.from('profiles').delete().eq('id', userData.dbId)
-                }
-                await supabase.auth.signOut()
-                onLogOut?.()
-              }},
-            ])
-          }
-        }}>
-          <Feather name={item.icon as any} size={18} color={item.color || '#64748B'} />
-          <Text style={[{ flex: 1, fontSize: 15, color: '#334155', marginLeft: 14 }, item.color ? { color: item.color } : {}]}>{item.label}</Text>
-          <Feather name="chevron-right" size={16} color="#CBD5E1" />
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+      {/* Actions */}
+      <View style={{ flex: 1, paddingHorizontal: 20, justifyContent: 'flex-end', paddingBottom: Math.max(insets.bottom, 16) }}>
+        {[
+          { icon: 'settings', label: 'Settings' },
+          { icon: 'shield', label: 'Privacy Policy' },
+          { icon: 'file-text', label: 'Terms of Service' },
+          { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
+          { icon: 'trash-2', label: 'Delete Account', color: '#EF4444' },
+        ].map(item => (
+          <TouchableOpacity key={item.label}
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, marginBottom: 2, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
+            onPress={() => {
+              if (item.label === 'Log Out') { onLogOut?.(); return }
+              if (item.label === 'Delete Account') {
+                Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: async () => {
+                    if (userData?.dbId) await supabase.from('profiles').delete().eq('id', userData.dbId)
+                    await supabase.auth.signOut()
+                    onLogOut?.()
+                  }},
+                ])
+              }
+            }}>
+            <Feather name={item.icon as any} size={17} color={item.color || '#64748B'} />
+            <Text style={[{ flex: 1, fontSize: 14, color: '#334155', marginLeft: 12 }, item.color ? { color: item.color } : {}]}>{item.label}</Text>
+            <Feather name="chevron-right" size={15} color="#CBD5E1" />
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   )
 }
@@ -5273,13 +5286,61 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [screen, setScreen] = useState<'landing' | 'register' | 'otp' | 'onboarding' | 'feed'>('landing')
+  const [screen, setScreen] = useState<'loading' | 'landing' | 'register' | 'otp' | 'onboarding' | 'feed'>('loading')
   const [userData, setUserData] = useState<any>({})
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
   const [authCredential, setAuthCredential] = useState('')
   const [authUserId, setAuthUserId] = useState<string | null>(null)
 
   const PROFILE_COLORS = ['#6366F1','#EC4899','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
+
+  const loadProfileForUser = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('auth_id', userId)
+      .single()
+    if (profile) {
+      setAuthUserId(userId)
+      setUserData({
+        name: profile.name,
+        age: profile.age?.toString() || '',
+        bio: profile.bio,
+        photos: profile.photos || [],
+        langs: profile.langs || [],
+        interests: profile.interests || [],
+        socialEnergy: profile.social_energy,
+        drinksPref: profile.drinks_pref,
+        smokingPref: profile.smoking_pref,
+        musicGenres: profile.music_genres || [],
+        transport: profile.transport,
+        format: profile.format,
+        city: profile.city,
+        color: profile.color,
+        dbId: profile.id,
+        authId: userId,
+      })
+      setScreen('feed')
+    } else {
+      setAuthUserId(userId)
+      setScreen('onboarding')
+    }
+  }
+
+  // Check existing session on mount
+  useEffect(() => {
+    // onAuthStateChange catches both initial restore from AsyncStorage and new logins
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          await loadProfileForUser(session.user.id)
+        } else {
+          setScreen('landing')
+        }
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   const saveProfileToDB = async (data: any, userId: string) => {
     try {
@@ -5321,9 +5382,46 @@ export default function App() {
     setScreen('landing')
   }
 
-  if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('feed')} />
+  if (screen === 'loading') return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F3FF' }}>
+      <ActivityIndicator size="large" color="#6366F1" />
+    </View>
+  )
+  const handleOtpVerify = async (userId: string) => {
+    setAuthUserId(userId)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('auth_id', userId)
+      .single()
+    if (profile) {
+      setUserData({
+        name: profile.name,
+        age: profile.age?.toString() || '',
+        bio: profile.bio,
+        photos: profile.photos || [],
+        langs: profile.langs || [],
+        interests: profile.interests || [],
+        socialEnergy: profile.social_energy,
+        drinksPref: profile.drinks_pref,
+        smokingPref: profile.smoking_pref,
+        musicGenres: profile.music_genres || [],
+        transport: profile.transport,
+        format: profile.format,
+        city: profile.city,
+        color: profile.color,
+        dbId: profile.id,
+        authId: userId,
+      })
+      setScreen('feed')
+    } else {
+      setScreen('onboarding')
+    }
+  }
+
+  if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('register')} />
   if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onSendOtp={(method, cred) => { setAuthMethod(method); setAuthCredential(cred); setScreen('otp') }} />
-  if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} method={authMethod} credential={authCredential} onVerify={(userId) => { setAuthUserId(userId); setScreen('onboarding') }} />
+  if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} method={authMethod} credential={authCredential} onVerify={handleOtpVerify} />
   if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} />
   return <FeedScreen userData={userData} onUpdateUserData={(patch: any) => setUserData((prev: any) => ({ ...prev, ...patch }))} onLogOut={handleLogOut} />
 }
