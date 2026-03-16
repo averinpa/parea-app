@@ -3273,31 +3273,50 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
   const [draftLangs, setDraftLangs] = useState<string[]>([])
   const [draft, setDraft] = useState<any>({})
 
-  const [photoVerifying, setPhotoVerifying] = useState(false)
+  const [moderatingIdx, setModeratingIdx] = useState<number | null>(null)
 
   const pickProfilePhoto = async (replaceIdx?: number) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true, allowsEditing: true, aspect: [3, 4] })
-    if (result.canceled || !result.assets?.[0]) return
-    const asset = result.assets[0]
-    setPhotoVerifying(true)
-    const safe = await isImageSafe(asset.base64 ?? '')
-    setPhotoVerifying(false)
-    if (!safe) {
-      Alert.alert('Photo rejected', 'This photo contains content that is not allowed. Please choose a different photo.')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      return
-    }
-    const newPhotos = [...userPhotos]
-    if (replaceIdx !== undefined) { newPhotos[replaceIdx] = asset.uri } else { newPhotos.push(asset.uri) }
-    onUpdateUserData?.({ photos: newPhotos })
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
+
+      // Pick once — with base64 only when key is available (for moderation)
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.6,
+        base64: !!ANTHROPIC_KEY,
+        allowsEditing: true,
+        aspect: [3, 4],
+      })
+      if (result.canceled || !result.assets?.[0]) return
+      const { uri, base64 } = result.assets[0]
+
+      // Save immediately — photo shows right away
+      const targetIdx = replaceIdx !== undefined ? replaceIdx : userPhotos.length
+      const newPhotos = [...userPhotos]
+      if (replaceIdx !== undefined) { newPhotos[replaceIdx] = uri } else { newPhotos.push(uri) }
+      onUpdateUserData?.({ photos: newPhotos })
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+
+      // Moderation in background — remove photo if unsafe
+      if (ANTHROPIC_KEY && base64) {
+        setModeratingIdx(targetIdx)
+        try {
+          const safe = await isImageSafe(base64)
+          if (!safe) {
+            onUpdateUserData?.({ photos: userPhotos }) // revert to before pick
+            Alert.alert('Photo removed', 'This photo contains content that is not allowed. Please choose a different one.')
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+          }
+        } catch { /* moderation failed — keep photo */ }
+        setModeratingIdx(null)
+      }
+    } catch { /* picker cancelled or error */ }
   }
 
   const deleteProfilePhoto = (idx: number) => {
     if (idx === 0 && userPhotos.length === 1) {
-      Alert.alert('Main photo required', 'You need at least one photo. Replace it with a different one instead.')
+      Alert.alert('Main photo required', 'You need at least one photo. Replace it instead.')
       return
     }
     Alert.alert('Delete photo?', undefined, [
@@ -3529,10 +3548,10 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         // Show filled photos + 1 empty add-slot (if < 3), always 3 cells total
         return (
           <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-            {photoVerifying && (
+            {moderatingIdx !== null && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF2FF', borderRadius: 12, padding: 10, marginBottom: 10 }}>
                 <ActivityIndicator size="small" color="#6366F1" />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#3730A3' }}>Checking photo…</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#3730A3' }}>Checking photo for safety…</Text>
               </View>
             )}
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -3554,6 +3573,11 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                       }}
                       style={{ width: CELL_W, height: CELL_H, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
                       <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      {moderatingIdx === i && (
+                        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+                          <ActivityIndicator color="#fff" />
+                        </View>
+                      )}
                       <View style={{ position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
                         <Feather name="edit-2" size={12} color="#fff" />
                       </View>
