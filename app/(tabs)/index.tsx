@@ -531,6 +531,9 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
+  const [dobDay, setDobDay] = useState('')
+  const [dobMonth, setDobMonth] = useState('')
+  const [dobYear, setDobYear] = useState('')
   const [gender, setGender] = useState<string | null>(null)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null])
   const [photoLoading, setPhotoLoading] = useState([false, false, false])
@@ -555,6 +558,8 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [emojiParticles, setEmojiParticles] = useState<Array<{ id: number; x: Animated.Value; y: Animated.Value; opacity: Animated.Value; rotate: Animated.Value }>>([])
   const slideAnim = useRef(new Animated.Value(0)).current
   const ageRef = useRef<TextInput>(null)
+  const dobMonthRef = useRef<TextInput>(null)
+  const dobYearRef = useRef<TextInput>(null)
 
   // Music visualizer animation
   useEffect(() => {
@@ -579,6 +584,17 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (digits.length === 2) ageRef.current?.blur()
   }
 
+  const dobFilled = dobDay.length === 2 && dobMonth.length === 2 && dobYear.length === 4
+  const dobAgeNum = (() => {
+    if (!dobFilled) return 0
+    const birth = new Date(parseInt(dobYear), parseInt(dobMonth) - 1, parseInt(dobDay))
+    const today = new Date()
+    let a = today.getFullYear() - birth.getFullYear()
+    if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) a--
+    return a
+  })()
+  const dobValid = dobFilled && dobAgeNum >= 18 && dobAgeNum <= 100
+
   const handleGender = (g: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setGender(g)
@@ -590,7 +606,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   }
 
   const canNext = () => {
-    if (step === 1) return name.trim().length >= 2 && ageValid && !!gender
+    if (step === 1) return name.trim().length >= 2 && dobValid && !!gender
     if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return interests.length > 0
     if (step === 4) return langs.length > 0
@@ -630,7 +646,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
       setShowConfetti(true)
       setTimeout(() => {
         setShowConfetti(false)
-        onFinish({ name, age, gender, photos, bio, interests, langs, bentoSong, bentoFlags, bentoMood })
+        onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, bentoSong, bentoFlags, bentoMood })
       }, 2200)
     }
   }
@@ -792,33 +808,120 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
               {step === 1 && (
                 <View>
-                  <Text style={s.stepTitle}>Tell us about yourself</Text>
-                  <Text style={s.stepSub}>This info will be visible on your profile</Text>
-
-                  <Text style={s.label}>Your name</Text>
-                  <TextInput style={s.input} value={name} onChangeText={t => setName(t.replace(/[^a-zA-ZА-Яа-яЁёÀ-ÿ\s\-']/g, ''))} placeholder="Name" placeholderTextColor="#94A3B8" maxLength={30} autoCapitalize="words" />
-
-                  <Text style={s.label}>Age</Text>
-                  <TextInput
-                    ref={ageRef}
-                    style={[s.input, { width: 110 }, ageError && { borderColor: '#EF4444', borderWidth: 1.5 }]}
-                    value={age} onChangeText={handleAgeChange}
-                    placeholder="18" placeholderTextColor="#94A3B8"
-                    keyboardType="number-pad" maxLength={2} />
-                  {ageError && (
-                    <Text style={{ fontSize: 12, color: '#EF4444', marginTop: -12, marginBottom: 16 }}>
-                      You must be 18 or older to use Parea
+                  {/* Header */}
+                  <View style={{ marginBottom: 32 }}>
+                    <Text style={{ fontSize: 32, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 38 }}>
+                      Hey! 👋{'\n'}Who are you?
                     </Text>
-                  )}
+                    <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8, lineHeight: 20 }}>
+                      Your profile info · visible to others
+                    </Text>
+                  </View>
 
-                  <Text style={s.label}>Gender</Text>
-                  <View style={s.row}>
-                    {['Male', 'Female', 'Non-binary'].map(g => (
-                      <TouchableOpacity key={g} onPress={() => handleGender(g)}
-                        style={[s.chip, gender === g && s.chipOn]}>
-                        <Text style={[s.chipTxt, gender === g && s.chipTxtOn]}>{g}</Text>
-                      </TouchableOpacity>
-                    ))}
+                  {/* Name */}
+                  <View style={{ marginBottom: 24 }}>
+                    <Text style={s.label}>Name</Text>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 18, paddingVertical: 4, boxShadow: '0 2px 12px rgba(129,140,248,0.08)' } as any}>
+                      <TextInput
+                        style={{ fontSize: 17, color: '#1E1B4B', fontWeight: '600', paddingVertical: 14 }}
+                        value={name}
+                        onChangeText={t => setName(t.replace(/[^a-zA-ZА-Яа-яЁёÀ-ÿ\s\-']/g, ''))}
+                        placeholder="Your name"
+                        placeholderTextColor="#CBD5E1"
+                        maxLength={30}
+                        autoCapitalize="words"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Date of birth */}
+                  <View style={{ marginBottom: 28 }}>
+                    <Text style={s.label}>Date of birth</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+                      {/* DD */}
+                      <View style={{ alignItems: 'center', gap: 6 }}>
+                        <TextInput
+                          ref={ageRef}
+                          style={{ fontSize: 22, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', width: 48, paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: dobDay.length === 2 ? '#818CF8' : '#E2E8F0' }}
+                          value={dobDay}
+                          onChangeText={v => {
+                            const d = v.replace(/\D/g, '').slice(0, 2)
+                            setDobDay(d)
+                            if (d.length === 2) dobMonthRef.current?.focus()
+                          }}
+                          placeholder="DD"
+                          placeholderTextColor="#CBD5E1"
+                          keyboardType="number-pad"
+                          maxLength={2}
+                          underlineColorAndroid="transparent"
+                        />
+                      </View>
+                      <Text style={{ fontSize: 22, color: '#CBD5E1', fontWeight: '300', paddingBottom: 8 }}>/</Text>
+                      {/* MM */}
+                      <View style={{ alignItems: 'center' }}>
+                        <TextInput
+                          ref={dobMonthRef}
+                          style={{ fontSize: 22, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', width: 48, paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: dobMonth.length === 2 ? '#818CF8' : '#E2E8F0' }}
+                          value={dobMonth}
+                          onChangeText={v => {
+                            const d = v.replace(/\D/g, '').slice(0, 2)
+                            setDobMonth(d)
+                            if (d.length === 2) dobYearRef.current?.focus()
+                          }}
+                          placeholder="MM"
+                          placeholderTextColor="#CBD5E1"
+                          keyboardType="number-pad"
+                          maxLength={2}
+                          underlineColorAndroid="transparent"
+                        />
+                      </View>
+                      <Text style={{ fontSize: 22, color: '#CBD5E1', fontWeight: '300', paddingBottom: 8 }}>/</Text>
+                      {/* YYYY */}
+                      <View style={{ alignItems: 'center' }}>
+                        <TextInput
+                          ref={dobYearRef}
+                          style={{ fontSize: 22, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', width: 72, paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: dobYear.length === 4 ? '#818CF8' : '#E2E8F0' }}
+                          value={dobYear}
+                          onChangeText={v => {
+                            const d = v.replace(/\D/g, '').slice(0, 4)
+                            setDobYear(d)
+                            if (d.length === 4) dobYearRef.current?.blur()
+                          }}
+                          placeholder="YYYY"
+                          placeholderTextColor="#CBD5E1"
+                          keyboardType="number-pad"
+                          maxLength={4}
+                          underlineColorAndroid="transparent"
+                        />
+                      </View>
+                    </View>
+                    {dobFilled && dobAgeNum < 18 && (
+                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 8 }}>You must be 18 or older</Text>
+                    )}
+                  </View>
+
+                  {/* Gender */}
+                  <View>
+                    <Text style={s.label}>Gender</Text>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      {[
+                        { label: 'Male', emoji: '♂' },
+                        { label: 'Female', emoji: '♀' },
+                        { label: 'Non-binary', emoji: '⚧' },
+                      ].map(({ label, emoji }) => (
+                        <TouchableOpacity
+                          key={label}
+                          onPress={() => handleGender(label)}
+                          style={[
+                            { flex: 1, paddingVertical: 14, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.65)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' },
+                            gender === label && { backgroundColor: '#818CF8', borderColor: '#818CF8', boxShadow: '0 4px 16px rgba(129,140,248,0.65)' } as any,
+                          ]}
+                          activeOpacity={0.75}>
+                          <Text style={{ fontSize: 16, marginBottom: 2 }}>{emoji}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: gender === label ? '#fff' : '#64748B' }}>{label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
                 </View>
               )}
@@ -1051,7 +1154,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
               </BlurView>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }]} onPress={next} disabled={!canNext()}>
+            <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }, canNext() && { shadowColor: '#818CF8', shadowOpacity: 0.6, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 14, boxShadow: '0 8px 32px rgba(129, 140, 248, 0.7)' } as any]} onPress={next} disabled={!canNext()}>
               <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue</Text>
             </TouchableOpacity>
           )}
@@ -4130,7 +4233,7 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
-  chipOn: { backgroundColor: '#818CF8', borderColor: '#818CF8' },
+  chipOn: { backgroundColor: '#818CF8', borderColor: '#818CF8', shadowColor: '#818CF8', shadowOpacity: 0.6, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8, boxShadow: '0 4px 16px rgba(129, 140, 248, 0.75)' } as any,
   chipTxt: { fontSize: 14, color: '#334155', fontWeight: '500' },
   chipTxtOn: { color: '#fff', fontWeight: '700' },
   photosRow: { flexDirection: 'row', gap: 10, height: 240, marginBottom: 8 },
