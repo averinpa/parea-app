@@ -4057,12 +4057,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
-  // Welcome notification on first launch
+  // Welcome notification — only once after registration
   useEffect(() => {
-    const t = setTimeout(() => {
-      addNotif({ type: 'welcome', emoji: '👋', color: '#6366F1', title: `Welcome to Parea, ${userData?.name || 'there'}!`, body: 'Find your tonight\'s crew in Cyprus 🌊' })
-    }, 1500)
-    return () => clearTimeout(t)
+    const key = `parea_welcomed_${userData?.authId || 'local'}`
+    AsyncStorage.getItem(key).then(val => {
+      if (val) return
+      const t = setTimeout(() => {
+        addNotif({ type: 'welcome', emoji: '👋', color: '#6366F1', title: `Welcome to Parea, ${userData?.name || 'there'}!`, body: 'Find your tonight\'s crew in Cyprus 🌊' })
+        AsyncStorage.setItem(key, '1')
+      }, 1500)
+      return () => clearTimeout(t)
+    })
   }, [])
 
   // Watch for new join requests
