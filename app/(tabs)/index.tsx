@@ -379,7 +379,7 @@ function formatLocal(digits: string, groups: number[]) {
   return result
 }
 
-function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onContinue: () => void }) {
+function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendOtp: (method: 'email' | 'phone', credential: string) => void }) {
   const [tab, setTab] = useState<'email' | 'phone'>('email')
   const [email, setEmail] = useState('')
   const [localPhone, setLocalPhone] = useState('')
@@ -396,10 +396,24 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
     setLocalPhone(formatLocal(digits, country.groups))
   }
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isValid || isChecking) return
     setIsChecking(true)
-    setTimeout(() => { setIsChecking(false); onContinue() }, 900)
+    try {
+      if (tab === 'email') {
+        const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true } })
+        if (error) { Alert.alert('Error', error.message); setIsChecking(false); return }
+        onSendOtp('email', email.trim())
+      } else {
+        const fullPhone = `${country.code}${localPhone.replace(/\D/g, '')}`
+        const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone })
+        if (error) { Alert.alert('Error', error.message + '\n\nPhone OTP requires Twilio setup in Supabase dashboard.'); setIsChecking(false); return }
+        onSendOtp('phone', fullPhone)
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Something went wrong')
+      setIsChecking(false)
+    }
   }
 
   return (
@@ -530,13 +544,13 @@ function RegistrationScreen({ onBack, onContinue }: { onBack: () => void; onCont
 
 // ─── OTP SCREEN ───────────────────────────────────────────────────────────────
 
-function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => void }) {
-  const [digits, setDigits] = useState(['', '', '', ''])
+function OTPScreen({ onBack, onVerify, method, credential }: { onBack: () => void; onVerify: (userId: string) => void; method: 'email' | 'phone'; credential: string }) {
+  const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const [seconds, setSeconds] = useState(59)
   const [canResend, setCanResend] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState('')
-  const refs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)]
+  const refs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)]
   const shakeAnim = useRef(new Animated.Value(0)).current
   const isFull = digits.every(d => d !== '')
 
@@ -562,33 +576,41 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
     setError('')
     const v = val.replace(/\D/g, '').slice(-1)
     const next = [...digits]; next[i] = v; setDigits(next)
-    if (v && i < 3) refs[i + 1].current?.focus()
+    if (v && i < 5) refs[i + 1].current?.focus()
     if (!v && i > 0) refs[i - 1].current?.focus()
-    if (v && i === 3) {
-      const code = [...next.slice(0, 3), v].join('')
-      if (code.length === 4) setTimeout(() => handleVerify([...next.slice(0, 3), v]), 100)
+    if (v && i === 5) {
+      const full = [...next.slice(0, 5), v]
+      if (full.every(x => x !== '')) setTimeout(() => handleVerify(full), 100)
     }
   }
 
-  const handleVerify = (d = digits) => {
+  const handleVerify = async (d = digits) => {
     if (!d.every(x => x !== '') || isVerifying) return
     setIsVerifying(true)
-    setTimeout(() => {
-      setIsVerifying(false)
-      if (d.join('') === '1234') {
-        onVerify()
-      } else {
+    const token = d.join('')
+    try {
+      const { data, error: err } = method === 'email'
+        ? await supabase.auth.verifyOtp({ email: credential, token, type: 'email' })
+        : await supabase.auth.verifyOtp({ phone: credential, token, type: 'sms' })
+      if (err) {
         setError('Wrong code. Please try again.')
         shake()
-        setDigits(['', '', '', ''])
+        setDigits(['', '', '', '', '', ''])
         setTimeout(() => refs[0].current?.focus(), 50)
+      } else {
+        onVerify(data.user!.id)
       }
-    }, 800)
+    } catch (e: any) {
+      setError('Verification failed. Try again.')
+    }
+    setIsVerifying(false)
   }
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setSeconds(59); setCanResend(false)
-    setDigits(['', '', '', '']); setError('')
+    setDigits(['', '', '', '', '', '']); setError('')
+    if (method === 'email') await supabase.auth.signInWithOtp({ email: credential })
+    else await supabase.auth.signInWithOtp({ phone: credential })
     refs[0].current?.focus()
   }
 
@@ -605,10 +627,10 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
         </View>
 
         <View style={[s.authContent, { alignItems: 'center' }]}>
-          <Text style={[s.authTitle, { marginBottom: 12 }]}>Verify your number</Text>
-          <Text style={[s.authSub, { marginBottom: 48 }]}>Enter the code sent to{'\n'}your phone number.</Text>
+          <Text style={[s.authTitle, { marginBottom: 12 }]}>Check your {method === 'email' ? 'email' : 'phone'}</Text>
+          <Text style={[s.authSub, { marginBottom: 48 }]}>Enter the 6-digit code sent to{'\n'}{credential}</Text>
 
-          <Animated.View style={{ flexDirection: 'row', gap: 16, marginBottom: 16, transform: [{ translateX: shakeAnim }] }}>
+          <Animated.View style={{ flexDirection: 'row', gap: 10, marginBottom: 16, transform: [{ translateX: shakeAnim }] }}>
             {digits.map((d, i) => (
               <View key={i} style={[s.otpCell, d && s.otpCellFilled, error ? { borderBottomColor: '#EF4444' } : {}]}>
                 <TextInput
@@ -3788,8 +3810,23 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         { icon: 'shield', label: 'Privacy Policy' },
         { icon: 'file-text', label: 'Terms of Service' },
         { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
+        { icon: 'trash-2', label: 'Delete Account', color: '#EF4444' },
       ].map(item => (
-        <TouchableOpacity key={item.label} style={s.profileActionRow} onPress={item.label === 'Log Out' ? onLogOut : undefined}>
+        <TouchableOpacity key={item.label} style={s.profileActionRow} onPress={() => {
+          if (item.label === 'Log Out') { onLogOut?.(); return }
+          if (item.label === 'Delete Account') {
+            Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: async () => {
+                if (userData?.dbId) {
+                  await supabase.from('profiles').delete().eq('id', userData.dbId)
+                }
+                await supabase.auth.signOut()
+                onLogOut?.()
+              }},
+            ])
+          }
+        }}>
           <Feather name={item.icon as any} size={18} color={item.color || '#64748B'} />
           <Text style={[{ flex: 1, fontSize: 15, color: '#334155', marginLeft: 14 }, item.color ? { color: item.color } : {}]}>{item.label}</Text>
           <Feather name="chevron-right" size={16} color="#CBD5E1" />
@@ -5331,12 +5368,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 export default function App() {
   const [screen, setScreen] = useState<'landing' | 'register' | 'otp' | 'onboarding' | 'feed'>('landing')
   const [userData, setUserData] = useState<any>({})
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
+  const [authCredential, setAuthCredential] = useState('')
+  const [authUserId, setAuthUserId] = useState<string | null>(null)
 
-  const saveProfileToDB = async (data: any) => {
+  const PROFILE_COLORS = ['#6366F1','#EC4899','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
+
+  const saveProfileToDB = async (data: any, userId: string) => {
     try {
-      const PROFILE_COLORS = ['#6366F1','#EC4899','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
       const color = PROFILE_COLORS[Math.floor(Math.random() * PROFILE_COLORS.length)]
       const { data: row, error } = await supabase.from('profiles').insert({
+        auth_id: userId,
         name: data.name,
         age: parseInt(data.age) || null,
         bio: data.bio,
@@ -5360,16 +5402,23 @@ export default function App() {
   }
 
   const handleFinishOnboarding = async (data: any) => {
-    const row = await saveProfileToDB(data)
-    setUserData({ ...data, dbId: row?.id })
+    const row = await saveProfileToDB(data, authUserId || '')
+    setUserData({ ...data, dbId: row?.id, authId: authUserId })
     setScreen('feed')
   }
 
+  const handleLogOut = async () => {
+    await supabase.auth.signOut()
+    setUserData({})
+    setAuthUserId(null)
+    setScreen('landing')
+  }
+
   if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('feed')} />
-  if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onContinue={() => setScreen('otp')} />
-  if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} onVerify={() => setScreen('onboarding')} />
+  if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onSendOtp={(method, cred) => { setAuthMethod(method); setAuthCredential(cred); setScreen('otp') }} />
+  if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} method={authMethod} credential={authCredential} onVerify={(userId) => { setAuthUserId(userId); setScreen('onboarding') }} />
   if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} />
-  return <FeedScreen userData={userData} onUpdateUserData={(patch: any) => setUserData((prev: any) => ({ ...prev, ...patch }))} onLogOut={() => { setUserData({}); setScreen('register') }} />
+  return <FeedScreen userData={userData} onUpdateUserData={(patch: any) => setUserData((prev: any) => ({ ...prev, ...patch }))} onLogOut={handleLogOut} />
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
