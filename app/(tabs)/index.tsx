@@ -3003,7 +3003,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, dismissedFullEvents = new Set(), onDismissFullEvent }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages }: any) {
   // Official/open events the user joined — shown as crew-finding cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted)
   // User-created socials the user requested to join — shown as "awaiting approval"
@@ -3147,8 +3147,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
             const slotsLeft = slotsTotal - approvedCount
             if (allRequests.length === 0 && approvedCount === 0) return null
-            // Hide if full AND host already went to chat — reappears when slot opens
-            if (slotsLeft <= 0 && dismissedFullEvents.has(ev.id)) return null
+            // Hide when full and no pending requests — nothing to do here
+            if (slotsLeft <= 0 && allRequests.length === 0) return null
             // Score + sort, show top 12
             const scored = allRequests
               .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
@@ -3266,10 +3266,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         </View>
                       </View>
                       <TouchableOpacity
-                        onPress={() => {
-                          onDismissFullEvent?.(ev.id)
-                          onGoToMessages?.()
-                        }}
+                        onPress={() => onGoToMessages?.()}
                         activeOpacity={0.85}
                         style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
                         <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Go to group chat 💬</Text>
@@ -4059,7 +4056,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
   const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
-  const [dismissedFullEvents, setDismissedFullEvents] = useState<Set<number>>(new Set())
 
   // ── Persist & restore state ───────────────────────────────────────────────
   const PERSIST_KEY = `parea_feed_${userData?.authId || 'local'}`
@@ -4521,8 +4517,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
             }}
-            dismissedFullEvents={dismissedFullEvents}
-            onDismissFullEvent={(id: number) => setDismissedFullEvents(prev => new Set([...prev, id]))}
           />}
           {activeTab === 'messages' && <MessagesTab
             initialSubTab={messagesInitialSubTab}
