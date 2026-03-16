@@ -3273,14 +3273,17 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
   const [draftLangs, setDraftLangs] = useState<string[]>([])
   const [draft, setDraft] = useState<any>({})
 
-  const [moderatingIdx, setModeratingIdx] = useState<number | null>(null)
+  // Per-slot status: null = idle, 'checking' = moderation running, 'rejected' = failed
+  const [slotStatus, setSlotStatus] = useState<Record<number, 'checking' | 'rejected'>>({})
+
+  const setSlot = (idx: number, status: 'checking' | 'rejected' | null) =>
+    setSlotStatus(prev => { const n = { ...prev }; if (status === null) delete n[idx]; else n[idx] = status; return n })
 
   const pickProfilePhoto = async (replaceIdx?: number) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
 
-      // Pick once — with base64 only when key is available (for moderation)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.6,
@@ -3291,25 +3294,32 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
       if (result.canceled || !result.assets?.[0]) return
       const { uri, base64 } = result.assets[0]
 
-      // Save immediately — photo shows right away
       const targetIdx = replaceIdx !== undefined ? replaceIdx : userPhotos.length
+
+      // Save immediately so photo appears right away
+      const photosBeforePick = [...userPhotos]
       const newPhotos = [...userPhotos]
       if (replaceIdx !== undefined) { newPhotos[replaceIdx] = uri } else { newPhotos.push(uri) }
       onUpdateUserData?.({ photos: newPhotos })
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-      // Moderation in background — remove photo if unsafe
+      // Background moderation
       if (ANTHROPIC_KEY && base64) {
-        setModeratingIdx(targetIdx)
+        setSlot(targetIdx, 'checking')
         try {
           const safe = await isImageSafe(base64)
           if (!safe) {
-            onUpdateUserData?.({ photos: userPhotos }) // revert to before pick
-            Alert.alert('Photo removed', 'This photo contains content that is not allowed. Please choose a different one.')
+            setSlot(targetIdx, 'rejected')
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+            setTimeout(() => {
+              onUpdateUserData?.({ photos: photosBeforePick })
+              setSlot(targetIdx, null)
+              Alert.alert('Photo removed 🚫', 'This photo doesn\'t meet our content guidelines. Please choose a different one.')
+            }, 1200) // show 'rejected' state for 1.2s before removing
+            return
           }
-        } catch { /* moderation failed — keep photo */ }
-        setModeratingIdx(null)
+        } catch { /* keep photo on moderation error */ }
+        setSlot(targetIdx, null)
       }
     } catch { /* picker cancelled or error */ }
   }
@@ -3548,45 +3558,61 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         // Show filled photos + 1 empty add-slot (if < 3), always 3 cells total
         return (
           <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-            {moderatingIdx !== null && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF2FF', borderRadius: 12, padding: 10, marginBottom: 10 }}>
-                <ActivityIndicator size="small" color="#6366F1" />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#3730A3' }}>Checking photo for safety…</Text>
-              </View>
-            )}
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {[0, 1, 2].map(i => {
                 const uri = userPhotos[i]
                 const isMain = i === 0
+                const status = slotStatus[i] ?? null
                 if (uri) {
+                  const isChecking = status === 'checking'
+                  const isRejected = status === 'rejected'
                   return (
-                    <TouchableOpacity key={i} activeOpacity={0.85}
-                      onPress={() => {
-                        const actions: any[] = [
-                          { text: '📷  Replace', onPress: () => pickProfilePhoto(i) },
-                        ]
-                        if (!(isMain && userPhotos.length === 1)) {
-                          actions.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
-                        }
-                        actions.push({ text: 'Cancel', style: 'cancel' })
-                        Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, actions)
-                      }}
-                      style={{ width: CELL_W, height: CELL_H, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
-                      <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                      {moderatingIdx === i && (
-                        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-                          <ActivityIndicator color="#fff" />
-                        </View>
-                      )}
-                      <View style={{ position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                        <Feather name="edit-2" size={12} color="#fff" />
-                      </View>
-                      {isMain && (
-                        <View style={{ position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.55)' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>Main ★</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                    <View key={i} style={{ width: CELL_W }}>
+                      <TouchableOpacity activeOpacity={isChecking ? 1 : 0.85}
+                        onPress={() => {
+                          if (isChecking || isRejected) return
+                          const actions: any[] = [
+                            { text: '📷  Replace', onPress: () => pickProfilePhoto(i) },
+                          ]
+                          if (!(isMain && userPhotos.length === 1)) {
+                            actions.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
+                          }
+                          actions.push({ text: 'Cancel', style: 'cancel' })
+                          Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, actions)
+                        }}
+                        style={{ width: CELL_W, height: CELL_H, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0',
+                          borderWidth: isRejected ? 2 : 0, borderColor: isRejected ? '#EF4444' : 'transparent' }}>
+                        <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        {/* Checking overlay */}
+                        {isChecking && (
+                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(99,102,241,0.7)', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <ActivityIndicator color="#fff" size="small" />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Checking…</Text>
+                          </View>
+                        )}
+                        {/* Rejected overlay */}
+                        {isRejected && (
+                          <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(239,68,68,0.75)', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                            <Text style={{ fontSize: 22 }}>🚫</Text>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>Not allowed</Text>
+                          </View>
+                        )}
+                        {/* Edit button (only when idle) */}
+                        {!isChecking && !isRejected && (
+                          <View style={{ position: 'absolute', bottom: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Feather name="edit-2" size={12} color="#fff" />
+                          </View>
+                        )}
+                        {isMain && !isChecking && !isRejected && (
+                          <View style={{ position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.55)' }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>Main ★</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                      {/* Status label below slot */}
+                      {isChecking && <Text style={{ fontSize: 10, color: '#6366F1', fontWeight: '700', textAlign: 'center', marginTop: 4 }}>Checking…</Text>}
+                      {isRejected && <Text style={{ fontSize: 10, color: '#EF4444', fontWeight: '700', textAlign: 'center', marginTop: 4 }}>Removed</Text>}
+                    </View>
                   )
                 }
                 // Empty slot — only show if it's the next available slot
