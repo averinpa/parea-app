@@ -3004,6 +3004,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted)
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
+  const [dismissedFullEvents, setDismissedFullEvents] = useState<Set<number>>(new Set())
   const [previewProfile, setPreviewProfile] = useState<any>(null)
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([])
   const [aiLoading, setAiLoading] = useState(false)
@@ -3141,6 +3142,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
             const slotsLeft = slotsTotal - approvedCount
             if (allRequests.length === 0 && approvedCount === 0) return null
+            // Hide if full AND host already went to chat — reappears when slot opens
+            if (slotsLeft <= 0 && dismissedFullEvents.has(ev.id)) return null
             // Score + sort, show top 12
             const scored = allRequests
               .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
@@ -3258,7 +3261,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         </View>
                       </View>
                       <TouchableOpacity
-                        onPress={() => onGoToMessages?.()}
+                        onPress={() => {
+                          setDismissedFullEvents(prev => new Set([...prev, ev.id]))
+                          onGoToMessages?.()
+                        }}
                         activeOpacity={0.85}
                         style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
                         <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Go to group chat 💬</Text>
