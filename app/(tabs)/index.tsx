@@ -1618,7 +1618,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   )
 
   const openJoinSheet = (ev: any) => {
-    setJoinSheet({ visible: true, ev, step: 1, format: '', transport: '' })
+    // Community events skip format step — only ask transport
+    const startStep = ev?.type === 'official' ? 1 : 2
+    setJoinSheet({ visible: true, ev, step: startStep, format: '', transport: '' })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
@@ -2117,16 +2119,18 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         <View style={s.joinSheetWrap}>
           <View style={s.joinSheetHandle} />
 
-          {/* Step indicator */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {[1, 2].map(n => (
-                <View key={n} style={{ width: joinSheet.step === n ? 20 : 6, height: 6, borderRadius: 3,
-                  backgroundColor: joinSheet.step >= n ? '#6366F1' : 'rgba(99,102,241,0.2)' }} />
-              ))}
+          {/* Step indicator — only for official events (2 steps) */}
+          {joinSheet.ev?.type === 'official' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {[1, 2].map(n => (
+                  <View key={n} style={{ width: joinSheet.step === n ? 20 : 6, height: 6, borderRadius: 3,
+                    backgroundColor: joinSheet.step >= n ? '#6366F1' : 'rgba(99,102,241,0.2)' }} />
+                ))}
+              </View>
+              <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 2</Text>
             </View>
-            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 2</Text>
-          </View>
+          )}
 
           {joinSheet.step === 1 ? (
             <>
@@ -2162,12 +2166,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </>
           ) : (
             <>
-              <TouchableOpacity onPress={() => setJoinSheet(prev => ({ ...prev, step: 1 }))}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
-                <Ionicons name="chevron-back" size={14} color="#6366F1" />
-                <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>Back</Text>
-              </TouchableOpacity>
-              <Text style={s.joinSheetTitle}>How are you getting{'\n'}there? 🗺️</Text>
+              {joinSheet.ev?.type === 'official' && (
+                <TouchableOpacity onPress={() => setJoinSheet(prev => ({ ...prev, step: 1 }))}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                  <Ionicons name="chevron-back" size={14} color="#6366F1" />
+                  <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>Back</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={s.joinSheetTitle}>{joinSheet.ev?.type === 'official' ? 'How are you getting\nthere? 🗺️' : 'How are you getting\nto the event? 🚗'}</Text>
               <View style={{ gap: 10, marginTop: 4 }}>
                 {TRANSPORT_OPTIONS.map(opt => {
                   const active = joinSheet.transport === opt.id
