@@ -4659,7 +4659,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                 {/* Step content in ScrollView */}
                 <ScrollView
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 24 : insets.bottom + 24 }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   style={{ flex: 1 }}>
