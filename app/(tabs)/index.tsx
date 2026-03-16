@@ -5151,7 +5151,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 17 }}>{n.body}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 }}>
                             <Text style={{ fontSize: 11, color: n.color, fontWeight: '600' }}>{timeAgo(n.time)}</Text>
-                            {!n.read && <Text style={{ fontSize: 11, color: '#94A3B8' }}>· tap to open →</Text>}
+                            {!n.read && n.type !== 'welcome' && (
+                              <Text style={{ fontSize: 11, color: '#94A3B8' }}>· {
+                                n.type === 'join_request' ? 'tap to review →' :
+                                n.type === 'match' || n.type === 'group_chat' || n.type === 'confirmed' || n.type === 'host_full' ? 'tap to open chat →' : 'tap to open →'
+                              }</Text>
+                            )}
                           </View>
                         </View>
                         {/* Dismiss */}
