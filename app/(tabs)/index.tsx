@@ -5571,6 +5571,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             'They will be removed from the group chat.',
                             [
                               { text: 'Remove', style: 'destructive', onPress: () => {
+                                // Remove from approvedJoiners so slot opens up for refill
+                                setApprovedJoiners(prev => ({
+                                  ...prev,
+                                  [openChat.hostEventId]: (prev[openChat.hostEventId] || []).filter((a: any) => a.id !== p.id),
+                                }))
                                 // Remove from memberProfiles + avatars in chatList
                                 setChatList(prev => prev.map(c => {
                                   if (c.id !== openChat.id) return c
