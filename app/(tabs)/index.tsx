@@ -247,22 +247,24 @@ Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' B
 
 async function isImageSafe(base64: string): Promise<boolean> {
   if (!ANTHROPIC_KEY) return true
+  // Reject if base64 is missing — safe default
+  if (!base64 || base64.length < 100) return false
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001', max_tokens: 10,
+        model: 'claude-haiku-4-5-20251001', max_tokens: 16,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-          { type: 'text', text: 'Does this image contain nudity, explicit sexual content, or anyone who appears to be under 18? Answer YES or NO only.' },
+          { type: 'text', text: 'Carefully examine this image. Does it contain any of the following: nudity, partial nudity, exposed genitals, exposed breasts, sexually explicit content, or any person who appears to be under 18 years old? Answer YES or NO only. When in doubt, answer YES.' },
         ]}],
       }),
     })
     const data = await res.json()
-    const answer = data?.content?.[0]?.text?.trim().toUpperCase() || 'NO'
+    const answer = data?.content?.[0]?.text?.trim().toUpperCase() || 'YES'
     return !answer.startsWith('YES')
-  } catch { return true }
+  } catch { return false }  // Reject on network error — safe default
 }
 
 // ─── LANDING SCREEN ───────────────────────────────────────────────────────────
@@ -827,13 +829,14 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   }
 
   // ── Replace this function body with a real API call when ready ──────────────
-  // Expected: return 'verified' | 'error'
-  const verifyPhoto = (imageUri: string, base64: string): Promise<'verified' | 'error'> =>
+  // Expected: return 'verified' | 'blocked' | 'error'
+  const verifyPhoto = (imageUri: string, base64: string): Promise<'verified' | 'blocked' | 'error'> =>
     new Promise(resolve =>
       setTimeout(async () => {
         const isTestFail = imageUri.toLowerCase().includes('test_fail')
+        if (isTestFail) { resolve('error'); return }
         const safe = await isImageSafe(base64)
-        resolve(isTestFail || !safe ? 'error' : 'verified')
+        resolve(!safe ? 'blocked' : 'verified')
       }, 2500)
     )
   // ─────────────────────────────────────────────────────────────────────────────
@@ -853,6 +856,11 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     const result2 = await verifyPhoto(asset.uri, asset.base64 ?? '')
     setPhotoLoading(l => { const n = [...l]; n[idx] = false; return n })
 
+    if (result2 === 'blocked') {
+      setPhotoStatus(s => { const n = [...s]; n[idx] = 'error'; return n })
+      setPhotoError(e => { const n = [...e]; n[idx] = 'Photo not allowed. Please use an appropriate photo.'; return n })
+      return
+    }
     if (result2 === 'error') {
       setPhotoStatus(s => { const n = [...s]; n[idx] = 'error'; return n })
       setPhotoError(e => { const n = [...e]; n[idx] = 'Face not detected. Try another photo.'; return n })
