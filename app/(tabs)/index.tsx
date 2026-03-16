@@ -1567,22 +1567,31 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // Data Matching: events whose category matches user interests float to top
   const userCategories = (userInterests as string[]).map((i: string) => INTEREST_TO_CATEGORY[i]).filter(Boolean)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
 
-  const FILTERS = [
+  const TYPE_FILTERS = [
     { id: 'all',       label: '✦ All' },
     { id: 'official',  label: '🌟 Official' },
     { id: 'community', label: '👥 Socials' },
-    { id: 'outdoors',  label: '🌿 Outdoors' },
-    { id: 'coffee',    label: '☕ Coffee' },
-    { id: 'food',      label: '🍕 Food' },
-    { id: 'culture',   label: '🎨 Culture' },
-    { id: 'sports',    label: '🎾 Sports' },
+  ]
+  const CAT_FILTERS = [
+    { id: 'outdoors', label: '🌿 Outdoors' },
+    { id: 'coffee',   label: '☕ Coffee' },
+    { id: 'food',     label: '🍕 Food' },
+    { id: 'culture',  label: '🎨 Culture' },
+    { id: 'sports',   label: '🎾 Sports' },
+    { id: 'wine',     label: '🍷 Wine' },
+    { id: 'tech',     label: '💻 Tech' },
+    { id: 'gaming',   label: '🎲 Gaming' },
   ]
 
   const filteredEvents = allCityEvents.filter(ev => {
-    if (feedFilter === 'official')  { if (ev.type !== 'official')   return false }
+    // Type filter
+    if (feedFilter === 'official')  { if (ev.type !== 'official') return false }
     else if (feedFilter === 'community') { if (!ev.isHosted && ev.type !== 'community') return false }
-    else if (feedFilter !== 'all')  { if (ev.category !== feedFilter) return false }
+    // Category filter
+    if (categoryFilter && ev.category !== categoryFilter) return false
+    // Date filter
     if (selectedDate) {
       const evDate = parseEventDate(ev.time)
       if (!evDate) return false
@@ -1804,16 +1813,31 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             )
           })()}
 
-          {/* Filter chips */}
-          <View style={{ height: 52 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterContent}>
-              {FILTERS.map(f => {
-                const isType = f.id === 'official' || f.id === 'community'
-                const isOn = feedFilter === f.id
+          {/* Row 1: Type filter */}
+          <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 8, paddingBottom: 6, paddingTop: 2 }}>
+            {TYPE_FILTERS.map(f => {
+              const isOn = feedFilter === f.id
+              const accent = f.id === 'official' ? '#D97706' : f.id === 'community' ? '#4338CA' : '#6366F1'
+              const bg = isOn ? (f.id === 'official' ? '#F59E0B' : '#6366F1') : f.id === 'official' ? '#FFFBEB' : f.id === 'community' ? '#EEF2FF' : '#F1F5F9'
+              const border = f.id === 'official' ? '#FCD34D' : f.id === 'community' ? '#A5B4FC' : 'transparent'
+              return (
+                <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
+                  style={{ flex: 1, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: bg, borderWidth: 1.5, borderColor: isOn ? 'transparent' : border }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : accent }}>{f.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+          {/* Row 2: Category filter */}
+          <View style={{ height: 44 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[s.filterContent, { paddingVertical: 4 }]}>
+              {CAT_FILTERS.map(f => {
+                const isOn = categoryFilter === f.id
                 return (
-                  <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
-                    style={[s.filterTab, isOn && s.filterTabOn, isType && !isOn && { borderWidth: 1.5, borderColor: f.id === 'official' ? '#F59E0B' : '#6366F1', backgroundColor: f.id === 'official' ? '#FFFBEB' : '#EEF2FF' }]}>
-                    <Text style={[s.filterTabTxt, isOn && s.filterTabTxtOn, isType && !isOn && { color: f.id === 'official' ? '#D97706' : '#4338CA', fontWeight: '700' }]}>{f.label}</Text>
+                  <TouchableOpacity key={f.id} onPress={() => setCategoryFilter(isOn ? null : f.id)} activeOpacity={0.75}
+                    style={[s.filterTab, isOn && s.filterTabOn]}>
+                    <Text style={[s.filterTabTxt, isOn && s.filterTabTxtOn]}>{f.label}</Text>
                   </TouchableOpacity>
                 )
               })}
