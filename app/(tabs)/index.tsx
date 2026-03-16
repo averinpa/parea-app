@@ -2035,6 +2035,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
   const crewSheetAnim = useRef(new Animated.Value(0)).current
   const hasNew = chatList.some(c => c.isNew)
+  const [memberPreview, setMemberPreview] = useState<any>(null)
 
   const openCrewSheet = (ev: any, profiles: any[], found: number, cap: number) => {
     setCrewSheet({ ev, profiles, found, cap })
@@ -2419,11 +2420,25 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   </View>
                 </View>
 
-                {/* Each partner — compact, details available in chat/vibecheck */}
+                {/* Each partner — tap to view full profile */}
                 {crewSheet.profiles.map((p: any, i: number) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: `${p.color}08`, borderWidth: 1, borderColor: `${p.color}20` }}>
-                    <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
+                  <TouchableOpacity key={i} activeOpacity={0.8}
+                    onPress={() => {
+                      setMemberPreview({
+                        ...p,
+                        colors: p.colors || [p.color, '#1E1B4B'],
+                        langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                        flag: p.flag || FLAG_MAP[p.langs?.[0]] || '🌍',
+                        goal: p.goal || 'chill',
+                        emoji: p.emoji || '👤',
+                      })
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: `${p.color}08`, borderWidth: 1, borderColor: `${p.color}20` }}>
+                    <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                      {p.photo
+                        ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} />
+                        : <Text style={{ fontSize: 22 }}>{p.emoji}</Text>}
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -2433,13 +2448,15 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       </View>
                       <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18 }} numberOfLines={2}>{p.bio}</Text>
                     </View>
-                  </View>
+                    <Feather name="chevron-right" size={16} color={p.color} style={{ opacity: 0.6 }} />
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             </Animated.View>
           </View>
         </Modal>
       )}
+      {memberPreview && <ProfilePreviewSheet profile={memberPreview} onClose={() => setMemberPreview(null)} />}
     </View>
   )
 }
@@ -3883,7 +3900,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 id: Date.now(), type: 'group',
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                 members: partners.length + 1,
-                avatars: [], colors: partners.map((p: any) => p.color),
+                avatars: partners.map((p: any) => p.photo).filter(Boolean),
+                colors: partners.map((p: any) => p.color),
+                memberProfiles: partners,
                 lastMsg: '🎉 Group chat created! Say hi',
                 time: 'now', isNew: true, expiresIn: 24,
               } : {
@@ -4982,10 +5001,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       onPress={() => {
                         setChatPartnerPreview({
                           ...p,
-                          colors: [p.color, '#1E1B4B'],
-                          flag: FLAG_MAP[p.langs?.[0]] || '🌍',
+                          colors: p.colors || [p.color, '#1E1B4B'],
+                          flag: p.flag || FLAG_MAP[p.langs?.[0]] || '🌍',
                           langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l),
-                          interests: [], goal: 'chill', emoji: '👤',
+                          interests: p.interests || [],
+                          goal: p.goal || 'chill',
+                          emoji: p.emoji || '👤',
                         })
                         setGroupMembersOpen(false)
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
