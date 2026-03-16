@@ -3567,6 +3567,32 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     prevPendingRef.current = pendingJoinRequests
   }, [pendingJoinRequests])
 
+  // Watch for crew/partner found on joined events
+  const prevActiveEventsRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    const myEvents = MOCK_EVENTS.filter(e => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed')
+    myEvents.forEach(ev => {
+      const format    = userEventFormat?.[ev.id] || 'squad'
+      const cap       = VIBE_FORMAT_MAX[format] || 5
+      const threshold = VIBE_FORMAT_THRESHOLD[format] || cap
+      const partnersFound = Math.min(cap - 1, (ev.id % Math.max(1, threshold - 1)) + 1)
+      const found     = 1 + partnersFound
+      const isActive  = found >= threshold
+      if (isActive && !prevActiveEventsRef.current.has(ev.id)) {
+        const isDuo = format === '1+1'
+        addNotif({
+          type: 'crew_ready',
+          emoji: isDuo ? '🎯' : '🔥',
+          color: isDuo ? '#EC4899' : '#43E97B',
+          title: isDuo ? 'Partner found!' : 'Your crew is ready!',
+          body: ev.title,
+        })
+      }
+      if (isActive) prevActiveEventsRef.current.add(ev.id)
+      else prevActiveEventsRef.current.delete(ev.id)
+    })
+  }, [joinedEvents, userEventFormat])
+
   // Watch for new chats (approvals / matches)
   useEffect(() => {
     if (chatList.length > prevChatCountRef.current && prevChatCountRef.current > 0) {
