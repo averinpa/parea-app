@@ -1688,7 +1688,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         stickyHeaderIndices={[0]}>
 
         {/* ── STICKY: Header + Filter chips ── */}
-        <View style={{ backgroundColor: '#F8F7FF' }}>
+        <View style={{ backgroundColor: '#F8F7FF', zIndex: 600 }}>
           {/* Top row: city + calendar */}
           <View style={[s.feedHeader, { justifyContent: 'space-between' }]}>
             <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
