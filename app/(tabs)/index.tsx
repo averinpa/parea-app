@@ -1533,7 +1533,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake }: any) {
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [draftVibe, setDraftVibe] = useState(tonightVibe)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -1642,7 +1642,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   }
 
   const getJoinState = (ev: any) => {
-    if (ev.participantsCount >= ev.maxParticipants) return 'full'
+    const approvedCount = (approvedJoiners[ev.id] || []).length
+    const actualCount = ev.isHosted ? approvedCount + 1 : ev.participantsCount
+    if (actualCount >= ev.maxParticipants) return 'full'
     return joinedEvents?.[ev.id] || 'none'
   }
 
@@ -2214,11 +2216,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [] }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
-  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[];
+  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
@@ -2299,8 +2301,22 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   <View style={{ padding: 16, gap: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
-                      <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.1)' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1' }}>Host 👑</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.1)' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1' }}>Host 👑</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                            Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event and its chat.', [
+                              { text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
+                              { text: 'Keep', style: 'cancel' },
+                            ])
+                          }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Feather name="trash-2" size={16} color="#ef4444" />
+                        </TouchableOpacity>
                       </View>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -2313,7 +2329,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                         </View>
                       ) : null}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {ev.participantsCount}/{ev.maxParticipants}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(approvedJoiners[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
                     </View>
                   </View>
@@ -2338,12 +2354,15 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const trsp   = TRANSPORT_CHIP[userEventTransport[ev.id]]
               const isLive = isToday(ev.time)
 
-              // Mirror Vibe Check math
+              // Use actual data for crew count
               const format        = userEventFormat[ev.id] || 'squad'
-              const cap           = VIBE_FORMAT_MAX[format] || 5
+              const cap           = ev.maxParticipants || VIBE_FORMAT_MAX[format] || 5
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
-              const partnersFound = Math.min(cap - 1, (ev.id % Math.max(1, threshold - 1)) + 1)
-              const found         = 1 + partnersFound
+              const chatForEvent  = chatList.find((c: any) => c.hostEventId === ev.id || c.event === ev.title)
+              const approvedCount = (approvedJoiners[ev.id] || []).length
+              const actualMembers = chatForEvent ? (chatForEvent.members || approvedCount + 1) : approvedCount + 1
+              const found         = Math.min(actualMembers, cap)
+              const partnersFound = Math.max(0, found - 1)
               const isActive      = found >= threshold
               const crewProfiles  = QUEUE_PROFILES.slice(0, partnersFound)
 
@@ -4139,6 +4158,76 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
   }, [approvedJoiners, userCreatedEvents])
 
+  // Refill pending join requests when pool runs low but slots still open
+  // refillInFlightRef tracks currently scheduled (in-flight) timeouts to avoid double-scheduling
+  const refillInFlightRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    userCreatedEvents.forEach(ev => {
+      const approved = approvedJoiners[ev.id] || []
+      const slotsTotal = (ev.maxParticipants || 5) - 1
+      const slotsLeft = slotsTotal - approved.length
+      if (slotsLeft <= 0) return
+      const pending = pendingJoinRequests[ev.id] || []
+      if (pending.length >= 3) return
+      // Exclude: currently pending, already approved, currently in-flight
+      const pendingIds = new Set(pending.map((r: any) => r.id))
+      const approvedIds = new Set(approved.map((r: any) => r.id))
+      const available = allSeekers.filter((s: any) => {
+        if (s.id === userData?.dbId || s.id === userData?.id) return false
+        if (pendingIds.has(s.id) || approvedIds.has(s.id)) return false
+        if (refillInFlightRef.current.has(`${ev.id}-${s.id}`)) return false
+        return true
+      })
+      const toAdd = available.slice(0, 3 - pending.length)
+      toAdd.forEach((requester: any, i: number) => {
+        const key = `${ev.id}-${requester.id}`
+        refillInFlightRef.current.add(key)
+        const evId = ev.id
+        setTimeout(() => {
+          refillInFlightRef.current.delete(key)
+          setUserCreatedEvents(existing => {
+            if (!existing.some(e => e.id === evId)) return existing
+            setPendingJoinRequests(prev => {
+              const current = prev[evId] || []
+              if (current.some((r: any) => r.id === requester.id)) return prev
+              return { ...prev, [evId]: [...current, { ...requester, requestId: `${evId}-${requester.id}` }] }
+            })
+            return existing
+          })
+        }, 1500 + i * 1200)
+      })
+    })
+  }, [pendingJoinRequests, approvedJoiners, userCreatedEvents])
+
+  // Auto-expire hosted events and their chats 24h after event ends
+  useEffect(() => {
+    const check = () => {
+      const now = Date.now()
+      const EXPIRE_AFTER = 24 * 60 * 60 * 1000 // 24 hours
+      setUserCreatedEvents(prev => {
+        const expired = prev.filter(ev => ev.expiresAt > 0 && now > ev.expiresAt + EXPIRE_AFTER)
+        if (expired.length === 0) return prev
+        const expiredIds = new Set(expired.map((ev: any) => ev.id))
+        // Remove chats linked to expired events
+        setChatList(cl => cl.filter(c => !expiredIds.has(c.hostEventId)))
+        setPendingJoinRequests(pjr => {
+          const n = { ...pjr }
+          expiredIds.forEach(id => delete n[id])
+          return n
+        })
+        setApprovedJoiners(aj => {
+          const n = { ...aj }
+          expiredIds.forEach(id => delete n[id])
+          return n
+        })
+        return prev.filter(ev => !expiredIds.has(ev.id))
+      })
+    }
+    check()
+    const interval = setInterval(check, 60 * 60 * 1000) // check every hour
+    return () => clearInterval(interval)
+  }, [])
+
   // Watch for crew/partner found on joined events
   const prevActiveEventsRef = useRef<Set<number>>(new Set())
   useEffect(() => {
@@ -4270,7 +4359,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} />}
           {activeTab === 'vibecheck' && <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={MOCK_EVENTS}
@@ -4317,12 +4406,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             pendingJoinRequests={pendingJoinRequests}
             approvedJoiners={approvedJoiners}
             onApproveJoiner={(eventId: number, joiner: any) => {
+              const ev = userCreatedEvents.find(e => e.id === eventId)
+              const maxParticipants = ev?.maxParticipants || 5
+              const slotsTotal = maxParticipants - 1 // host takes 1 slot
+              const alreadyApproved = (approvedJoiners[eventId] || []).length
+              if (alreadyApproved >= slotsTotal) {
+                showToast("Event is already full!")
+                return
+              }
               setPendingJoinRequests(prev => ({
                 ...prev,
                 [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
               }))
-              const ev = userCreatedEvents.find(e => e.id === eventId)
-              const isDuo = (ev?.maxParticipants || 5) <= 2
+              const isDuo = maxParticipants <= 2
 
               if (isDuo) {
                 // 1-on-1 event → direct chat + auto-navigate
@@ -4345,6 +4441,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 // Squad/Party → find or create one group chat for this event
                 const newApproved = [...(approvedJoiners[eventId] || []), joiner]
                 setApprovedJoiners(prev => ({ ...prev, [eventId]: newApproved }))
+                // If now full — clear remaining pending requests
+                if (newApproved.length >= slotsTotal) {
+                  setPendingJoinRequests(prev => ({ ...prev, [eventId]: [] }))
+                }
 
                 setChatList(prev => {
                   const existingIdx = prev.findIndex(c => c.hostEventId === eventId)
@@ -4415,12 +4515,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   [id]: [...(prev[id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
                 }))
               }
+              // If host leaves their own group chat → also remove the hosted event from Plans
+              const leavingChat = chatList.find(c => c.id === id)
+              if (leavingChat?.hostEventId) {
+                setUserCreatedEvents(prev => prev.filter(e => e.id !== leavingChat.hostEventId))
+                setPendingJoinRequests(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
+                setApprovedJoiners(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
+              }
               setChatList(prev => prev.filter(c => c.id !== id))
-              showToast("We let them know your plans changed 📅")
+              showToast("Event cancelled and chat removed 🗑️")
             }}
             joinedEvents={joinedEvents}
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
+            approvedJoiners={approvedJoiners}
+            onCancelHostedEvent={(ev) => {
+              setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id))
+              setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
+              showToast("Event cancelled 🗑️")
+            }}
             onVibeCheck={() => setActiveTab('vibecheck')}
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
@@ -4830,13 +4945,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           s.id !== userData?.dbId && s.id !== userData?.id
                         )
                         const uniqueCandidates = candidatePool.slice(0, 8)
+                        // Mark initial batch as in-flight so refill effect doesn't double-add
+                        uniqueCandidates.forEach((requester: any) => {
+                          refillInFlightRef.current.add(`${newId}-${requester.id}`)
+                        })
                         uniqueCandidates.forEach((requester: any, i: number) => {
                           const delay = 2500 + i * 1800
                           setTimeout(() => {
-                            setPendingJoinRequests(prev => ({
-                              ...prev,
-                              [newId]: [...(prev[newId] || []), { ...requester, requestId: `${newId}-${requester.id}` }],
-                            }))
+                            refillInFlightRef.current.delete(`${newId}-${requester.id}`)
+                            setUserCreatedEvents(existing => {
+                              if (!existing.some(e => e.id === newId)) return existing
+                              setPendingJoinRequests(prev => ({
+                                ...prev,
+                                [newId]: [...(prev[newId] || []), { ...requester, requestId: `${newId}-${requester.id}` }],
+                              }))
+                              return existing
+                            })
                           }, delay)
                         })
 
@@ -5150,28 +5274,45 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  const msg = openChat.type === 'duo'
-                    ? `${openChat.name} will see that your plans changed 📅`
-                    : `The group will see you've left. Your spot will be freed.`
-                  Alert.alert(
-                    openChat.type === 'duo' ? `Leave chat with ${openChat.name}?` : `Leave "${openChat.event}"?`,
-                    msg,
-                    [
-                      { text: 'Leave', style: 'destructive', onPress: () => {
-                        setChatMessages(prev => ({
-                          ...prev,
-                          [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
-                        }))
-                        setChatList(prev => prev.filter(c => c.id !== openChat.id))
-                        setOpenChat(null)
-                        showToast("We let them know your plans changed 📅")
-                      }},
-                      { text: 'Cancel', style: 'cancel' },
-                    ]
-                  )
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                  if (openChat.hostEventId) {
+                    Alert.alert(
+                      `Cancel "${openChat.event}"?`,
+                      'This will delete the event and remove all members from the chat.',
+                      [
+                        { text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => {
+                          setUserCreatedEvents(prev => prev.filter(e => e.id !== openChat.hostEventId))
+                          setPendingJoinRequests(prev => { const n = { ...prev }; delete n[openChat.hostEventId]; return n })
+                          setApprovedJoiners(prev => { const n = { ...prev }; delete n[openChat.hostEventId]; return n })
+                          setChatList(prev => prev.filter(c => c.id !== openChat.id))
+                          setOpenChat(null)
+                          showToast("Event cancelled 🗑️")
+                        }},
+                        { text: 'Keep', style: 'cancel' },
+                      ]
+                    )
+                  } else {
+                    Alert.alert(
+                      openChat.type === 'duo' ? `Leave chat with ${openChat.name}?` : `Leave "${openChat.event}"?`,
+                      openChat.type === 'duo' ? `${openChat.name} will see that your plans changed 📅` : `The group will see you've left. Your spot will be freed.`,
+                      [
+                        { text: 'Leave', style: 'destructive', onPress: () => {
+                          setChatMessages(prev => ({
+                            ...prev,
+                            [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
+                          }))
+                          setChatList(prev => prev.filter(c => c.id !== openChat.id))
+                          setOpenChat(null)
+                          showToast("We let them know your plans changed 📅")
+                        }},
+                        { text: 'Cancel', style: 'cancel' },
+                      ]
+                    )
+                  }
                 }}>
-                  <Feather name="more-horizontal" size={22} color="#334155" />
+                  {openChat.hostEventId
+                    ? <Feather name="trash-2" size={22} color="#ef4444" />
+                    : <Feather name="more-horizontal" size={22} color="#334155" />}
                 </TouchableOpacity>
               </View>
 
