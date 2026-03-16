@@ -3038,7 +3038,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       {partners.map((p, i) => {
                         const match = aiMatches.find(m => m.id === p.id)
                         return (
-                          <TouchableOpacity key={i} onPress={() => { setPreviewProfile({ ...p, aiScore: match?.score, aiReason: match?.reason }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
+                          <TouchableOpacity key={i} onPress={() => { setPreviewProfile({ ...p, flag: FLAG_MAP[p.langs?.[0]] || '🌍', langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: match?.score ?? 50, aiReason: match?.reason ?? 'Ready to connect' }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
                             <View style={{ alignItems: 'center' }}>
                               <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
                                 <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
@@ -3104,7 +3104,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
   const [draft, setDraft] = useState<any>({})
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+    <View style={{ flex: 1 }}>
       {/* Full-screen photo preview with info overlay */}
       <Modal visible={previewIdx !== null} transparent animationType="fade" onRequestClose={() => setPreviewIdx(null)}>
         <View style={{ flex: 1, backgroundColor: '#000' }}>
@@ -3165,6 +3165,108 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </View>
       </Modal>
 
+      {/* Vibe Edit Modal — outside ScrollView to avoid rendering issues */}
+      <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}>
+          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Edit vibe</Text>
+            <TouchableOpacity onPress={() => setVibeEditOpen(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="x" size={16} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+
+            {/* Music genres */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Music taste</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+              {MUSIC_GENRES.map(g => {
+                const on = (draft.musicGenres || []).includes(g.id)
+                return (
+                  <TouchableOpacity key={g.id} onPress={() => setDraft((v: any) => ({ ...v, musicGenres: on ? v.musicGenres.filter((x: string) => x !== g.id) : [...(v.musicGenres || []), g.id] }))}
+                    style={{ width: (W - 40 - 20) / 3, borderRadius: 12, overflow: 'hidden' }}>
+                    <LinearGradient colors={on ? g.colors : ['#F8FAFC', '#F1F5F9']}
+                      style={{ paddingVertical: 10, alignItems: 'center', gap: 3, borderWidth: 1.5, borderRadius: 12, borderColor: on ? 'transparent' : '#E2E8F0' }}>
+                      <Text style={{ fontSize: 18 }}>{g.emoji}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#475569', textAlign: 'center' }}>{g.label}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            {/* Social energy */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 24 }}>
+              {SOCIAL_ENERGY.map(e => {
+                const on = draft.socialEnergy === e.id
+                return (
+                  <TouchableOpacity key={e.id} onPress={() => setDraft((v: any) => ({ ...v, socialEnergy: e.id }))}
+                    style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
+                    <Text style={{ fontSize: 18, marginBottom: 3 }}>{e.emoji}</Text>
+                    <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center' }}>{e.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            {/* Drinks & Smoking */}
+            {[
+              { key: 'drinksPref', label: '🍷 Alcohol', opts: ['Social drinker', 'Rarely', "Don't drink"] },
+              { key: 'smokingPref', label: '🚬 Smoking', opts: ['Non-smoker', 'Social', 'Smoker'] },
+            ].map(row => (
+              <View key={row.key} style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>{row.label}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {row.opts.map(opt => {
+                    const on = draft[row.key] === opt
+                    return (
+                      <TouchableOpacity key={opt} onPress={() => setDraft((v: any) => ({ ...v, [row.key]: opt }))}
+                        style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>
+                          {opt === "Don't drink" ? '🚫' : opt === 'Rarely' ? '🥤' : opt === 'Social drinker' ? '🥂' : opt === 'Non-smoker' ? '🚭' : opt === 'Social' ? '🌬️' : '🚬'}
+                        </Text>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3, textAlign: 'center' }}>{opt}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </View>
+            ))}
+
+            {/* Dealbreakers */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Hard limits</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>These will never appear in your matches.</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+              {DEALBREAKERS.map(db => {
+                const on = (draft.dealbreakers || []).includes(db.id)
+                return (
+                  <TouchableOpacity key={db.id} onPress={() => setDraft((v: any) => ({ ...v, dealbreakers: on ? v.dealbreakers.filter((x: string) => x !== db.id) : [...(v.dealbreakers || []), db.id] }))}
+                    activeOpacity={0.75}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, backgroundColor: on ? '#FFF1F2' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#F43F5E' : '#E2E8F0' }}>
+                    <Text style={{ fontSize: 16 }}>{db.emoji}</Text>
+                    <View>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: on ? '#BE123C' : '#334155' }}>{db.label}</Text>
+                      <Text style={{ fontSize: 10, color: on ? '#FDA4AF' : '#94A3B8' }}>{db.desc}</Text>
+                    </View>
+                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: '#F43F5E', alignItems: 'center', justifyContent: 'center', opacity: on ? 1 : 0 }}>
+                      <Text style={{ fontSize: 9, color: '#fff', fontWeight: '800' }}>✕</Text>
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            <TouchableOpacity onPress={() => { onUpdateUserData?.(draft); setVibeEditOpen(false) }}
+              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
       {/* Header */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={{ fontSize: 22, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.4 }}>My Profile</Text>
@@ -3302,107 +3404,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         )
       })()}
 
-      {/* Vibe Edit Modal */}
-      <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}>
-          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Edit vibe</Text>
-            <TouchableOpacity onPress={() => setVibeEditOpen(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name="x" size={16} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-
-            {/* Music genres */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Music taste</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-              {MUSIC_GENRES.map(g => {
-                const on = (draft.musicGenres || []).includes(g.id)
-                return (
-                  <TouchableOpacity key={g.id} onPress={() => setDraft((v: any) => ({ ...v, musicGenres: on ? v.musicGenres.filter((x: string) => x !== g.id) : [...(v.musicGenres || []), g.id] }))}
-                    style={{ width: (W - 40 - 20) / 3, borderRadius: 12, overflow: 'hidden' }}>
-                    <LinearGradient colors={on ? g.colors : ['#F8FAFC', '#F1F5F9']}
-                      style={{ paddingVertical: 10, alignItems: 'center', gap: 3, borderWidth: 1.5, borderRadius: 12, borderColor: on ? 'transparent' : '#E2E8F0' }}>
-                      <Text style={{ fontSize: 18 }}>{g.emoji}</Text>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#475569', textAlign: 'center' }}>{g.label}</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
-            {/* Social energy */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 24 }}>
-              {SOCIAL_ENERGY.map(e => {
-                const on = draft.socialEnergy === e.id
-                return (
-                  <TouchableOpacity key={e.id} onPress={() => setDraft((v: any) => ({ ...v, socialEnergy: e.id }))}
-                    style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
-                    <Text style={{ fontSize: 18, marginBottom: 3 }}>{e.emoji}</Text>
-                    <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center' }}>{e.label}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
-            {/* Drinks & Smoking */}
-            {[
-              { key: 'drinksPref', label: '🍷 Alcohol', opts: ['Social drinker', 'Rarely', "Don't drink"] },
-              { key: 'smokingPref', label: '🚬 Smoking', opts: ['Non-smoker', 'Social', 'Smoker'] },
-            ].map(row => (
-              <View key={row.key} style={{ marginBottom: 24 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>{row.label}</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {row.opts.map(opt => {
-                    const on = draft[row.key] === opt
-                    return (
-                      <TouchableOpacity key={opt} onPress={() => setDraft((v: any) => ({ ...v, [row.key]: opt }))}
-                        style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>
-                          {opt === "Don't drink" ? '🚫' : opt === 'Rarely' ? '🥤' : opt === 'Social drinker' ? '🥂' : opt === 'Non-smoker' ? '🚭' : opt === 'Social' ? '🌬️' : '🚬'}
-                        </Text>
-                        <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3, textAlign: 'center' }}>{opt}</Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-              </View>
-            ))}
-
-            {/* Dealbreakers */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Hard limits</Text>
-            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>These will never appear in your matches.</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-              {DEALBREAKERS.map(db => {
-                const on = (draft.dealbreakers || []).includes(db.id)
-                return (
-                  <TouchableOpacity key={db.id} onPress={() => setDraft((v: any) => ({ ...v, dealbreakers: on ? v.dealbreakers.filter((x: string) => x !== db.id) : [...(v.dealbreakers || []), db.id] }))}
-                    activeOpacity={0.75}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, backgroundColor: on ? '#FFF1F2' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#F43F5E' : '#E2E8F0' }}>
-                    <Text style={{ fontSize: 16 }}>{db.emoji}</Text>
-                    <View>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: on ? '#BE123C' : '#334155' }}>{db.label}</Text>
-                      <Text style={{ fontSize: 10, color: on ? '#FDA4AF' : '#94A3B8' }}>{db.desc}</Text>
-                    </View>
-                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: '#F43F5E', alignItems: 'center', justifyContent: 'center', opacity: on ? 1 : 0 }}>
-                      <Text style={{ fontSize: 9, color: '#fff', fontWeight: '800' }}>✕</Text>
-                    </View>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
-            <TouchableOpacity onPress={() => { onUpdateUserData?.(draft); setVibeEditOpen(false) }}
-              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Modal>
-
       {/* Languages */}
       {(userData?.langs || []).length > 0 && (
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
@@ -3434,6 +3435,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </TouchableOpacity>
       ))}
     </ScrollView>
+    </View>
   )
 }
 
@@ -3544,6 +3546,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setNotifications(prev => prev.filter(n => n.id !== id))
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
+
+  // Welcome notification on first launch
+  useEffect(() => {
+    const t = setTimeout(() => {
+      addNotif({ type: 'welcome', emoji: '👋', color: '#6366F1', title: `Welcome to Parea, ${userData?.name || 'there'}!`, body: 'Find your tonight\'s crew in Cyprus 🌊' })
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [])
 
   // Watch for new join requests
   useEffect(() => {
