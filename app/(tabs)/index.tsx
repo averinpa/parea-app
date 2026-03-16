@@ -3957,7 +3957,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   partnerProfile: joiner,
                 }
                 setChatList(prev => [newChat, ...prev])
-                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `It's a date with ${joiner.name}!`, body: ev?.title || 'Check your chats' })
+                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} is joining you!`, body: ev?.title || 'Check your chats' })
                 setTimeout(() => {
                   setMessagesInitialSubTab('messages')
                   setActiveTab('messages')
