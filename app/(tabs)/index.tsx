@@ -140,7 +140,7 @@ async function aiMatchCompanions(
   user: {
     interests: string[]; bio: string; age: string | number; langs: string[]
     musicGenres?: string[]; drinksPref?: string; smokingPref?: string
-    socialEnergy?: string; dealbreakers?: string[]
+    socialEnergy?: string; dealbreakers?: string[]; eventContext?: string
   },
   candidates: Array<{
     id: number; name: string; age: number; bio: string
@@ -181,22 +181,22 @@ async function aiMatchCompanions(
         messages: [{
           role: 'user',
           content: `You are an AI companion matching system for Parea, a social app in Cyprus.
-
-User profile:
+${user.eventContext ? `\nEvent context: ${user.eventContext}\nMatch specifically for this event — prioritize candidates who would enjoy this type of activity.\n` : ''}
+User profile (tonight's vibe):
 - Age: ${user.age}
 - Interests: ${user.interests.join(', ') || 'not set'}
 - Music taste: ${(user.musicGenres || []).join(', ') || 'any'}
 - Drinks: ${user.drinksPref || 'not specified'}
 - Smoking: ${user.smokingPref || 'not specified'}
-- Social energy: ${(energyLabel as any)[user.socialEnergy || ''] || 'balanced'}
+- Social energy right now: ${(energyLabel as any)[user.socialEnergy || ''] || 'balanced'}
 - Languages: ${user.langs.join(', ') || 'en'}
 - Bio: "${user.bio || 'no bio'}"
 
 Eligible candidates (hard limits already filtered out):
 ${candidatesList}
 
-Score each candidate 0-100 for companion compatibility. Weigh: shared interests & music taste (40%), lifestyle compatibility (25%), language overlap (20%), age proximity (15%). Lifestyle compatibility means similar drinking/smoking habits — not identical, just compatible (social drinker is OK with rarely drinker; smoker with social smoker etc.). Return ONLY valid JSON, no other text:
-[{"id": <number>, "score": <0-100>, "reason": "<max 5 words, warm & specific>"}]`,
+Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' Boost score for candidates whose interests align with the event context.' : ''} Weigh: shared interests & music taste (40%), lifestyle compatibility (25%), language overlap (20%), age proximity (15%). Lifestyle = compatible habits, not identical. Return ONLY valid JSON, no other text:
+[{"id": <number>, "score": <0-100>, "reason": "<max 5 words, event-specific if possible>"}]`,
         }],
       }),
     })
@@ -2747,7 +2747,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner, userData }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, onApproveJoiner, onRejectJoiner, userData, tonightVibe }: any) {
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed')
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
@@ -2762,6 +2762,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
       })
     : QUEUE_PROFILES
 
+  const eventContext = myEvents.length > 0
+    ? myEvents.map((e: any) => `${e.title} (${e.category})`).join(', ')
+    : undefined
+
   useEffect(() => {
     if (!userData?.interests?.length) return
     setAiLoading(true)
@@ -2774,15 +2778,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         musicGenres: userData.musicGenres || [],
         drinksPref: userData.drinksPref || '',
         smokingPref: userData.smokingPref || '',
-        socialEnergy: userData.socialEnergy || '',
+        socialEnergy: tonightVibe?.energy || userData.socialEnergy || '',
         dealbreakers: userData.dealbreakers || [],
+        eventContext,
       },
       QUEUE_PROFILES
     ).then(results => {
       setAiMatches(results)
       setAiLoading(false)
     })
-  }, [])
+  }, [tonightVibe?.energy, eventContext])
 
   // aurora blob animations
   const blob1 = useRef(new Animated.Value(0)).current
@@ -3664,6 +3669,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
             userData={userData}
+            tonightVibe={tonightVibe}
             onGoHome={() => setActiveTab('home')}
             onConfirm={(ev: any, partners: any[], format: string) => {
               const isGroup = format !== '1+1'
