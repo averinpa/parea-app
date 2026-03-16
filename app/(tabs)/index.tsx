@@ -264,7 +264,7 @@ async function isImageSafe(base64: string): Promise<boolean> {
     const data = await res.json()
     const answer = data?.content?.[0]?.text?.trim().toUpperCase() || 'YES'
     return !answer.startsWith('YES')
-  } catch { return false }  // Reject on network error — safe default
+  } catch { return true }  // Allow on network error — don't block users if API is unreachable
 }
 
 // ─── LANDING SCREEN ───────────────────────────────────────────────────────────
