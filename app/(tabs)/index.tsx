@@ -262,7 +262,10 @@ async function isImageSafe(base64: string): Promise<boolean> {
       }),
     })
     const data = await res.json()
-    const answer = data?.content?.[0]?.text?.trim().toUpperCase() || 'YES'
+    if (__DEV__) Alert.alert('API response', JSON.stringify(data).slice(0, 300))
+    // If API returned an error (no content), allow the photo
+    if (!data?.content?.[0]?.text) return true
+    const answer = data.content[0].text.trim().toUpperCase()
     return !answer.startsWith('YES')
   } catch { return true }  // Allow on network error — don't block users if API is unreachable
 }
