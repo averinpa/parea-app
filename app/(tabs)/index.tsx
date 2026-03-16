@@ -1226,7 +1226,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                     {/* Header */}
                     <View style={{ marginBottom: 28 }}>
                       <Text style={{ fontSize: 32, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 38 }}>
-                        What's your{'\n'}vibe? ✦
+                        Your{'\n'}interests ✦
                       </Text>
                       <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8 }}>
                         AI uses this to find your perfect companion
