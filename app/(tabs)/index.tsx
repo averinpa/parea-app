@@ -2419,44 +2419,19 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   </View>
                 </View>
 
-                {/* Each partner */}
+                {/* Each partner — compact, details available in chat/vibecheck */}
                 {crewSheet.profiles.map((p: any, i: number) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, padding: 14, borderRadius: 18, backgroundColor: `${p.color}08`, borderWidth: 1, borderColor: `${p.color}20` }}>
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: `${p.color}08`, borderWidth: 1, borderColor: `${p.color}20` }}>
                     <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                         <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}</Text>
                         <Text style={{ fontSize: 13, color: '#64748B' }}>{p.age}</Text>
                         <Text style={{ fontSize: 14 }}>{p.flag}</Text>
                       </View>
-                      <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18, marginBottom: 8 }}>{p.bio}</Text>
-                      {/* Transport + goal */}
-                      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(100,116,139,0.1)' }}>
-                          <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600' }}>
-                            {p.transport === 'car' ? '🚗 Driving' : p.transport === 'lift' ? '🙋 Needs lift' : '🚶 Meet there'}
-                          </Text>
-                        </View>
-                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(100,116,139,0.1)' }}>
-                          <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600' }}>
-                            {p.goal === 'chill' ? '😌 Chill' : p.goal === 'networking' ? '🤝 Networking' : '⚡ Activity'}
-                          </Text>
-                        </View>
-                      </View>
-                      {/* Interests */}
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                        {p.interests.slice(0, 3).map((tag: string, ti: number) => (
-                          <View key={ti} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: `${p.color}15`, borderWidth: 1, borderColor: `${p.color}30` }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: p.color }}>{tag}</Text>
-                          </View>
-                        ))}
-                        {/* Languages */}
-                        {p.langs.map((l: string, li: number) => (
-                          <Text key={`l${li}`} style={{ fontSize: 14 }}>{l}</Text>
-                        ))}
-                      </View>
+                      <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18 }} numberOfLines={2}>{p.bio}</Text>
                     </View>
                   </View>
                 ))}
