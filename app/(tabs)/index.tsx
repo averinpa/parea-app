@@ -3679,10 +3679,9 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
 
       {/* Vibe section */}
       {(() => {
-        const energyInfo = SOCIAL_ENERGY.find(e => e.id === userData?.socialEnergy)
         const drinksIcon = userData?.drinksPref === "Don't drink" ? '🚫' : userData?.drinksPref === 'Rarely' ? '🥤' : '🥂'
         const smokingIcon = userData?.smokingPref === 'Non-smoker' ? '🚭' : userData?.smokingPref === 'Social' ? '🌬️' : '🚬'
-        const hasVibe = energyInfo || (userData?.musicGenres?.length > 0) || userData?.drinksPref
+        const hasVibe = (userData?.musicGenres?.length > 0) || userData?.drinksPref
         return (
           <View style={{ marginHorizontal: 20, marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -3707,12 +3706,10 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
             {hasVibe ? (
               <LinearGradient colors={['#1E1B4B', '#3730A3']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={{ borderRadius: 16, padding: 14 }}>
-                {energyInfo && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: (userData?.musicGenres?.length > 0) ? 12 : 0 }}>
-                    <Text style={{ fontSize: 22 }}>{energyInfo.emoji}</Text>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>{energyInfo.label}</Text>
-                    {userData?.drinksPref && <Text style={{ marginLeft: 8, fontSize: 16 }}>{drinksIcon}</Text>}
-                    {userData?.smokingPref && <Text style={{ fontSize: 16 }}>{smokingIcon}</Text>}
+                {(userData?.drinksPref || userData?.smokingPref) && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: (userData?.musicGenres?.length > 0) ? 12 : 0 }}>
+                    {userData?.drinksPref && <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: '600' }}>{drinksIcon} {userData.drinksPref}</Text>}
+                    {userData?.smokingPref && <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: '600' }}>{smokingIcon} {userData.smokingPref}</Text>}
                   </View>
                 )}
                 {(userData?.musicGenres || []).length > 0 && (
