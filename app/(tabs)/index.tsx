@@ -585,6 +585,33 @@ function OTPScreen({ onBack, onVerify }: { onBack: () => void; onVerify: () => v
 
 // ─── ONBOARDING SCREEN ────────────────────────────────────────────────────────
 
+const MUSIC_GENRES = [
+  { id: 'rock',       label: 'Rock',        emoji: '🎸', colors: ['#1a0505', '#c0392b'] as const },
+  { id: 'electronic', label: 'Electronic',  emoji: '🎧', colors: ['#0d0221', '#6c3fc5'] as const },
+  { id: 'hiphop',     label: 'Hip-hop',     emoji: '🎤', colors: ['#0a0a0a', '#e67e22'] as const },
+  { id: 'pop',        label: 'Pop',         emoji: '🎵', colors: ['#1a0020', '#e91e8c'] as const },
+  { id: 'jazz',       label: 'Jazz',        emoji: '🎷', colors: ['#1c0f00', '#c8890a'] as const },
+  { id: 'rnb',        label: 'R&B',         emoji: '🎶', colors: ['#12001f', '#9b59b6'] as const },
+  { id: 'classical',  label: 'Classical',   emoji: '🎻', colors: ['#0a1020', '#2471a3'] as const },
+  { id: 'metal',      label: 'Metal',       emoji: '🤘', colors: ['#0a0a0a', '#555']    as const },
+  { id: 'indie',      label: 'Indie',       emoji: '🌿', colors: ['#0a1a0a', '#2e7d32'] as const },
+  { id: 'reggae',     label: 'Reggae',      emoji: '🌴', colors: ['#0a1500', '#558b2f'] as const },
+  { id: 'latin',      label: 'Latin',       emoji: '💃', colors: ['#1a0a00', '#d84315'] as const },
+  { id: 'house',      label: 'House',       emoji: '🎹', colors: ['#050520', '#0288d1'] as const },
+  { id: 'techno',     label: 'Techno',      emoji: '⚙️', colors: ['#050505', '#424242'] as const },
+  { id: 'country',    label: 'Country',     emoji: '🤠', colors: ['#1a1000', '#a0522d'] as const },
+  { id: 'punk',       label: 'Punk',        emoji: '✊', colors: ['#0f0010', '#ad1457'] as const },
+  { id: 'soul',       label: 'Soul',        emoji: '🕯️', colors: ['#1a0505', '#bf360c'] as const },
+]
+
+const SOCIAL_ENERGY = [
+  { id: 'homebody',   label: 'Homebody',         emoji: '🌙' },
+  { id: 'chill',      label: 'Chill vibes',       emoji: '🛋️' },
+  { id: 'balanced',   label: 'Balanced',          emoji: '😊' },
+  { id: 'social',     label: 'Social butterfly',  emoji: '🎉' },
+  { id: 'party',      label: 'Party animal',      emoji: '🔥' },
+]
+
 function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: (data: any) => void }) {
   const insets = useSafeAreaInsets()
   const TOTAL = 5
@@ -605,6 +632,11 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
   const [bio, setBio] = useState('')
   const [interests, setInterests] = useState<string[]>([])
   const [langs, setLangs] = useState<string[]>([])
+  const [musicGenres, setMusicGenres] = useState<string[]>([])
+  const [drinksPref, setDrinksPref] = useState('')
+  const [smokingPref, setSmokingPref] = useState('')
+  const [petsPref, setPetsPref] = useState('')
+  const [socialEnergy, setSocialEnergy] = useState('')
   const [bentoSong, setBentoSong] = useState('')
   const [bentoFlags, setBentoFlags] = useState('')
   const [bentoMood, setBentoMood] = useState('')
@@ -670,7 +702,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
     if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return interests.length > 0
     if (step === 4) return langs.length > 0
-    if (step === 5) return bio.trim().length >= 20 || [bentoSong, bentoFlags, bentoMood].filter(Boolean).length >= 2
+    if (step === 5) return musicGenres.length >= 1 && !!socialEnergy
     return true
   }
 
@@ -706,7 +738,7 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
       setShowConfetti(true)
       setTimeout(() => {
         setShowConfetti(false)
-        onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, bentoSong, bentoFlags, bentoMood })
+        onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy })
       }, 2200)
     }
   }
@@ -1171,89 +1203,113 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
               {step === 5 && (
                 <View>
-                  <Text style={s.stepTitle}>The Vibe Check ✨</Text>
-                  <Text style={s.stepSub}>Make your profile unforgettable</Text>
+                  {/* Header */}
+                  <View style={{ marginBottom: 28 }}>
+                    <Text style={{ fontSize: 32, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 38 }}>
+                      Your vibe ✦
+                    </Text>
+                    <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8 }}>
+                      Helps AI find your perfect companion
+                    </Text>
+                  </View>
 
-                  {/* Bento grid */}
-                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16, height: 220 }}>
-
-                    {/* Song card */}
-                    <TouchableOpacity onPress={() => openBento('song')} activeOpacity={0.8}
-                      style={{ flex: 1.1, borderRadius: 22, overflow: 'hidden' }}>
-                      <LinearGradient
-                        colors={bentoSong ? ['#4c1d95', '#6d28d9'] : ['#7c3aed', '#a78bfa']}
-                        style={[s.bentoCard, { borderColor: 'rgba(255,255,255,0.18)' }]}>
-                        <Text style={{ fontSize: 28, marginBottom: 8 }}>🎧</Text>
-                        <Text style={[s.bentoLabel, { color: 'rgba(255,255,255,0.6)' }]}>MUSIC TASTE</Text>
-                        <Text style={{ fontSize: 13, color: '#fff', fontWeight: bentoSong ? '700' : '400', lineHeight: 18, marginTop: 2, flex: 1, opacity: bentoSong ? 1 : 0.55 }} numberOfLines={4}>
-                          {bentoSong || '+ add'}
-                        </Text>
-                        {!!bentoSong && (
-                          <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 20, marginTop: 8 }}>
-                            {barAnims.map((anim, i) => (
-                              <Animated.View key={i} style={{ width: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.85)', height: 20, transform: [{ scaleY: anim }] }} />
-                            ))}
-                          </View>
-                        )}
-                        {!bentoSong && (
-                          <View style={{ position: 'absolute', bottom: 12, right: 12, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ fontSize: 18, color: '#fff', lineHeight: 22 }}>+</Text>
-                          </View>
-                        )}
-                      </LinearGradient>
-                    </TouchableOpacity>
-
-                    {/* Right column */}
-                    <View style={{ flex: 1, gap: 10 }}>
-                      <TouchableOpacity onPress={() => openBento('flags')} activeOpacity={0.8}
-                        style={{ flex: 1, borderRadius: 22, overflow: 'hidden' }}>
-                        <LinearGradient
-                          colors={bentoFlags ? ['#064e3b', '#059669'] : ['#10b981', '#34d399']}
-                          style={[s.bentoCard, { borderColor: 'rgba(255,255,255,0.18)' }]}>
-                          <Text style={{ fontSize: 20, marginBottom: 4 }}>🚩🟢</Text>
-                          <Text style={[s.bentoLabel, { color: 'rgba(255,255,255,0.6)' }]}>MY FLAG</Text>
-                          <Text style={{ fontSize: 11, color: '#fff', fontWeight: bentoFlags ? '700' : '400', flex: 1, opacity: bentoFlags ? 1 : 0.55 }} numberOfLines={2}>
-                            {bentoFlags || '+ add'}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity onPress={() => openBento('mood')} activeOpacity={0.8}
-                        style={{ flex: 1, borderRadius: 22, overflow: 'hidden' }}>
-                        <LinearGradient
-                          colors={bentoMood ? ['#92400e', '#b45309'] : ['#f97316', '#fbbf24']}
-                          style={[s.bentoCard, { borderColor: 'rgba(255,255,255,0.18)' }]}>
-                          <Text style={{ fontSize: 20, marginBottom: 4 }}>⚡</Text>
-                          <Text style={[s.bentoLabel, { color: 'rgba(255,255,255,0.6)' }]}>WEEKEND MOOD</Text>
-                          <Text style={{ fontSize: 11, color: '#fff', fontWeight: bentoMood ? '700' : '400', flex: 1, opacity: bentoMood ? 1 : 0.55 }} numberOfLines={2}>
-                            {bentoMood || '+ add'}
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
+                  {/* Music genres */}
+                  <View style={{ marginBottom: 28 }}>
+                    <Text style={s.label}>Music taste · pick your genres</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                      {MUSIC_GENRES.map(g => {
+                        const on = musicGenres.includes(g.id)
+                        return (
+                          <TouchableOpacity
+                            key={g.id}
+                            onPress={() => setMusicGenres(prev => prev.includes(g.id) ? prev.filter(x => x !== g.id) : [...prev, g.id])}
+                            activeOpacity={0.8}
+                            style={{ width: (W - 48 - 20) / 3, borderRadius: 14, overflow: 'hidden' }}>
+                            <LinearGradient
+                              colors={on ? g.colors : ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.35)']}
+                              style={{ paddingVertical: 10, alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 14, borderColor: on ? 'transparent' : 'rgba(255,255,255,0.85)', boxShadow: on ? `0 3px 12px ${g.colors[1]}66` : 'none' } as any}>
+                              <Text style={{ fontSize: 20 }}>{g.emoji}</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#334155', textAlign: 'center' }}>{g.label}</Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        )
+                      })}
                     </View>
                   </View>
 
-                  {/* About me (compact) */}
-                  <TextInput
-                    style={[s.input, { height: 80, textAlignVertical: 'top', paddingTop: 12 }]}
-                    value={bio} onChangeText={handleBioChange}
-                    placeholder="Add a short note about yourself..."
-                    placeholderTextColor="#94A3B8" multiline maxLength={150} />
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, marginBottom: 14 }}>
-                    <Animated.Text style={[s.charCount, { transform: [{ scale: counterBounceAnim }] }]}>{bio.length} / 150</Animated.Text>
-                    {vibeCheckPassed && <Text style={{ fontSize: 12, color: '#16a34a', fontWeight: '700' }}>Vibe Check Passed! ✅</Text>}
+                  {/* Lifestyle */}
+                  <View style={{ marginBottom: 28 }}>
+                    <Text style={s.label}>Lifestyle</Text>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.65)', borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', overflow: 'hidden' }}>
+                      {[
+                        { key: 'drinks',  label: '🍷 Alcohol',  val: drinksPref,  set: setDrinksPref,  opts: ['Social drinker', 'Rarely', "Don't drink"] },
+                        { key: 'smoking', label: '🚬 Smoking',  val: smokingPref, set: setSmokingPref, opts: ['Non-smoker', 'Social', 'Smoker'] },
+                        { key: 'pets',    label: '🐾 Pets',     val: petsPref,    set: setPetsPref,    opts: ['🐕 Dogs', '🐱 Cats', '❤️ Both', '🙅 None'] },
+                      ].map((row, ri, arr) => (
+                        <View key={row.key} style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: ri < arr.length - 1 ? 1 : 0, borderBottomColor: 'rgba(203,213,225,0.4)' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8 }}>{row.label}</Text>
+                          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                            {row.opts.map(opt => {
+                              const on = row.val === opt
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  onPress={() => row.set(on ? '' : opt)}
+                                  style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: on ? '#818CF8' : 'rgba(241,245,249,0.8)', borderWidth: 1.5, borderColor: on ? '#818CF8' : 'rgba(203,213,225,0.6)', boxShadow: on ? '0 2px 8px rgba(129,140,248,0.4)' : 'none' } as any}
+                                  activeOpacity={0.75}>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: on ? '#fff' : '#64748B' }}>{opt}</Text>
+                                </TouchableOpacity>
+                              )
+                            })}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
                   </View>
 
-                  {/* Magic Rewrite */}
-                  <TouchableOpacity onPress={magicRewrite} disabled={magicLoading} activeOpacity={0.85}>
-                    <LinearGradient colors={['#7c3aed', '#4f46e5', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                      style={{ borderRadius: 16, paddingVertical: 13, alignItems: 'center', shadowColor: '#6366F1', shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 6 }}>
-                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 }}>
-                        {magicLoading ? 'Vibing... ✨' : 'Magic Rewrite ✨'}
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
+                  {/* Social energy */}
+                  <View style={{ marginBottom: 28 }}>
+                    <Text style={s.label}>Social energy</Text>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {SOCIAL_ENERGY.map(e => {
+                        const on = socialEnergy === e.id
+                        return (
+                          <TouchableOpacity
+                            key={e.id}
+                            onPress={() => setSocialEnergy(e.id)}
+                            activeOpacity={0.8}
+                            style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 16, backgroundColor: on ? '#818CF8' : 'rgba(255,255,255,0.65)', borderWidth: 1.5, borderColor: on ? '#818CF8' : 'rgba(255,255,255,0.85)', boxShadow: on ? '0 4px 14px rgba(129,140,248,0.55)' : 'none' } as any}>
+                            <Text style={{ fontSize: 20, marginBottom: 4 }}>{e.emoji}</Text>
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center' }}>{e.label}</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </View>
+                  </View>
+
+                  {/* One-liner bio */}
+                  <View>
+                    <Text style={s.label}>One line about you · optional</Text>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 16, paddingVertical: 4, marginBottom: 10 }}>
+                      <TextInput
+                        style={{ fontSize: 15, color: '#1E1B4B', paddingVertical: 12 }}
+                        value={bio}
+                        onChangeText={handleBioChange}
+                        placeholder="e.g. Rock concerts & good coffee ☕"
+                        placeholderTextColor="#CBD5E1"
+                        maxLength={60}
+                        underlineColorAndroid="transparent"
+                      />
+                    </View>
+                    <TouchableOpacity onPress={magicRewrite} disabled={magicLoading} activeOpacity={0.85}>
+                      <LinearGradient colors={['#7c3aed', '#4f46e5', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={{ borderRadius: 16, paddingVertical: 13, alignItems: 'center', boxShadow: '0 4px 16px rgba(99,102,241,0.4)' } as any}>
+                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 }}>
+                          {magicLoading ? 'Writing... ✨' : '✨ Write with AI'}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
