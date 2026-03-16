@@ -926,79 +926,109 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
                 </View>
               )}
 
-              {step === 2 && (
-                <View>
-                  <Text style={s.stepTitle}>Add your photos</Text>
-                  <Text style={s.stepSub}>First photo required · All photos are automatically checked</Text>
+              {step === 2 && (() => {
+                const mainW = (W - 48 - 10) * 0.58
+                const mainH = mainW * (4 / 3)
+                const smallH = (mainH - 8) / 2
 
-                  {/* Dynamic checklist */}
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'Clear face', ci: 0 },
-                      { label: 'Good lighting', ci: 1 },
-                      { label: 'No sunglasses', ci: 2 },
-                    ].map(({ label, ci }) => {
-                      const st = checklist[ci]
-                      const bg = st === 'ok' ? 'rgba(34,197,94,0.15)' : st === 'warn' ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.55)'
-                      const border = st === 'ok' ? 'rgba(34,197,94,0.4)' : st === 'warn' ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.8)'
-                      const color = st === 'ok' ? '#16a34a' : st === 'warn' ? '#DC2626' : '#64748B'
-                      const icon = st === 'ok' ? '✅ ' : st === 'warn' ? '❌ ' : '◦ '
-                      return (
-                        <View key={label} style={{ backgroundColor: bg, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: border }}>
-                          <Text style={{ fontSize: 12, color, fontWeight: '500' }}>{icon}{label}</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
+                const renderSlot = (idx: number, width: number | `${number}%`, height: number) => {
+                  const uri = photos[idx]
+                  const isMain = idx === 0
+                  const borderR = isMain ? 22 : 16
+                  const statusBorder = photoStatus[idx] === 'verified' ? '#22c55e' : photoStatus[idx] === 'error' ? '#EF4444' : undefined
 
-                  {/* Photo slots */}
-                  <View style={s.photosRow}>
-                    {photos.map((uri, idx) => (
-                      <View key={idx} style={{ flex: idx === 0 ? 1.4 : 1 }}>
-                        <TouchableOpacity
-                          style={[s.photoSlot, idx === 0 && s.photoSlotMain, photoStatus[idx] === 'verified' && { borderColor: '#22c55e', borderWidth: 2 }, photoStatus[idx] === 'error' && { borderColor: '#EF4444', borderWidth: 2 }]}
-                          onPress={() => onPhotoPress(idx)} activeOpacity={0.85}>
-                          {photoLoading[idx] ? (
-                            <View style={s.photoCenter}>
-                              <ActivityIndicator color="#6366F1" size="large" />
-                              <Text style={s.photoCheckTxt}>Analyzing photo...</Text>
+                  return (
+                    <View key={idx}>
+                      <TouchableOpacity
+                        onPress={() => onPhotoPress(idx)}
+                        activeOpacity={0.85}
+                        style={{
+                          width, height, borderRadius: borderR, overflow: 'hidden',
+                          backgroundColor: 'rgba(185,208,235,0.35)',
+                          borderWidth: statusBorder ? 2 : 1.5,
+                          borderColor: statusBorder ?? (isMain ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.8)'),
+                          borderStyle: uri ? 'solid' : 'dashed',
+                        }}>
+                        {photoLoading[idx] ? (
+                          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <ActivityIndicator color="#6366F1" size="small" />
+                            <Text style={{ fontSize: 10, color: '#818CF8', fontWeight: '600' }}>Checking...</Text>
+                          </View>
+                        ) : uri ? (
+                          <>
+                            <Animated.Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            <TouchableOpacity
+                              style={{ position: 'absolute', top: 7, right: 7, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
+                              onPress={() => removePhoto(idx)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                              <Ionicons name="close" size={13} color="#fff" />
+                            </TouchableOpacity>
+                            {isMain && photoStatus[0] === 'verified' && (
+                              <View style={{ position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(34,197,94,0.88)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                                <Text style={{ fontSize: 10, color: '#fff', fontWeight: '800', letterSpacing: 0.5 }}>✓ MAIN</Text>
+                              </View>
+                            )}
+                            {photoBadge[idx] && !isMain && (
+                              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(34,197,94,0.85)', paddingVertical: 4, alignItems: 'center' }}>
+                                <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>✓ Verified</Text>
+                              </View>
+                            )}
+                          </>
+                        ) : (
+                          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                            <View style={{ width: isMain ? 44 : 32, height: isMain ? 44 : 32, borderRadius: isMain ? 22 : 16, backgroundColor: 'rgba(129,140,248,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                              <Ionicons name={isMain ? 'camera-outline' : 'add'} size={isMain ? 22 : 18} color="rgba(99,102,241,0.55)" />
                             </View>
-                          ) : uri ? (
-                            <>
-                              <Animated.Image source={{ uri }} style={[s.photoImg, { opacity: photoFadeAnims[idx] }]} />
-                              <TouchableOpacity
-                                style={s.photoRemoveBtn}
-                                onPress={() => removePhoto(idx)}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                <Ionicons name="close" size={14} color="#fff" />
-                              </TouchableOpacity>
-                              {idx === 0 && photoStatus[0] === 'verified' && (
-                                <View style={s.mainBadge}>
-                                  <Text style={{ fontSize: 10, color: '#fff', fontWeight: '800', letterSpacing: 1 }}>MAIN</Text>
-                                </View>
-                              )}
-                              {photoBadge[idx] && (
-                                <View style={s.verifiedBadge}>
-                                  <Text style={{ fontSize: 11, color: '#fff', fontWeight: '700' }}>Face verified ✅</Text>
-                                </View>
-                              )}
-                            </>
-                          ) : (
-                            <View style={s.photoCenter}>
-                              <Ionicons name="add" size={30} color="rgba(99,102,241,0.45)" />
-                              {idx === 0 && <Text style={s.photoMainTxt}>MAIN</Text>}
-                              <Text style={s.photoCropHint}>Tap · drag to crop</Text>
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                        {photoError[idx] && (
-                          <Text style={{ fontSize: 11, color: '#EF4444', marginTop: 5, textAlign: 'center', fontWeight: '500' }}>{photoError[idx]}</Text>
+                            {isMain && <Text style={{ fontSize: 11, color: 'rgba(99,102,241,0.5)', fontWeight: '600', marginTop: 2 }}>Main photo</Text>}
+                          </View>
                         )}
+                      </TouchableOpacity>
+                      {photoError[idx] && (
+                        <Text style={{ fontSize: 10, color: '#EF4444', marginTop: 4, textAlign: 'center' }}>{photoError[idx]}</Text>
+                      )}
+                    </View>
+                  )
+                }
+
+                return (
+                  <View>
+                    {/* Header */}
+                    <View style={{ marginBottom: 28 }}>
+                      <Text style={{ fontSize: 32, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 38 }}>
+                        Your photos ✦
+                      </Text>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8 }}>First photo is required · auto-verified</Text>
+                    </View>
+
+                    {/* Grid */}
+                    <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                      {renderSlot(0, mainW, mainH)}
+                      <View style={{ flex: 1, gap: 8 }}>
+                        {renderSlot(1, '100%', smallH)}
+                        {renderSlot(2, '100%', smallH)}
                       </View>
-                    ))}
+                    </View>
+
+                    {/* Checklist */}
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      {[
+                        { label: 'Clear face', ci: 0 },
+                        { label: 'Good lighting', ci: 1 },
+                        { label: 'No sunglasses', ci: 2 },
+                      ].map(({ label, ci }) => {
+                        const st = checklist[ci]
+                        const ok = st === 'ok', bad = st === 'warn'
+                        return (
+                          <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: ok ? 'rgba(34,197,94,0.12)' : bad ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.6)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: ok ? 'rgba(34,197,94,0.35)' : bad ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.85)' }}>
+                            <Text style={{ fontSize: 11 }}>{ok ? '✅' : bad ? '❌' : '·'}</Text>
+                            <Text style={{ fontSize: 12, color: ok ? '#16a34a' : bad ? '#DC2626' : '#94A3B8', fontWeight: '500' }}>{label}</Text>
+                          </View>
+                        )
+                      })}
+                    </View>
                   </View>
-                </View>
-              )}
+                )
+              })()}
 
               {step === 3 && (
                 <View>
