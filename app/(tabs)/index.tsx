@@ -4659,7 +4659,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                 {/* Step content in ScrollView */}
                 <ScrollView
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 24 : insets.bottom + 24 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   style={{ flex: 1 }}>
@@ -4893,8 +4893,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </View>
                   )}
 
-                  {/* Bottom button — inside ScrollView so keyboard never covers it */}
-                  <View style={{ paddingTop: 16, paddingBottom: 8 }}>
+                </ScrollView>
+
+                {/* Bottom button — pinned to bottom */}
+                <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 16 : insets.bottom > 0 ? insets.bottom + 12 : 20, backgroundColor: 'transparent' }}>
                   {createStep < 4 ? (
                     <TouchableOpacity
                       style={[s.btnPrimary,
@@ -4992,9 +4994,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Social 🚀</Text>
                     </TouchableOpacity>
                   )}
-                  </View>
-
-                </ScrollView>
+                </View>
 
               </KeyboardAvoidingView>
             </SafeAreaView>
