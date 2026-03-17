@@ -1725,8 +1725,30 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         <View style={{ backgroundColor: '#F8F7FF', zIndex: 600, paddingBottom: 4 }}>
           {/* Greeting row */}
           <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <View>
+            <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 15, color: '#94A3B8', fontWeight: '500' }}>Hi, {userName} 👋</Text>
+              <TouchableOpacity
+                onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+                  paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
+                  backgroundColor: tonightVibe ? '#EEF2FF' : '#F1F5F9' }}>
+                {tonightVibe ? (() => {
+                  const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
+                  const drinksIcon = tonightVibe.drinks === "Don't drink" ? '🚫' : tonightVibe.drinks === 'Rarely' ? '🥤' : '🥂'
+                  const smokingIcon = tonightVibe.smoking === 'Non-smoker' ? '🚭' : tonightVibe.smoking === 'Social' ? '🌬️' : '🚬'
+                  return <>
+                    <Text style={{ fontSize: 13 }}>{energyInfo.emoji}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{energyInfo.label}</Text>
+                    <Text style={{ fontSize: 11 }}>{drinksIcon}</Text>
+                    <Text style={{ fontSize: 11 }}>{smokingIcon}</Text>
+                    <Feather name="edit-2" size={10} color="#94A3B8" />
+                  </>
+                })() : <>
+                  <Text style={{ fontSize: 12 }}>✨</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8' }}>Set your vibe</Text>
+                </>}
+              </TouchableOpacity>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
               {/* City */}
@@ -1931,38 +1953,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             )
           })}
         </ScrollView>
-
-        {/* Tonight's Vibe card */}
-        {tonightVibe && (() => {
-          const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
-          const drinksIcon = tonightVibe.drinks === "Don't drink" ? '🚫' : tonightVibe.drinks === 'Rarely' ? '🥤' : '🥂'
-          const smokingIcon = tonightVibe.smoking === 'Non-smoker' ? '🚭' : tonightVibe.smoking === 'Social' ? '🌬️' : '🚬'
-          return (
-            <TouchableOpacity activeOpacity={0.85} onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
-              style={{ marginHorizontal: 16, marginBottom: 12 }}>
-              <LinearGradient colors={['#1E1B4B', '#3730A3']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={{ borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: 'rgba(199,210,254,0.7)', fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Tonight's vibe</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 20 }}>{energyInfo.emoji}</Text>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>{energyInfo.label}</Text>
-                  </View>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                  {[drinksIcon, smokingIcon].map((ic, i) => (
-                    <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
-                      <Text style={{ fontSize: 13 }}>{ic}</Text>
-                    </View>
-                  ))}
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Text style={{ fontSize: 10, color: 'rgba(199,210,254,0.9)', fontWeight: '600' }}>Edit</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )
-        })()}
 
         {/* Community event list */}
         {communityEvents.length > 0 ? (
