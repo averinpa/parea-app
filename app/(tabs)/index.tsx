@@ -3587,15 +3587,95 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
     ])
   }
 
+  const [profilePreviewOpen, setProfilePreviewOpen] = useState(false)
+
   return (
     <View style={{ flex: 1 }}>
-      {/* Full-screen photo preview with info overlay */}
+
+      {/* ── Profile Card Preview Modal ─────────────────────────────────────── */}
+      <Modal visible={profilePreviewOpen} animationType="slide" onRequestClose={() => setProfilePreviewOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
+          <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+            {/* Photo with swipe dots */}
+            <View style={{ height: 480, position: 'relative' }}>
+              {userPhotos[0] ? (
+                <Image source={{ uri: userPhotos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              ) : (
+                <LinearGradient colors={['#6366F1', '#818CF8']} style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 64 }}>👤</Text>
+                </LinearGradient>
+              )}
+              <LinearGradient colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.75)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 200 }} />
+              {/* Name + age over photo */}
+              <View style={{ position: 'absolute', bottom: 20, left: 20, right: 20 }}>
+                <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
+                {(userData?.langs || []).length > 0 && (
+                  <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                    {(userData.langs as string[]).map((code: string) => {
+                      const l = LANGUAGES_LIST.find(x => x.code === code)
+                      return l ? <Text key={code} style={{ fontSize: 20 }}>{l.flag}</Text> : null
+                    })}
+                  </View>
+                )}
+              </View>
+              {/* Close */}
+              <TouchableOpacity onPress={() => setProfilePreviewOpen(false)}
+                style={{ position: 'absolute', top: 52, right: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name="x" size={20} color="#fff" />
+              </TouchableOpacity>
+              <View style={{ position: 'absolute', top: 58, left: 0, right: 0, alignItems: 'center' }}>
+                <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.8)' }}>👁  Profile preview</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Content card */}
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -20, padding: 24 }}>
+              {/* Bio */}
+              {userData?.bio ? (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>About</Text>
+                  <Text style={{ fontSize: 15, color: '#334155', lineHeight: 22 }}>{userData.bio}</Text>
+                </View>
+              ) : null}
+
+              {/* Interests */}
+              {(userData?.interests || []).length > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Interests</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {(userData.interests as string[]).map((item: string) => (
+                      <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 7 }}>
+                        <Text style={{ fontSize: 14, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* More photos */}
+              {userPhotos.length > 1 && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Photos</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {userPhotos.slice(1).map((uri, i) => (
+                      <Image key={i} source={{ uri }} style={{ width: (W - 48 - 16) / 2, height: 140, borderRadius: 16 }} resizeMode="cover" />
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* ── Single photo full-screen preview ──────────────────────────────── */}
       <Modal visible={previewIdx !== null} transparent animationType="fade" onRequestClose={() => setPreviewIdx(null)}>
         <View style={{ flex: 1, backgroundColor: '#000' }}>
           {previewIdx !== null && userPhotos[previewIdx] && (
             <Image source={{ uri: userPhotos[previewIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           )}
-          {/* Gradient + info at bottom */}
           <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 60 }}>
             <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
             {userData?.bio ? <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 6, lineHeight: 20 }}>{userData.bio}</Text> : null}
@@ -3617,21 +3697,18 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
               </View>
             )}
           </LinearGradient>
-          {/* Left arrow */}
           {previewIdx !== null && previewIdx > 0 && (
             <TouchableOpacity onPress={() => setPreviewIdx(i => (i !== null ? i - 1 : i))}
               style={{ position: 'absolute', left: 16, top: '45%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
               <Feather name="chevron-left" size={26} color="#fff" />
             </TouchableOpacity>
           )}
-          {/* Right arrow */}
           {previewIdx !== null && previewIdx < userPhotos.length - 1 && (
             <TouchableOpacity onPress={() => setPreviewIdx(i => (i !== null ? i + 1 : i))}
               style={{ position: 'absolute', right: 16, top: '45%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
               <Feather name="chevron-right" size={26} color="#fff" />
             </TouchableOpacity>
           )}
-          {/* Dots */}
           {userPhotos.length > 1 && (
             <View style={{ flexDirection: 'row', gap: 6, position: 'absolute', top: 52, alignSelf: 'center', left: 0, right: 0, justifyContent: 'center' }}>
               {userPhotos.map((_, i) => (
@@ -3641,7 +3718,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
               ))}
             </View>
           )}
-          {/* Close */}
           <TouchableOpacity onPress={() => setPreviewIdx(null)}
             style={{ position: 'absolute', top: 44, right: 20, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
             <Feather name="x" size={20} color="#fff" />
@@ -3649,7 +3725,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </View>
       </Modal>
 
-      {/* Vibe Edit Modal — outside ScrollView to avoid rendering issues */}
+      {/* Vibe Edit Modal */}
       <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}>
@@ -3661,8 +3737,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-
-            {/* Music genres */}
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Music taste</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
               {MUSIC_GENRES.map(g => {
@@ -3679,8 +3753,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 )
               })}
             </View>
-
-            {/* Social energy */}
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 24 }}>
               {SOCIAL_ENERGY.map(e => {
@@ -3694,8 +3766,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 )
               })}
             </View>
-
-            {/* Drinks & Smoking */}
             {[
               { key: 'drinksPref', label: '🍷 Alcohol', opts: ['Social drinker', 'Rarely', "Don't drink"] },
               { key: 'smokingPref', label: '🚬 Smoking', opts: ['Non-smoker', 'Social', 'Smoker'] },
@@ -3708,93 +3778,54 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                     return (
                       <TouchableOpacity key={opt} onPress={() => setDraft((v: any) => ({ ...v, [row.key]: opt }))}
                         style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>
-                          {opt === "Don't drink" ? '🚫' : opt === 'Rarely' ? '🥤' : opt === 'Social drinker' ? '🥂' : opt === 'Non-smoker' ? '🚭' : opt === 'Social' ? '🌬️' : '🚬'}
-                        </Text>
-                        <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3, textAlign: 'center' }}>{opt}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt}</Text>
                       </TouchableOpacity>
                     )
                   })}
                 </View>
               </View>
             ))}
-
-            {/* Dealbreakers */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Hard limits</Text>
-            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>These will never appear in your matches.</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-              {DEALBREAKERS.map(db => {
-                const on = (draft.dealbreakers || []).includes(db.id)
-                return (
-                  <TouchableOpacity key={db.id} onPress={() => setDraft((v: any) => ({ ...v, dealbreakers: on ? v.dealbreakers.filter((x: string) => x !== db.id) : [...(v.dealbreakers || []), db.id] }))}
-                    activeOpacity={0.75}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, backgroundColor: on ? '#FFF1F2' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#F43F5E' : '#E2E8F0' }}>
-                    <Text style={{ fontSize: 16 }}>{db.emoji}</Text>
-                    <View>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: on ? '#BE123C' : '#334155' }}>{db.label}</Text>
-                      <Text style={{ fontSize: 10, color: on ? '#FDA4AF' : '#94A3B8' }}>{db.desc}</Text>
-                    </View>
-                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: '#F43F5E', alignItems: 'center', justifyContent: 'center', opacity: on ? 1 : 0 }}>
-                      <Text style={{ fontSize: 9, color: '#fff', fontWeight: '800' }}>✕</Text>
-                    </View>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
             <TouchableOpacity onPress={() => { onUpdateUserData?.(draft); setVibeEditOpen(false) }}
-              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save</Text>
+              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save changes</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
 
-      {/* Language edit modal */}
+      {/* Lang Edit Modal */}
       <Modal visible={langEditOpen} transparent animationType="slide" onRequestClose={() => setLangEditOpen(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setLangEditOpen(false)} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}>
           <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Languages I speak</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Languages</Text>
             <TouchableOpacity onPress={() => setLangEditOpen(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
               <Feather name="x" size={16} color="#64748B" />
             </TouchableOpacity>
           </View>
-          <Text style={{ fontSize: 13, color: '#94A3B8', paddingHorizontal: 20, marginBottom: 16 }}>Select all that apply — this helps match you with the right people</Text>
-          <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-            {LANGUAGES_LIST.map(l => {
-              const on = draftLangs.includes(l.code)
-              return (
-                <TouchableOpacity key={l.code} activeOpacity={0.8}
-                  onPress={() => {
-                    setDraftLangs(prev => on ? prev.filter(c => c !== l.code) : [...prev, l.code])
-                    Haptics.selectionAsync()
-                  }}
-                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, marginBottom: 8, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : 'transparent' }}>
-                  <Text style={{ fontSize: 26, marginRight: 14 }}>{l.flag}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: on ? '#3730A3' : '#334155', flex: 1 }}>{l.label}</Text>
-                  <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: on ? '#6366F1' : '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
-                    {on && <Feather name="check" size={13} color="#fff" />}
-                  </View>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-          <View style={{ paddingHorizontal: 20, paddingBottom: 40 }}>
-            <TouchableOpacity
-              disabled={draftLangs.length === 0}
-              onPress={() => { onUpdateUserData?.({ langs: draftLangs }); setLangEditOpen(false) }}
-              style={{ backgroundColor: draftLangs.length === 0 ? '#E2E8F0' : '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: draftLangs.length === 0 ? '#94A3B8' : '#fff' }}>
-                Save{draftLangs.length > 0 ? ` (${draftLangs.length} selected)` : ''}
-              </Text>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 }}>
+              {LANGUAGES_LIST.map(l => {
+                const on = draftLangs.includes(l.code)
+                return (
+                  <TouchableOpacity key={l.code} onPress={() => { setDraftLangs(prev => on ? prev.filter(x => x !== l.code) : [...prev, l.code]); Haptics.selectionAsync() }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : '#E2E8F0' }}>
+                    <Text style={{ fontSize: 22 }}>{l.flag}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#4338CA' : '#64748B' }}>{l.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <TouchableOpacity onPress={() => { onUpdateUserData?.({ langs: draftLangs }); setLangEditOpen(false) }}
+              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save{draftLangs.length > 0 ? ` (${draftLangs.length})` : ''}</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
-      {/* Interests edit modal */}
+      {/* Interests Edit Modal */}
       <Modal visible={interestsEditOpen} transparent animationType="slide" onRequestClose={() => setInterestsEditOpen(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setInterestsEditOpen(false)} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' }}>
@@ -3813,10 +3844,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                   {cat.items.map(item => {
                     const on = draftInterests.includes(item)
                     return (
-                      <TouchableOpacity key={item} onPress={() => {
-                        setDraftInterests(prev => on ? prev.filter(x => x !== item) : [...prev, item])
-                        Haptics.selectionAsync()
-                      }} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : '#E2E8F0' }}>
+                      <TouchableOpacity key={item} onPress={() => { setDraftInterests(prev => on ? prev.filter(x => x !== item) : [...prev, item]); Haptics.selectionAsync() }}
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : '#E2E8F0' }}>
                         <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#4338CA' : '#64748B' }}>{item}</Text>
                       </TouchableOpacity>
                     )
@@ -3832,158 +3861,186 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </View>
       </Modal>
 
-      {/* Header */}
-      <View style={{ paddingTop: Math.max(insets.top, 20) + 8, paddingHorizontal: 20, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.4 }}>My Profile</Text>
-      </View>
+      {/* ── Main Profile ScrollView ────────────────────────────────────────── */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
 
-      {/* Photo + info row */}
-      {(() => {
-        const MAIN_W = 110
-        const MAIN_H = Math.round(MAIN_W * (4 / 3))
-        const SMALL = 68
-
-        const renderSlot = (i: number, w: number, h: number) => {
-          const uri = userPhotos[i]
-          const isMain = i === 0
-          const status = slotStatus[i] ?? null
-          const isChecking = status === 'checking'
-          const isRejected = status === 'rejected'
-          if (uri) {
-            return (
-              <TouchableOpacity key={i} activeOpacity={isChecking ? 1 : 0.85}
-                onPress={() => {
-                  if (isChecking || isRejected) return
-                  const acts: any[] = [{ text: '📷  Replace', onPress: () => pickProfilePhoto(i) }]
-                  if (!(isMain && userPhotos.length === 1)) acts.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
-                  acts.push({ text: 'Cancel', style: 'cancel' })
-                  Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, acts)
-                }}
-                style={{ width: w, height: h, borderRadius: 14, overflow: 'hidden', backgroundColor: '#E2E8F0', borderWidth: isRejected ? 2 : 0, borderColor: '#EF4444' }}>
-                <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                {isChecking && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(99,102,241,0.7)', alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#fff" size="small" /></View>}
-                {isRejected && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(239,68,68,0.75)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20 }}>🚫</Text></View>}
-                {isMain && !isChecking && !isRejected && <View style={{ position: 'absolute', top: 6, left: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.55)' }}><Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>Main ★</Text></View>}
-                {!isChecking && !isRejected && <View style={{ position: 'absolute', bottom: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}><Feather name="edit-2" size={10} color="#fff" /></View>}
-              </TouchableOpacity>
-            )
-          }
-          if (i === userPhotos.length) {
-            return (
-              <TouchableOpacity key={i} onPress={() => pickProfilePhoto()}
-                style={{ width: w, height: h, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: i === 0 ? '#6366F1' : '#E2E8F0', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                <Feather name="plus" size={16} color={i === 0 ? '#6366F1' : '#94A3B8'} />
-                <Text style={{ fontSize: 10, color: i === 0 ? '#6366F1' : '#94A3B8', fontWeight: '700' }}>Add</Text>
-              </TouchableOpacity>
-            )
-          }
-          return <View key={i} style={{ width: w, height: h, borderRadius: 14, backgroundColor: '#F1F5F9', opacity: 0.4 }} />
-        }
-
-        return (
-          <View style={{ paddingHorizontal: 20, flexDirection: 'row', gap: 12, marginBottom: 14 }}>
-            <TouchableOpacity activeOpacity={0.9} onPress={() => userPhotos[0] && setPreviewIdx(0)}>
-              {renderSlot(0, MAIN_W, MAIN_H)}
-            </TouchableOpacity>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 19, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
-              {userData?.bio ? <Text style={{ fontSize: 13, color: '#64748B', marginTop: 3, lineHeight: 18 }} numberOfLines={3}>{userData.bio}</Text> : null}
-              <View style={{ flex: 1 }} />
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {renderSlot(1, SMALL, SMALL)}
-                {renderSlot(2, SMALL, SMALL)}
-              </View>
-            </View>
-          </View>
-        )
-      })()}
-
-      {/* Interests */}
-      <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Interests</Text>
-          <TouchableOpacity onPress={() => { setDraftInterests(userData?.interests || []); setInterestsEditOpen(true) }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
-            <Feather name="edit-2" size={11} color="#6366F1" />
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
+        {/* Header */}
+        <View style={{ paddingTop: Math.max(insets.top, 20) + 8, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ fontSize: 26, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>My Profile</Text>
+          <TouchableOpacity
+            onPress={() => { setProfilePreviewOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+            <Feather name="eye" size={14} color="#6366F1" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Preview</Text>
           </TouchableOpacity>
         </View>
-        {(userData?.interests || []).length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-            {(userData.interests as string[]).map((item: string) => (
-              <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 }}>
-                <Text style={{ fontSize: 13, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        ) : (
-          <TouchableOpacity onPress={() => { setDraftInterests([]); setInterestsEditOpen(true) }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>✨ Add interests</Text>
-          </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Languages */}
-      <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
-          <TouchableOpacity onPress={() => { setDraftLangs(userData?.langs || []); setLangEditOpen(true) }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
-            <Feather name="edit-2" size={11} color="#6366F1" />
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-        {(userData?.langs || []).length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {(userData.langs as string[]).map((code: string) => {
-              const l = LANGUAGES_LIST.find(x => x.code === code)
-              return l ? (
-                <View key={code} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 }}>
-                  <Text style={{ fontSize: 16 }}>{l.flag}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569' }}>{l.label}</Text>
-                </View>
-              ) : null
-            })}
-          </ScrollView>
-        ) : (
-          <TouchableOpacity onPress={() => { setDraftLangs([]); setLangEditOpen(true) }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>🌍 Add languages</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        {/* Photos grid */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          {(() => {
+            const MAIN_W = W - 40 - 8 - (W - 40) / 3
+            const MAIN_H = Math.round(MAIN_W * (4 / 3))
+            const SMALL_W = (W - 40 - 8) / 3
+            const SMALL_H = Math.round(SMALL_W * (4 / 3))
 
-      {/* Actions */}
-      <View style={{ flex: 1, paddingHorizontal: 20, justifyContent: 'flex-end', paddingBottom: Math.max(insets.bottom, 16) }}>
-        {[
-          { icon: 'settings', label: 'Settings' },
-          { icon: 'shield', label: 'Privacy Policy' },
-          { icon: 'file-text', label: 'Terms of Service' },
-          { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
-          { icon: 'trash-2', label: 'Delete Account', color: '#EF4444' },
-        ].map(item => (
-          <TouchableOpacity key={item.label}
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, marginBottom: 2, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }}
-            onPress={() => {
-              if (item.label === 'Log Out') { onLogOut?.(); return }
-              if (item.label === 'Delete Account') {
-                Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: async () => {
-                    if (userData?.dbId) await supabase.from('profiles').delete().eq('id', userData.dbId)
-                    await supabase.auth.signOut()
-                    onLogOut?.()
-                  }},
-                ])
+            const renderSlot = (i: number, w: number, h: number) => {
+              const uri = userPhotos[i]
+              const isMain = i === 0
+              const status = slotStatus[i] ?? null
+              const isChecking = status === 'checking'
+              const isRejected = status === 'rejected'
+              if (uri) {
+                return (
+                  <TouchableOpacity key={i} activeOpacity={isChecking ? 1 : 0.85}
+                    onPress={() => {
+                      if (isChecking || isRejected) return
+                      const acts: any[] = [{ text: '📷  Replace', onPress: () => pickProfilePhoto(i) }]
+                      if (!(isMain && userPhotos.length === 1)) acts.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
+                      acts.push({ text: 'Cancel', style: 'cancel' })
+                      Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, acts)
+                    }}
+                    style={{ width: w, height: h, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E2E8F0', borderWidth: isRejected ? 2 : 0, borderColor: '#EF4444' }}>
+                    <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    {isChecking && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(99,102,241,0.7)', alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#fff" size="small" /></View>}
+                    {isRejected && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(239,68,68,0.75)', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20 }}>🚫</Text></View>}
+                    {isMain && !isChecking && !isRejected && <View style={{ position: 'absolute', top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.55)' }}><Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>Main ★</Text></View>}
+                    {!isChecking && !isRejected && <View style={{ position: 'absolute', bottom: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}><Feather name="edit-2" size={12} color="#fff" /></View>}
+                  </TouchableOpacity>
+                )
               }
-            }}>
-            <Feather name={item.icon as any} size={17} color={item.color || '#64748B'} />
-            <Text style={[{ flex: 1, fontSize: 14, color: '#334155', marginLeft: 12 }, item.color ? { color: item.color } : {}]}>{item.label}</Text>
-            <Feather name="chevron-right" size={15} color="#CBD5E1" />
-          </TouchableOpacity>
-        ))}
-      </View>
+              if (i <= userPhotos.length) {
+                return (
+                  <TouchableOpacity key={i} onPress={() => pickProfilePhoto()}
+                    style={{ width: w, height: h, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: i === 0 ? '#6366F1' : '#E2E8F0', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <Feather name="plus" size={18} color={i === 0 ? '#6366F1' : '#94A3B8'} />
+                    <Text style={{ fontSize: 11, color: i === 0 ? '#6366F1' : '#94A3B8', fontWeight: '700' }}>Add</Text>
+                  </TouchableOpacity>
+                )
+              }
+              return <View key={i} style={{ width: w, height: h, borderRadius: 16, backgroundColor: '#F1F5F9', opacity: 0.35 }} />
+            }
+
+            return (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {/* Main photo */}
+                <TouchableOpacity activeOpacity={0.9} onPress={() => userPhotos[0] && setPreviewIdx(0)} style={{ width: MAIN_W, height: MAIN_H }}>
+                  {renderSlot(0, MAIN_W, MAIN_H)}
+                </TouchableOpacity>
+                {/* 2 small on right */}
+                <View style={{ gap: 8 }}>
+                  {renderSlot(1, SMALL_W, SMALL_H)}
+                  {renderSlot(2, SMALL_W, SMALL_H)}
+                </View>
+              </View>
+            )
+          })()}
+        </View>
+
+        {/* Name + bio card */}
+        <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.4, marginBottom: userData?.bio ? 8 : 0 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
+          {userData?.bio ? (
+            <Text style={{ fontSize: 14, color: '#64748B', lineHeight: 21 }}>{userData.bio}</Text>
+          ) : (
+            <Text style={{ fontSize: 14, color: '#CBD5E1', fontStyle: 'italic' }}>No bio yet</Text>
+          )}
+        </View>
+
+        {/* Interests card */}
+        <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Interests</Text>
+            <TouchableOpacity onPress={() => { setDraftInterests(userData?.interests || []); setInterestsEditOpen(true) }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+              <Feather name="edit-2" size={11} color="#6366F1" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          {(userData?.interests || []).length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {(userData.interests as string[]).map((item: string) => (
+                <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 7 }}>
+                  <Text style={{ fontSize: 13, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => { setDraftInterests([]); setInterestsEditOpen(true) }}
+              style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>✨ Add interests</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Languages card */}
+        <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 20, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
+            <TouchableOpacity onPress={() => { setDraftLangs(userData?.langs || []); setLangEditOpen(true) }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+              <Feather name="edit-2" size={11} color="#6366F1" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          {(userData?.langs || []).length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {(userData.langs as string[]).map((code: string) => {
+                const l = LANGUAGES_LIST.find(x => x.code === code)
+                return l ? (
+                  <View key={code} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F1F5F9', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8 }}>
+                    <Text style={{ fontSize: 18 }}>{l.flag}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569' }}>{l.label}</Text>
+                  </View>
+                ) : null
+              })}
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => { setDraftLangs([]); setLangEditOpen(true) }}
+              style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>🌍 Add languages</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Actions */}
+        <View style={{ marginHorizontal: 20, gap: 2 }}>
+          {[
+            { icon: 'settings', label: 'Settings', color: '#334155' },
+            { icon: 'shield', label: 'Privacy Policy', color: '#334155' },
+            { icon: 'file-text', label: 'Terms of Service', color: '#334155' },
+            { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
+            { icon: 'trash-2', label: 'Delete Account', color: '#EF4444' },
+          ].map((item, idx, arr) => (
+            <TouchableOpacity key={item.label}
+              style={{
+                flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+                paddingHorizontal: 16, paddingVertical: 14, marginBottom: 1,
+                borderTopLeftRadius: idx === 0 ? 20 : 6, borderTopRightRadius: idx === 0 ? 20 : 6,
+                borderBottomLeftRadius: idx === arr.length - 1 ? 20 : 6, borderBottomRightRadius: idx === arr.length - 1 ? 20 : 6,
+              }}
+              onPress={() => {
+                if (item.label === 'Log Out') { onLogOut?.(); return }
+                if (item.label === 'Delete Account') {
+                  Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: async () => {
+                      if (userData?.dbId) await supabase.from('profiles').delete().eq('id', userData.dbId)
+                      await supabase.auth.signOut()
+                      onLogOut?.()
+                    }},
+                  ])
+                }
+              }}>
+              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: item.color === '#EF4444' ? 'rgba(239,68,68,0.08)' : '#F8FAFC', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Feather name={item.icon as any} size={16} color={item.color} />
+              </View>
+              <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: item.color }}>{item.label}</Text>
+              <Feather name="chevron-right" size={16} color="#CBD5E1" />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+      </ScrollView>
     </View>
   )
 }
