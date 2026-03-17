@@ -4531,24 +4531,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
     // Side effects OUTSIDE the state updater
     if (!currentState && ev.type === 'community' && !ev.isHosted) {
-      // Compute compatibility
-      const userLangsNow: string[] = userData?.langs || []
-      const hostLangsNow: string[] = ev.hostLangs || []
-      const langMatchNow = userLangsNow.some((l: string) => hostLangsNow.includes(l))
-      const interestMatchNow = (userData?.interests || []).includes(ev.category)
-      const compatScoreNow = (langMatchNow ? 35 : 10) + (interestMatchNow ? 40 : 5) + 20
-      const isGoodMatch = compatScoreNow >= 60
+      // Simulate host approval after 5s (in real app host approves manually)
       setTimeout(() => {
         setJoinedEvents(cur => {
           if (cur[ev.id] !== 'pending') return cur
-          if (!isGoodMatch) { const next = { ...cur }; delete next[ev.id]; return next }
           return { ...cur, [ev.id]: 'joined' }
         })
-        if (isGoodMatch) {
-          addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved! Check Vibe tab 🎉', body: ev.title })
-        } else {
-          addNotif({ type: 'crew_ready', emoji: '😔', color: '#F87171', title: 'Request not approved', body: `"${ev.title}" — complete your profile to improve your match score` })
-        }
+        addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: ev.title })
       }, 5000)
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
