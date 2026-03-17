@@ -3034,10 +3034,10 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
 }
 
 function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages }: any) {
-  // Official/concert events — shown as AI crew-finding cards
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && e.type !== 'community')
-  // Community events (host-gated) — shown as request/approval cards
-  const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && e.type === 'community')
+  // Official/concert events + approved community events — shown as crew cards
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
+  // Community events pending host approval — shown as waiting cards
+  const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && !e.isHosted && e.type === 'community')
   // User-created socials the user requested to join — shown as "awaiting approval"
   const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted)
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
@@ -3322,23 +3322,20 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             )
           })}
           {myEvents.map((ev: any) => {
+            const isCommunity = ev.type === 'community'
             const format     = userEventFormat?.[ev.id]    || (ev.type === 'official' ? '1+1' : 'squad')
             const transport  = userEventTransport?.[ev.id] || 'meet'
-            const cap        = VIBE_FORMAT_MAX[format] || 5
-            const threshold  = VIBE_FORMAT_THRESHOLD[format] || cap
-            const isParty    = format === 'party'
-            const isScanning = joinedEvents?.[ev.id] === 'pending'
-            const partnersFound = isScanning ? 0 : cap - 1
-            const found      = isScanning ? 1 : cap   // pending = just me; joined = full crew
-            const isActive   = !isScanning && found >= threshold
-            const partners   = aiRankedProfiles.slice(0, partnersFound) // AI-ranked partners
+            // For community events: use real participant count as crew size
+            const cap        = isCommunity ? Math.min(ev.participantsCount || 5, 5) : (VIBE_FORMAT_MAX[format] || 5)
+            const threshold  = isCommunity ? cap : (VIBE_FORMAT_THRESHOLD[format] || cap)
+            const isParty    = !isCommunity && format === 'party'
+            const partnersFound = cap - 1
+            const found      = cap
+            const isActive   = true // community joined = host approved = always active
+            const partners   = aiRankedProfiles.slice(0, partnersFound)
 
             // Status label
-            const statusLabel = isScanning
-              ? 'SCANNING…'
-              : isActive
-              ? (isParty ? 'GROUP ACTIVE 🔥' : 'READY ✓')
-              : 'SCANNING…'
+            const statusLabel = isCommunity ? 'HOST APPROVED ✓' : (isParty ? 'GROUP ACTIVE 🔥' : 'READY ✓')
             const statusColor = isActive ? '#43E97B' : '#818CF8'
             const statusBg    = isActive ? 'rgba(67,233,123,0.15)' : 'rgba(99,102,241,0.13)'
             const statusBorder= isActive ? 'rgba(67,233,123,0.35)' : 'rgba(99,102,241,0.28)'
@@ -3365,7 +3362,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
                   {/* My choices pills */}
                   <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
-                    {[VIBE_FORMAT_LABEL[format], TRANSPORT_LABEL[transport]].map((label, i) => (
+                    {(isCommunity
+                      ? [ev.category, TRANSPORT_LABEL[transport]]
+                      : [VIBE_FORMAT_LABEL[format], TRANSPORT_LABEL[transport]]
+                    ).map((label, i) => (
                       <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
                         <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '600' }}>{label || '—'}</Text>
                       </View>
@@ -3376,10 +3376,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ marginBottom: 18 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                       <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '700', letterSpacing: 0.5 }}>
-                        {isParty && isActive ? 'GROUP ACTIVE · STILL OPEN' : 'CREW FOUND'}
+                        {isCommunity ? 'GROUP MEMBERS' : isParty && isActive ? 'GROUP ACTIVE · STILL OPEN' : 'CREW FOUND'}
                       </Text>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor }}>
-                        {isParty ? `${found} / ${cap} joined` : `${found} / ${cap}`}
+                        {isCommunity ? `${ev.participantsCount || cap} going` : isParty ? `${found} / ${cap} joined` : `${found} / ${cap}`}
                       </Text>
                     </View>
                     {/* Two-segment bar for party: threshold zone + overflow zone */}
@@ -3450,7 +3450,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         onPress={() => onConfirm?.(ev, partners, format)}
                         style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
                         <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>
-                          {isParty ? 'Join the chat 🚀' : "Let's go! 🚀"}
+                          {isCommunity ? 'Confirm & Open Chat 🚀' : isParty ? 'Join the chat 🚀' : "Let's go! 🚀"}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -4545,28 +4545,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           return { ...cur, [ev.id]: 'joined' }
         })
         if (isGoodMatch) {
-          addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request!', body: ev.title })
-          // Create group chat with correct structure
-          const chatId = Date.now()
-          const members = QUEUE_PROFILES.slice(0, Math.min(3, ev.participantsCount || 3))
-          setChatList(prev => [{
-            id: chatId,
-            type: 'group',
-            event: ev.title,
-            eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-            members: members.length + 1,
-            avatars: members.map((m: any) => m.photo).filter(Boolean),
-            colors: members.map((m: any) => m.color),
-            memberProfiles: members,
-            lastMsg: '🎉 You\'ve been approved! Welcome',
-            time: 'now',
-            isNew: true,
-            expiresIn: 48,
-          }, ...prev])
-          setChatMessages((prev: any) => ({
-            ...prev,
-            [chatId]: [{ id: 1, from: 'system', text: `You've been approved to join "${ev.title}" 🎉 Welcome!`, time: 'now' }],
-          }))
+          addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved! Check Vibe tab 🎉', body: ev.title })
         } else {
           addNotif({ type: 'crew_ready', emoji: '😔', color: '#F87171', title: 'Request not approved', body: `"${ev.title}" — complete your profile to improve your match score` })
         }
