@@ -1672,11 +1672,17 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     ? [...communityFiltered].sort((a, b) => (userCategories.includes(b.category) ? 1 : 0) - (userCategories.includes(a.category) ? 1 : 0))
     : communityFiltered
 
-  // Apply search to official
+  // Apply search + date filter to official
   const officialEvents = officialAll.filter(ev => {
-    if (!searchQuery.trim()) return true
-    const q = searchQuery.toLowerCase()
-    return (ev.title || '').toLowerCase().includes(q) || (ev.category || '').toLowerCase().includes(q)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      if (!(ev.title || '').toLowerCase().includes(q) && !(ev.category || '').toLowerCase().includes(q)) return false
+    }
+    if (selectedDate) {
+      const evDate = parseEventDate(ev.time || ev.date_label || '')
+      if (!evDate || evDate.toDateString() !== selectedDate.toDateString()) return false
+    }
+    return true
   })
 
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
