@@ -2344,7 +2344,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const isLive = isToday(ev.time)
 
               // Use actual data for crew count
-              const format        = userEventFormat[ev.id] || 'squad'
+              const format        = userEventFormat[ev.id] || (ev.type === 'official' ? '1+1' : 'squad')
               const cap           = VIBE_FORMAT_MAX[format] || 5
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
               // Crew is always fully assembled (mirrors VibeCheck simulation)
@@ -3296,7 +3296,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             )
           })}
           {myEvents.map((ev: any) => {
-            const format     = userEventFormat?.[ev.id]    || 'squad'
+            const format     = userEventFormat?.[ev.id]    || (ev.type === 'official' ? '1+1' : 'squad')
             const transport  = userEventTransport?.[ev.id] || 'meet'
             const cap        = VIBE_FORMAT_MAX[format] || 5
             const threshold  = VIBE_FORMAT_THRESHOLD[format] || cap
