@@ -1573,22 +1573,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     const lower = timeStr.toLowerCase()
     if (lower.startsWith('today')) return today
     if (lower.startsWith('tomorrow')) { const d = new Date(today); d.setDate(d.getDate() + 1); return d }
-    const dayMap: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 }
-    const prefix = lower.slice(0, 3)
-    if (prefix in dayMap) {
-      const d = new Date(today)
-      const diff = ((dayMap[prefix] - d.getDay()) + 7) % 7 || 7
-      d.setDate(d.getDate() + diff)
-      return d
-    }
-    // Format: "26/03/2026" or "26.03.2026"
+    // Format: "26/03/2026" or "26.03.2026" — check before day-of-week
     const dmyMatch = timeStr.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/)
     if (dmyMatch) {
       const d = new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]))
       d.setHours(0, 0, 0, 0)
       return d
     }
-    // Format: "Thursday, 26 March 2026" or "26 March 2026" or "Tuesday, 04 August 2026"
+    // Format: "Thursday, 26 March 2026" or "26 March 2026" — check before day-of-week
     const monthMap: Record<string, number> = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 }
     const longMatch = timeStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/)
     if (longMatch) {
@@ -1598,6 +1590,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         d.setHours(0, 0, 0, 0)
         return d
       }
+    }
+    // Format: "Sat, 20:30" or "Mon" — day of week (relative)
+    const dayMap: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 }
+    const prefix = lower.slice(0, 3)
+    if (prefix in dayMap) {
+      const d = new Date(today)
+      const diff = ((dayMap[prefix] - d.getDay()) + 7) % 7 || 7
+      d.setDate(d.getDate() + diff)
+      return d
     }
     return null
   }
