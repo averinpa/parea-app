@@ -1733,7 +1733,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       <TouchableOpacity
         onPress={() => {
           if (isFull) return
-          if (state === 'pending' && ev.type === 'community' && !ev.isHosted) return // waiting for host
+          if (ev.type === 'community' && !ev.isHosted && state !== 'none') return // locked after request sent
           if (state === 'none') openJoinSheet(ev)
           else if (state === 'joined') onJoin(ev)
         }}
