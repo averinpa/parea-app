@@ -1726,8 +1726,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           {/* Greeting row */}
           <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <View>
-              <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '500' }}>Hi, {userName} 👋</Text>
-              <Text style={{ fontSize: 28, fontWeight: '900', color: '#6366F1', letterSpacing: -0.5, marginTop: 1 }}>Parea</Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>Hi, {userName} 👋</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
               {/* City */}
