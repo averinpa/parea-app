@@ -1958,11 +1958,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance || ''}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
-                      <TouchableOpacity
-                        onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
-                        style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, backgroundColor: '#6366F1' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>I'm Going</Text>
-                      </TouchableOpacity>
+                      {(() => { const st = getJoinState(ev); const active = st !== 'none'; return (
+                        <TouchableOpacity
+                          onPress={() => { if (!active) openJoinSheet(ev) }}
+                          activeOpacity={active ? 1 : 0.75}
+                          style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, backgroundColor: active ? 'rgba(34,197,94,0.15)' : '#6366F1', opacity: active ? 0.9 : 1 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: active ? '#16a34a' : '#fff' }}>
+                            {st === 'confirmed' ? 'Confirmed ✓' : st === 'joined' ? 'Crew ready ✓' : st === 'pending' ? 'Finding crew…' : "I'm Going"}
+                          </Text>
+                        </TouchableOpacity>
+                      )})()}
                     </View>
                   </View>
                 </TouchableOpacity>
