@@ -2278,12 +2278,21 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
     <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={{ paddingTop: 52, paddingHorizontal: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
-          <View>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#818CF8', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Parea</Text>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8 }}>
-              {subTab === 'going' ? 'My Plans' : 'Chats'}
-            </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 20 }}>{subTab === 'going' ? '🗓' : '💬'}</Text>
+            </View>
+            <View>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>
+                {subTab === 'going' ? 'My Plans' : 'Chats'}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500', marginTop: 1 }}>
+                {subTab === 'going'
+                  ? `${myEvents.length + activeHostedEvents.length} upcoming`
+                  : `${chatList.length} conversation${chatList.length !== 1 ? 's' : ''}`}
+              </Text>
+            </View>
           </View>
           {hasNew && subTab === 'messages' && (
             <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99, backgroundColor: '#6366F1' }}>
