@@ -2511,76 +2511,54 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
                   </View>
                 ) : (() => {
-                  const allAvatars = chat.avatars || []
-                  const cols = (chat.colors || ['#818CF8', '#6366F1', '#4F46E5', '#7C3AED'])
-                  const totalOthers = (chat.members || 1) - 1
+                  const photos = (chat.avatars || []).filter(Boolean).slice(0, 2)
+                  const cols = (chat.colors || ['#818CF8', '#6366F1'])
                   const gc0 = (cols[0] && typeof cols[0] === 'string') ? cols[0] : '#818CF8'
                   const gc1 = (cols[1] && typeof cols[1] === 'string') ? cols[1] : '#6366F1'
+                  const totalOthers = Math.max(0, (chat.members || 1) - 1)
+                  const extra = Math.max(0, totalOthers - photos.length)
+                  const SZ = 42
+                  const SHIFT = 22
 
-                  if (allAvatars.length === 0) {
+                  if (photos.length === 0) {
                     return (
                       <LinearGradient colors={[gc0, gc1]}
-                        style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', elevation: 4 }}>
+                        style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', elevation: 3 }}>
                         <Text style={{ fontSize: 26 }}>{chat.eventEmoji || '🎉'}</Text>
                       </LinearGradient>
                     )
                   }
 
-                  // Telegram-style: 2×2 grid clipped to circle
-                  // Show up to 4 cells; fill missing with color swatches
-                  const cells = allAvatars.slice(0, 4)
-                  const numCells = Math.min(totalOthers, 4)
-                  const HALF = 27
-                  const GAP = 1.5
-
-                  const CellView = ({ av, idx }: { av?: string; idx: number }) => {
-                    const bg = (cols[idx] && typeof cols[idx] === 'string') ? cols[idx] : '#818CF8'
-                    return (
-                      <View style={{ width: HALF, height: HALF, backgroundColor: bg, overflow: 'hidden' }}>
-                        {av ? <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} /> : null}
-                      </View>
-                    )
-                  }
-
-                  const extra = Math.max(0, totalOthers - cells.length)
-
+                  const containerW = SZ + (photos.length > 1 ? SHIFT : 0) + (extra > 0 ? SHIFT : 0)
                   return (
-                    <View style={{ width: 54, height: 54, borderRadius: 27, overflow: 'hidden', elevation: 4, backgroundColor: '#E2E8F0' }}>
-                      {numCells === 1 ? (
-                        <View style={{ flex: 1, backgroundColor: gc0 }}>
-                          {cells[0] && <Image source={{ uri: cells[0] }} style={{ width: '100%', height: '100%' }} />}
-                        </View>
-                      ) : numCells === 2 ? (
-                        <View style={{ flex: 1, flexDirection: 'row', gap: GAP }}>
-                          <CellView av={cells[0]} idx={0} />
-                          <CellView av={cells[1]} idx={1} />
-                        </View>
-                      ) : numCells === 3 ? (
-                        <View style={{ flex: 1, gap: GAP }}>
-                          <View style={{ flexDirection: 'row', gap: GAP, flex: 1 }}>
-                            <CellView av={cells[0]} idx={0} />
-                            <CellView av={cells[1]} idx={1} />
+                    <View style={{ width: containerW, height: SZ, position: 'relative' }}>
+                      {/* Render photos back-to-front so first is on top */}
+                      {[...photos].reverse().map((photo: string, ri: number) => {
+                        const ai = photos.length - 1 - ri
+                        return (
+                          <View key={ai} style={{
+                            position: 'absolute', left: ai * SHIFT,
+                            width: SZ, height: SZ, borderRadius: SZ / 2,
+                            borderWidth: 2.5, borderColor: '#fff',
+                            overflow: 'hidden',
+                            backgroundColor: (cols[ai] && typeof cols[ai] === 'string') ? cols[ai] : '#818CF8',
+                            zIndex: photos.length - ai, elevation: photos.length - ai,
+                          }}>
+                            <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} />
                           </View>
-                          <View style={{ flex: 1, backgroundColor: (cols[2] && typeof cols[2] === 'string') ? cols[2] : '#4F46E5', overflow: 'hidden' }}>
-                            {cells[2] && <Image source={{ uri: cells[2] }} style={{ width: '100%', height: '100%' }} />}
-                          </View>
-                        </View>
-                      ) : (
-                        <View style={{ flex: 1, gap: GAP }}>
-                          <View style={{ flexDirection: 'row', gap: GAP, flex: 1 }}>
-                            <CellView av={cells[0]} idx={0} />
-                            <CellView av={cells[1]} idx={1} />
-                          </View>
-                          <View style={{ flexDirection: 'row', gap: GAP, flex: 1 }}>
-                            <CellView av={cells[2]} idx={2} />
-                            {extra > 0 ? (
-                              <View style={{ width: HALF, height: HALF, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff' }}>+{extra + 1}</Text>
-                              </View>
-                            ) : (
-                              <CellView av={cells[3]} idx={3} />
-                            )}
-                          </View>
+                        )
+                      })}
+                      {extra > 0 && (
+                        <View style={{
+                          position: 'absolute', left: photos.length * SHIFT,
+                          top: (SZ - 28) / 2,
+                          width: 28, height: 28, borderRadius: 14,
+                          backgroundColor: '#6366F1',
+                          alignItems: 'center', justifyContent: 'center',
+                          borderWidth: 2.5, borderColor: '#fff',
+                          zIndex: 0, elevation: 0,
+                        }}>
+                          <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
                         </View>
                       )}
                     </View>
