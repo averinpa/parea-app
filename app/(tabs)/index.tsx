@@ -5556,14 +5556,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ) : (
                   notifications.map(n => {
                     const handleNotifTap = () => {
-                      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+                      dismissNotif(n.id)
                       closeNotifPanel()
-                      if (n.type === 'join_request') {
+                      if (n.type === 'join_request' || n.type === 'member_left') {
                         setActiveTab('vibecheck')
-                      } else if (n.type === 'match' || n.type === 'group_chat') {
+                      } else if (n.type === 'match' || n.type === 'group_chat' || n.type === 'new_message' || n.type === 'member_joined') {
                         setMessagesInitialSubTab('messages')
                         setActiveTab('messages')
-                      } else if (n.type === 'confirmed') {
+                      } else if (n.type === 'confirmed' || n.type === 'host_full' || n.type === 'reminder_24h' || n.type === 'reminder_2h' || n.type === 'event_cancelled') {
+                        setMessagesInitialSubTab('going')
+                        setActiveTab('messages')
+                      } else if (n.type === 'crew_ready') {
                         setMessagesInitialSubTab('going')
                         setActiveTab('messages')
                       }
@@ -5592,7 +5595,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             {!n.read && n.type !== 'welcome' && (
                               <Text style={{ fontSize: 11, color: '#94A3B8' }}>· {
                                 n.type === 'join_request' ? 'tap to review →' :
-                                n.type === 'match' || n.type === 'group_chat' || n.type === 'confirmed' || n.type === 'host_full' ? 'tap to open chat →' : 'tap to open →'
+                                n.type === 'match' || n.type === 'group_chat' || n.type === 'new_message' || n.type === 'member_joined' ? 'tap to open chat →' :
+                                n.type === 'reminder_24h' || n.type === 'reminder_2h' ? 'tap to see plans →' :
+                                n.type === 'event_cancelled' || n.type === 'member_left' ? 'tap to view →' : 'tap to open →'
                               }</Text>
                             )}
                           </View>
