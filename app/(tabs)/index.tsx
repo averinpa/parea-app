@@ -5291,43 +5291,34 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 4 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 6 }}
                     onPress={() => { setGroupMembersOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
                     activeOpacity={0.7}
                   >
-                    {/* Overlapping avatars / fallback emoji */}
-                    {(openChat.avatars || []).length === 0 ? (
-                      <LinearGradient
-                        colors={[
-                          ((openChat.colors || [])[0] && typeof (openChat.colors || [])[0] === 'string') ? (openChat.colors || [])[0] : '#818CF8',
-                          ((openChat.colors || [])[1] && typeof (openChat.colors || [])[1] === 'string') ? (openChat.colors || [])[1] : '#6366F1',
-                        ]}
-                        style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                        <Text style={{ fontSize: 20 }}>{openChat.eventEmoji || '🎉'}</Text>
-                      </LinearGradient>
-                    ) : (
-                      <View style={{ width: 54, height: 36, position: 'relative', marginRight: 10 }}>
-                        {(openChat.avatars || []).slice(0, 3).map((av: string, ai: number) => (
-                          <View key={ai} style={{ position: 'absolute', left: ai * 16, top: 0, width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: (openChat.colors || [])[ai] || '#818CF8', zIndex: 3 - ai }}>
-                            <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }} numberOfLines={1}>{openChat.event}</Text>
-                      <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>
-                        {openChat.eventEmoji} {openChat.members} members · tap to see all
+                    <LinearGradient
+                      colors={[
+                        ((openChat.colors || [])[0] && typeof (openChat.colors || [])[0] === 'string') ? (openChat.colors || [])[0] : '#818CF8',
+                        ((openChat.colors || [])[1] && typeof (openChat.colors || [])[1] === 'string') ? (openChat.colors || [])[1] : '#6366F1',
+                      ]}
+                      style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20 }}>{openChat.eventEmoji || '🎉'}</Text>
+                    </LinearGradient>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.2 }} numberOfLines={1}>{openChat.event}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }} numberOfLines={1}>
+                        {openChat.members} members
                       </Text>
                     </View>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity onPress={() => {
+                <TouchableOpacity
+                  style={{ padding: 6 }}
+                  onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                   if (openChat.hostEventId) {
                     Alert.alert(
-                      `Cancel "${openChat.event}"?`,
-                      'This will delete the event and remove all members from the chat.',
+                      openChat.event,
+                      'What do you want to do?',
                       [
                         { text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => {
                           setUserCreatedEvents(prev => prev.filter(e => e.id !== openChat.hostEventId))
@@ -5337,15 +5328,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           setOpenChat(null)
                           showToast("Event cancelled 🗑️")
                         }},
-                        { text: 'Keep', style: 'cancel' },
+                        { text: 'Close', style: 'cancel' },
                       ]
                     )
                   } else {
                     Alert.alert(
-                      openChat.type === 'duo' ? `Leave chat with ${openChat.name}?` : `Leave "${openChat.event}"?`,
-                      openChat.type === 'duo' ? `${openChat.name} will see that your plans changed 📅` : `The group will see you've left. Your spot will be freed.`,
+                      openChat.type === 'duo' ? `Chat with ${openChat.name}` : openChat.event,
+                      'What do you want to do?',
                       [
-                        { text: 'Leave', style: 'destructive', onPress: () => {
+                        { text: 'Leave chat', style: 'destructive', onPress: () => {
                           setChatMessages(prev => ({
                             ...prev,
                             [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
@@ -5354,14 +5345,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           setOpenChat(null)
                           showToast("We let them know your plans changed 📅")
                         }},
-                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Close', style: 'cancel' },
                       ]
                     )
                   }
                 }}>
-                  {openChat.hostEventId
-                    ? <Feather name="trash-2" size={22} color="#ef4444" />
-                    : <Feather name="more-horizontal" size={22} color="#334155" />}
+                  <Feather name="more-vertical" size={22} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
