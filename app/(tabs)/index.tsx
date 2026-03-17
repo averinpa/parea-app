@@ -1723,7 +1723,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const JoinButton = ({ ev }: { ev: any }) => {
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : ev.isHosted ? 'Request' : 'Join'
+    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Requested…' : (ev.isHosted || ev.type === 'community') ? 'Request' : 'Join'
     let bg: string, textColor: string
     if (isFull)                   { bg = '#F1F5F9'; textColor = '#94A3B8' }
     else if (state === 'joined')  { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
@@ -1731,7 +1731,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     else                          { bg = '#6366F1'; textColor = '#fff' }
     return (
       <TouchableOpacity
-        onPress={() => { if (!isFull && state === 'none') openJoinSheet(ev); else if (!isFull) onJoin(ev) }}
+        onPress={() => { if (isFull) return; if (state === 'none' && ev.type !== 'community') openJoinSheet(ev); else if (state !== 'joined') onJoin(ev) }}
         activeOpacity={isFull ? 1 : 0.75}
         style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 12, backgroundColor: bg, opacity: isFull ? 0.55 : 1 }}>
         <Text style={{ fontSize: 13, fontWeight: '700', color: textColor }}>{label}</Text>
