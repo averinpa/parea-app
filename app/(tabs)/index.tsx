@@ -2376,7 +2376,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 
               // Use actual data for crew count
               const format        = userEventFormat[ev.id] || 'squad'
-              const cap           = ev.maxParticipants || VIBE_FORMAT_MAX[format] || 5
+              const cap           = VIBE_FORMAT_MAX[format] || 5
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
               const chatForEvent  = chatList.find((c: any) => c.hostEventId === ev.id || c.event === ev.title)
               const approvedCount = (approvedJoiners[ev.id] || []).length
@@ -3309,10 +3309,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const cap        = VIBE_FORMAT_MAX[format] || 5
             const threshold  = VIBE_FORMAT_THRESHOLD[format] || cap
             const isParty    = format === 'party'
-            // found = total slots filled INCLUDING me (slot #1)
-            // partners = found - 1 (the other people in the queue)
-            const partnersFound = Math.min(cap - 1, (ev.id % Math.max(1, threshold - 1)) + 1)
-            const found      = 1 + partnersFound   // me + partners
+            // Crew is always fully assembled — show ready state so user can confirm
+            const partnersFound = cap - 1
+            const found      = cap   // me + all partners
             const isActive   = found >= threshold
             const partners   = aiRankedProfiles.slice(0, partnersFound) // AI-ranked partners
 
