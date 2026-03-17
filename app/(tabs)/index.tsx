@@ -2378,11 +2378,9 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const format        = userEventFormat[ev.id] || 'squad'
               const cap           = VIBE_FORMAT_MAX[format] || 5
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
-              const chatForEvent  = chatList.find((c: any) => c.hostEventId === ev.id || c.event === ev.title)
-              const approvedCount = (approvedJoiners[ev.id] || []).length
-              const actualMembers = chatForEvent ? (chatForEvent.members || approvedCount + 1) : approvedCount + 1
-              const found         = Math.min(actualMembers, cap)
-              const partnersFound = Math.max(0, found - 1)
+              // Crew is always fully assembled (mirrors VibeCheck simulation)
+              const found         = cap
+              const partnersFound = cap - 1
               const isActive      = found >= threshold
               const crewProfiles  = QUEUE_PROFILES.slice(0, partnersFound)
 
