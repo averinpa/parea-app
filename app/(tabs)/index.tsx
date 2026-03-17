@@ -3588,6 +3588,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
   }
 
   const [profilePreviewOpen, setProfilePreviewOpen] = useState(false)
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
 
   return (
     <View style={{ flex: 1 }}>
@@ -3838,8 +3839,82 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </View>
       </Modal>
 
-      {/* ── Main Profile (compact, minimal scroll) ───────────────────────── */}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+      {/* ── Edit Profile sheet ────────────────────────────────────────────── */}
+      <Modal visible={editProfileOpen} transparent animationType="slide" onRequestClose={() => setEditProfileOpen(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={() => setEditProfileOpen(false)} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '80%' }}>
+          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Edit Profile</Text>
+            <TouchableOpacity onPress={() => setEditProfileOpen(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="x" size={16} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            {/* Interests */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Interests</Text>
+              <TouchableOpacity onPress={() => { setDraftInterests(userData?.interests || []); setEditProfileOpen(false); setTimeout(() => setInterestsEditOpen(true), 300) }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Edit →</Text>
+              </TouchableOpacity>
+            </View>
+            {(userData?.interests || []).length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {(userData.interests as string[]).map((item: string) => (
+                  <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
+                    <Text style={{ fontSize: 13, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => { setDraftInterests([]); setEditProfileOpen(false); setTimeout(() => setInterestsEditOpen(true), 300) }}
+                style={{ alignItems: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', marginBottom: 20 }}>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>✨ Add interests</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Languages */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
+              <TouchableOpacity onPress={() => { setDraftLangs(userData?.langs || []); setEditProfileOpen(false); setTimeout(() => setLangEditOpen(true), 300) }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Edit →</Text>
+              </TouchableOpacity>
+            </View>
+            {(userData?.langs || []).length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {(userData.langs as string[]).map((code: string) => {
+                  const l = LANGUAGES_LIST.find(x => x.code === code)
+                  return l ? (
+                    <View key={code} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F8FAFC', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7 }}>
+                      <Text style={{ fontSize: 18 }}>{l.flag}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#475569' }}>{l.label}</Text>
+                    </View>
+                  ) : null
+                })}
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => { setDraftLangs([]); setEditProfileOpen(false); setTimeout(() => setLangEditOpen(true), 300) }}
+                style={{ alignItems: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', marginBottom: 20 }}>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>🌍 Add languages</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Vibe */}
+            <View style={{ marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Vibe</Text>
+              <TouchableOpacity onPress={() => { setDraft({ musicGenres: userData?.musicGenres || [], socialEnergy: userData?.socialEnergy, drinksPref: userData?.drinksPref, smokingPref: userData?.smokingPref }); setEditProfileOpen(false); setTimeout(() => setVibeEditOpen(true), 300) }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, gap: 10 }}>
+                <Text style={{ fontSize: 20 }}>✨</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569', flex: 1 }}>Music, energy, drinks & smoking</Text>
+                <Feather name="chevron-right" size={16} color="#CBD5E1" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* ── Main Profile (no scroll) ───────────────────────────────────────── */}
+      <View style={{ flex: 1, paddingBottom: Math.max(insets.bottom, 16) }}>
 
         {/* Header */}
         <View style={{ paddingTop: Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -3856,7 +3931,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         {(() => {
           const SZ = (W - 40 - 16) / 3
           return (
-            <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 18 }}>
               {[0, 1, 2].map(i => {
                 const uri = userPhotos[i]
                 const isMain = i === 0
@@ -3893,65 +3968,22 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
           )
         })()}
 
-        {/* Name + bio */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-          <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
+        {/* Name + bio — centered */}
+        <View style={{ alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 }}>
+          <Text style={{ fontSize: 22, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3, textAlign: 'center' }}>{nm}{ag ? `, ${ag}` : ''}</Text>
           {userData?.bio ? (
-            <Text style={{ fontSize: 13, color: '#64748B', marginTop: 3, lineHeight: 19 }} numberOfLines={2}>{userData.bio}</Text>
+            <Text style={{ fontSize: 13, color: '#64748B', marginTop: 4, lineHeight: 19, textAlign: 'center' }} numberOfLines={2}>{userData.bio}</Text>
           ) : null}
         </View>
 
-        {/* Interests + Languages in one card */}
-        <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
-          {/* Interests row */}
-          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Interests</Text>
-              <TouchableOpacity onPress={() => { setDraftInterests(userData?.interests || []); setInterestsEditOpen(true) }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-            {(userData?.interests || []).length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                {(userData.interests as string[]).map((item: string) => (
-                  <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
-                    <Text style={{ fontSize: 13, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            ) : (
-              <TouchableOpacity onPress={() => { setDraftInterests([]); setInterestsEditOpen(true) }}>
-                <Text style={{ fontSize: 13, color: '#94A3B8' }}>+ Add interests</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={{ height: 1, backgroundColor: '#F1F5F9', marginHorizontal: 16 }} />
-          {/* Languages row */}
-          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
-              <TouchableOpacity onPress={() => { setDraftLangs(userData?.langs || []); setLangEditOpen(true) }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-            {(userData?.langs || []).length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {(userData.langs as string[]).map((code: string) => {
-                  const l = LANGUAGES_LIST.find(x => x.code === code)
-                  return l ? (
-                    <View key={code} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F8FAFC', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5 }}>
-                      <Text style={{ fontSize: 16 }}>{l.flag}</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{l.label}</Text>
-                    </View>
-                  ) : null
-                })}
-              </View>
-            ) : (
-              <TouchableOpacity onPress={() => { setDraftLangs([]); setLangEditOpen(true) }}>
-                <Text style={{ fontSize: 13, color: '#94A3B8' }}>+ Add languages</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        {/* Edit Profile button */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <TouchableOpacity
+            onPress={() => { setEditProfileOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', borderRadius: 16, paddingVertical: 14 }}>
+            <Feather name="edit-2" size={16} color="#fff" />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Edit Profile</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Actions */}
@@ -3989,7 +4021,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
           ))}
         </View>
 
-      </ScrollView>
+      </View>
     </View>
   )
 }
