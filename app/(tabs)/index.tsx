@@ -1623,7 +1623,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   // Official: DB events + MOCK official fallback (if DB empty)
   const officialMock = MOCK_EVENTS.filter(e => e.city === city && e.type === 'official' && !isEventPast(e.time))
   const officialAll: any[] = officialDbEvents.length > 0
-    ? officialDbEvents.map(e => ({ ...e, _fromDb: true, type: 'official', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.max_participants ?? e.capacity ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
+    ? officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.max_participants ?? e.capacity ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
     : officialMock
 
   // Community: MOCK community + user-created extra events
@@ -4067,7 +4067,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, _fromDb: true, type: 'official', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.max_participants ?? e.capacity ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
+      .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.max_participants ?? e.capacity ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
   }, [])
   const persistLoaded = useRef(false)
 
