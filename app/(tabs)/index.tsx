@@ -1581,6 +1581,24 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       d.setDate(d.getDate() + diff)
       return d
     }
+    // Format: "26/03/2026" or "26.03.2026"
+    const dmyMatch = timeStr.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/)
+    if (dmyMatch) {
+      const d = new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]))
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+    // Format: "Thursday, 26 March 2026" or "26 March 2026" or "Tuesday, 04 August 2026"
+    const monthMap: Record<string, number> = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 }
+    const longMatch = timeStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/)
+    if (longMatch) {
+      const month = monthMap[longMatch[2].toLowerCase()]
+      if (month !== undefined) {
+        const d = new Date(parseInt(longMatch[3]), month, parseInt(longMatch[1]))
+        d.setHours(0, 0, 0, 0)
+        return d
+      }
+    }
     return null
   }
 
