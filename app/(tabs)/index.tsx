@@ -2692,6 +2692,7 @@ const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': 'Duo · me +1', s
 const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', networking: '🤝 Networking', activity: '⚡ Activity' }
 
 function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () => void }) {
+  const insets = useSafeAreaInsets()
   const [photoIdx, setPhotoIdx] = useState(0)
   const slideAnim = useRef(new Animated.Value(300)).current
 
@@ -2760,7 +2761,7 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
           </TouchableOpacity>
         </View>
 
-        <View style={{ paddingHorizontal: 22, paddingBottom: 40 }}>
+        <View style={{ paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
           {/* Name + age */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
             <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
@@ -5265,7 +5266,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
             <StatusBar style="dark" />
             <SafeAreaView style={s.fill}>
-              <View style={[s.chatHeader, { paddingTop: Math.max(insets.top, 12) }]}>
+              <View style={s.chatHeader}>
                 <TouchableOpacity onPress={() => setOpenChat(null)} style={{ padding: 4 }}>
                   <Ionicons name="chevron-back" size={26} color="#1E1B4B" />
                 </TouchableOpacity>
@@ -5515,7 +5516,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         <Modal transparent animationType="slide" onRequestClose={() => setGroupMembersOpen(false)}>
           <View style={{ flex: 1, justifyContent: 'flex-end' }}>
             <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setGroupMembersOpen(false)} />
-            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%', paddingBottom: 32 }}>
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%', paddingBottom: Math.max(insets.bottom, 32) }}>
               {/* Handle */}
               <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
                 <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
