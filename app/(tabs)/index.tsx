@@ -4068,7 +4068,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (saved.joinedEvents) setJoinedEvents(saved.joinedEvents)
         if (saved.userCreatedEvents) setUserCreatedEvents(saved.userCreatedEvents)
         if (saved.pendingJoinRequests) setPendingJoinRequests(saved.pendingJoinRequests)
-        if (saved.approvedJoiners) setApprovedJoiners(saved.approvedJoiners)
+        if (saved.approvedJoiners) {
+          setApprovedJoiners(saved.approvedJoiners)
+          // Pre-fill ref so already-full events don't re-trigger auto-nav to messages on app open
+          if (saved.userCreatedEvents) {
+            saved.userCreatedEvents.forEach((ev: any) => {
+              const approved = saved.approvedJoiners[ev.id] || []
+              const slotsTotal = (ev.maxParticipants || 5) - 1
+              if (approved.length >= slotsTotal && slotsTotal > 0) {
+                prevFullHostEventsRef.current.add(ev.id)
+              }
+            })
+          }
+        }
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (saved.chatList) setChatList(saved.chatList)
         if (saved.chatMessages) setChatMessages(saved.chatMessages)
