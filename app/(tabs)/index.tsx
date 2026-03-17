@@ -1559,9 +1559,26 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     }
     return null
   }
+
+  const parseEventDateTime = (timeStr: string): Date | null => {
+    const date = parseEventDate(timeStr)
+    if (!date) return null
+    const match = timeStr.match(/(\d{1,2}):(\d{2})/)
+    if (match) {
+      date.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0)
+    }
+    return date
+  }
+
+  const isEventPast = (timeStr: string): boolean => {
+    const dt = parseEventDateTime(timeStr)
+    if (!dt) return false
+    return dt < new Date()
+  }
   const allCityEvents = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
     if (e.city !== city) return false
     if (e.isHosted) return false  // host doesn't join their own event
+    if (isEventPast(e.time)) return false  // hide past events
     return true
   })
 
@@ -2025,23 +2042,20 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     </LinearGradient>
                     <View style={s.compactCardBody}>
                       <Text style={s.compactCardTitle} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={s.compactCardTime}>{ev.time.split(', ')[1] || ev.time}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
-                            <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
-                          ))}
-                          <Text style={{ fontSize: 10, color: '#6366F1', marginLeft: 6, fontWeight: '700' }}>{ev.seekingCount} going</Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
-                          activeOpacity={getJoinState(ev) === 'full' ? 1 : 0.75}
-                          style={{ backgroundColor: getJoinState(ev) === 'full' ? 'rgba(100,116,139,0.1)' : getJoinState(ev) === 'joined' ? 'rgba(34,197,94,0.12)' : getJoinState(ev) === 'pending' ? 'rgba(251,191,36,0.15)' : '#6366F1', borderRadius: 99, paddingHorizontal: 9, paddingVertical: 4, opacity: getJoinState(ev) === 'full' ? 0.55 : 1 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: getJoinState(ev) === 'full' ? '#94A3B8' : getJoinState(ev) === 'joined' ? '#16a34a' : getJoinState(ev) === 'pending' ? '#d97706' : '#fff' }}>
-                            {getJoinState(ev) === 'full' ? 'Full' : getJoinState(ev) === 'joined' ? 'Joined ✓' : getJoinState(ev) === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : ev.type === 'official' ? "Going →" : ev.isHosted ? 'Request →' : 'Join →'}
-                          </Text>
-                        </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
+                          <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
+                        ))}
+                        <Text style={{ fontSize: 10, color: '#94A3B8', marginLeft: 6 }}>{ev.time.split(', ')[1] || ev.time} · {ev.seekingCount} going</Text>
                       </View>
+                      <TouchableOpacity
+                        onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
+                        activeOpacity={getJoinState(ev) === 'full' ? 1 : 0.75}
+                        style={{ marginTop: 8, backgroundColor: getJoinState(ev) === 'full' ? 'rgba(100,116,139,0.1)' : getJoinState(ev) === 'joined' ? 'rgba(34,197,94,0.12)' : getJoinState(ev) === 'pending' ? 'rgba(251,191,36,0.15)' : '#6366F1', borderRadius: 10, paddingVertical: 7, alignItems: 'center', opacity: getJoinState(ev) === 'full' ? 0.55 : 1 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: getJoinState(ev) === 'full' ? '#94A3B8' : getJoinState(ev) === 'joined' ? '#16a34a' : getJoinState(ev) === 'pending' ? '#d97706' : '#fff' }}>
+                          {getJoinState(ev) === 'full' ? 'Full' : getJoinState(ev) === 'joined' ? 'Joined ✓' : getJoinState(ev) === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : ev.type === 'official' ? 'I\'m Going →' : ev.isHosted ? 'Request →' : 'Join →'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -5973,8 +5987,8 @@ const s = StyleSheet.create({
   joinBtn: { backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)' },
   compactCardShadow: { width: 152, borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   compactCard: { borderRadius: 18, overflow: 'hidden', backgroundColor: '#fff' },
-  compactCardGrad: { height: 88, alignItems: 'center', justifyContent: 'center' },
-  compactCardBody: { padding: 10 },
+  compactCardGrad: { height: 100, alignItems: 'center', justifyContent: 'center' },
+  compactCardBody: { padding: 12 },
   compactCardTitle: { fontSize: 12, fontWeight: '700', color: '#1E1B4B', lineHeight: 17 },
   compactCardTime: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
   listCardShadow: { borderRadius: 18, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
