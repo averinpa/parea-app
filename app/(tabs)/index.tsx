@@ -1533,14 +1533,23 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData }: any) {
+  const insets = useSafeAreaInsets()
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [draftVibe, setDraftVibe] = useState(tonightVibe)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
+  const [searchQuery, setSearchQuery] = useState('')
+  const [officialDbEvents, setOfficialDbEvents] = useState<any[]>([])
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const now = Date.now()
+
+  useEffect(() => {
+    supabase.from('official_events').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { if (data && data.length > 0) setOfficialDbEvents(data) })
+  }, [])
 
   // Parse event time string → Date (for calendar matching)
   const parseEventDate = (timeStr: string): Date | null => {
@@ -1582,15 +1591,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return true
   })
 
-  // Data Matching: events whose category matches user interests float to top
+  // ── Data ─────────────────────────────────────────────────────────────────
   const userCategories = (userInterests as string[]).map((i: string) => INTEREST_TO_CATEGORY[i]).filter(Boolean)
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
 
-  const TYPE_FILTERS = [
-    { id: 'all',       label: '✦ All' },
-    { id: 'official',  label: '🌟 Official' },
-    { id: 'community', label: '👥 Socials' },
-  ]
   const CAT_FILTERS = [
     { id: 'outdoors', label: '🌿 Outdoors' },
     { id: 'coffee',   label: '☕ Coffee' },
@@ -1602,32 +1605,46 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     { id: 'gaming',   label: '🎲 Gaming' },
   ]
 
-  const filteredEvents = allCityEvents.filter(ev => {
-    // Type filter
-    if (feedFilter === 'official')  { if (ev.type !== 'official') return false }
-    else if (feedFilter === 'community') { if (!ev.isHosted && ev.type !== 'community') return false }
-    // Category filter
+  // Official: DB events + MOCK official fallback (if DB empty)
+  const officialMock = MOCK_EVENTS.filter(e => e.city === city && e.type === 'official' && !isEventPast(e.time))
+  const officialAll: any[] = officialDbEvents.length > 0
+    ? officialDbEvents.map(e => ({ ...e, _fromDb: true, gradient: ['#667eea', '#764ba2'] }))
+    : officialMock
+
+  // Community: MOCK community + user-created extra events
+  const communityAll = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
+    if (e.city !== city) return false
+    if (e.isHosted) return false
+    if (isEventPast(e.time)) return false
+    if (e.type === 'official') return false
+    return true
+  })
+
+  // Apply search + category filter to community
+  const communityFiltered = communityAll.filter(ev => {
     if (categoryFilter && ev.category !== categoryFilter) return false
-    // Date filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      if (!ev.title.toLowerCase().includes(q) && !(ev.description || '').toLowerCase().includes(q)) return false
+    }
     if (selectedDate) {
       const evDate = parseEventDate(ev.time)
-      if (!evDate) return false
-      return evDate.toDateString() === selectedDate.toDateString()
+      if (!evDate || evDate.toDateString() !== selectedDate.toDateString()) return false
     }
     return true
   })
 
-  // Sort: matching interests first, then rest
-  const visibleEvents = userCategories.length > 0
-    ? [...filteredEvents].sort((a, b) => {
-        const aMatch = userCategories.includes(a.category) ? 1 : 0
-        const bMatch = userCategories.includes(b.category) ? 1 : 0
-        return bMatch - aMatch
-      })
-    : filteredEvents
+  // Sort community: interest-matched first
+  const communityEvents = userCategories.length > 0
+    ? [...communityFiltered].sort((a, b) => (userCategories.includes(b.category) ? 1 : 0) - (userCategories.includes(a.category) ? 1 : 0))
+    : communityFiltered
 
-  const featured = visibleEvents[0]
-  const rest = visibleEvents.slice(1)
+  // Apply search to official
+  const officialEvents = officialAll.filter(ev => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    return (ev.title || '').toLowerCase().includes(q) || (ev.category || '').toLowerCase().includes(q)
+  })
 
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
   const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2; format: string; transport: string }>(
@@ -1635,19 +1652,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   )
 
   const openJoinSheet = (ev: any) => {
-    // Community events skip format step — only ask transport
     const startStep = ev?.type === 'official' ? 1 : 2
     setJoinSheet({ visible: true, ev, step: startStep, format: '', transport: '' })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
-  // When FeedScreen asks to re-open join sheet (from "Update my plans")
   useEffect(() => {
-    if (pendingJoinEv) {
-      openJoinSheet(pendingJoinEv)
-      onPendingJoinConsumed?.()
-    }
+    if (pendingJoinEv) { openJoinSheet(pendingJoinEv); onPendingJoinConsumed?.() }
   }, [pendingJoinEv])
+
   const closeJoinSheet = () => setJoinSheet(prev => ({ ...prev, visible: false }))
 
   const confirmJoin = () => {
@@ -1667,30 +1680,21 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return joinedEvents?.[ev.id] || 'none'
   }
 
-  const JoinButton = ({ ev, large, onDark = false }: { ev: any; large?: boolean; onDark?: boolean }) => {
+  const JoinButton = ({ ev }: { ev: any }) => {
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const joinLabel = ev.type === 'official' ? "I'm Going" : ev.isHosted ? 'Request →' : 'Join →'
-    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : joinLabel
-
-    // onDark=true (featured card): white translucent. onDark=false (list cards): solid colors
+    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : ev.isHosted ? 'Request' : 'Join'
     let bg: string, textColor: string
-    if (onDark) {
-      bg = isFull ? 'rgba(255,255,255,0.10)' : state !== 'none' ? 'rgba(99,255,180,0.22)' : 'rgba(255,255,255,0.22)'
-      textColor = '#fff'
-    } else {
-      if (isFull)             { bg = 'rgba(100,116,139,0.1)';  textColor = '#94A3B8' }
-      else if (state === 'joined')  { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
-      else if (state === 'pending') { bg = 'rgba(251,191,36,0.15)'; textColor = '#d97706' }
-      else                          { bg = '#6366F1';              textColor = '#fff' }
-    }
-
+    if (isFull)                   { bg = '#F1F5F9'; textColor = '#94A3B8' }
+    else if (state === 'joined')  { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
+    else if (state === 'pending') { bg = 'rgba(251,191,36,0.15)'; textColor = '#d97706' }
+    else                          { bg = '#6366F1'; textColor = '#fff' }
     return (
       <TouchableOpacity
         onPress={() => { if (!isFull && state === 'none') openJoinSheet(ev); else if (!isFull) onJoin(ev) }}
         activeOpacity={isFull ? 1 : 0.75}
-        style={[s.joinBtn, { backgroundColor: bg, opacity: isFull ? 0.55 : 1, borderColor: onDark ? 'rgba(255,255,255,0.4)' : 'transparent' }, large && { paddingHorizontal: 22, paddingVertical: 12 }]}>
-        <Text style={{ fontSize: large ? 14 : 11, fontWeight: '700', color: textColor }}>{label}</Text>
+        style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 12, backgroundColor: bg, opacity: isFull ? 0.55 : 1 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: textColor }}>{label}</Text>
       </TouchableOpacity>
     )
   }
@@ -1706,48 +1710,43 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     { id: 'lift', emoji: '🙋', label: 'Need a ride',    sub: "I'll hop in with someone" },
     { id: 'meet', emoji: '📍', label: 'Meet you there', sub: 'Getting there solo' },
   ]
-  const todayEvents = rest.filter(e => e.time.toLowerCase().includes('today'))
-  const upcoming = rest.filter(e => !e.time.toLowerCase().includes('today'))
+
+  const userName = userData?.name?.split(' ')[0] || 'there'
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8F7FF' }}>
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         stickyHeaderIndices={[0]}>
 
-        {/* ── STICKY: Header + Filter chips ── */}
-        <View style={{ backgroundColor: '#F8F7FF', zIndex: 600 }}>
-          {/* Top row: city + calendar + bell */}
-          <View style={[s.feedHeader, { justifyContent: 'space-between' }]}>
-            <TouchableOpacity style={s.cityBtn} onPress={() => setCityOpen(true)}>
-              <Text style={{ fontSize: 12, marginRight: 2 }}>📍</Text>
-              <Text style={s.cityBtnTxt}>{city}</Text>
-              <Ionicons name="chevron-down" size={13} color="#4338CA" />
-            </TouchableOpacity>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {/* Calendar button */}
+        {/* ── STICKY HEADER ── */}
+        <View style={{ backgroundColor: '#F8F7FF', zIndex: 600, paddingBottom: 4 }}>
+          {/* Greeting row */}
+          <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <View>
+              <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '500' }}>Hi, {userName} 👋</Text>
+              <Text style={{ fontSize: 28, fontWeight: '900', color: '#6366F1', letterSpacing: -0.5, marginTop: 1 }}>Parea</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              {/* City */}
+              <TouchableOpacity onPress={() => setCityOpen(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: '#EEF2FF' }}>
+                <Text style={{ fontSize: 11 }}>📍</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city}</Text>
+              </TouchableOpacity>
+              {/* Calendar */}
               <TouchableOpacity
                 onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-                  backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#EEF2FF' }}>
-                <Feather name="calendar" size={14} color={calendarOpen || selectedDate ? '#fff' : '#6366F1'} />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: calendarOpen || selectedDate ? '#fff' : '#6366F1' }}>
-                  {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
-                </Text>
-                {selectedDate && (
-                  <TouchableOpacity onPress={() => { setSelectedDate(null); setCalendarOpen(false) }} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-                    <Feather name="x" size={12} color="#fff" />
-                  </TouchableOpacity>
-                )}
+                style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name="calendar" size={16} color={calendarOpen || selectedDate ? '#fff' : '#6366F1'} />
               </TouchableOpacity>
               {/* Bell */}
               <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
-                  style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-                    shadowColor: '#6366F1', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 }}>
-                  <Ionicons name="notifications-outline" size={20} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
+                  style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+                    shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
+                  <Ionicons name="notifications-outline" size={18} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
                 </TouchableOpacity>
                 {unreadCount > 0 && (
                   <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8,
@@ -1759,21 +1758,38 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </View>
           </View>
 
+          {/* Search bar */}
+          <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, height: 44, gap: 10,
+              shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+              <Feather name="search" size={16} color="#94A3B8" />
+              <TextInput
+                placeholder="Find an event..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={{ flex: 1, fontSize: 14, color: '#1E1B4B' }}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Feather name="x" size={15} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
           {/* Inline Calendar */}
           {calendarOpen && (() => {
             const today = new Date(); today.setHours(0,0,0,0)
             const firstDay = new Date(calYear, calMonth, 1).getDay()
             const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
             const monthName = new Date(calYear, calMonth).toLocaleDateString('en', { month: 'long', year: 'numeric' })
-            // Collect event dates for dots
-            const eventDates = new Set(allCityEvents.map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
-            const officialDates = new Set(allCityEvents.filter(ev => ev.type === 'official').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
-            const socialDates = new Set(allCityEvents.filter(ev => ev.isHosted || ev.type === 'community').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
+            const officialDates = new Set(communityAll.filter(ev => ev.type === 'official').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
+            const socialDates = new Set(communityAll.filter(ev => ev.type !== 'official').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
             const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
             while (cells.length % 7 !== 0) cells.push(null)
             return (
               <View style={{ marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff', borderRadius: 20, padding: 14, shadowColor: '#6366F1', shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
-                {/* Month nav */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <TouchableOpacity onPress={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) } else setCalMonth(m => m - 1) }}
                     style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
@@ -1785,13 +1801,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <Feather name="chevron-right" size={16} color="#475569" />
                   </TouchableOpacity>
                 </View>
-                {/* Day labels */}
                 <View style={{ flexDirection: 'row', marginBottom: 6 }}>
                   {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
                     <Text key={d} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '700', color: '#94A3B8' }}>{d}</Text>
                   ))}
                 </View>
-                {/* Cells */}
                 {Array.from({ length: cells.length / 7 }, (_, row) => (
                   <View key={row} style={{ flexDirection: 'row', marginBottom: 2 }}>
                     {cells.slice(row * 7, row * 7 + 7).map((day, col) => {
@@ -1819,242 +1833,74 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     })}
                   </View>
                 ))}
-                {/* Legend */}
                 <View style={{ flexDirection: 'row', gap: 14, marginTop: 10, justifyContent: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
-                    <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Official event</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Official</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366F1' }} />
-                    <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Social</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Community</Text>
                   </View>
                 </View>
               </View>
             )
           })()}
-
-          {/* Row 1: Type filter */}
-          <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 8, paddingBottom: 6, paddingTop: 2 }}>
-            {TYPE_FILTERS.map(f => {
-              const isOn = feedFilter === f.id
-              const accent = f.id === 'official' ? '#D97706' : f.id === 'community' ? '#4338CA' : '#6366F1'
-              const bg = isOn ? (f.id === 'official' ? '#F59E0B' : '#6366F1') : f.id === 'official' ? '#FFFBEB' : f.id === 'community' ? '#EEF2FF' : '#F1F5F9'
-              const border = f.id === 'official' ? '#FCD34D' : f.id === 'community' ? '#A5B4FC' : 'transparent'
-              return (
-                <TouchableOpacity key={f.id} onPress={() => setFeedFilter(f.id)} activeOpacity={0.75}
-                  style={{ flex: 1, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: bg, borderWidth: 1.5, borderColor: isOn ? 'transparent' : border }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : accent }}>{f.label}</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-          {/* Row 2: Category filter */}
-          <View style={{ height: 44 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[s.filterContent, { paddingVertical: 4 }]}>
-              {CAT_FILTERS.map(f => {
-                const isOn = categoryFilter === f.id
-                return (
-                  <TouchableOpacity key={f.id} onPress={() => setCategoryFilter(isOn ? null : f.id)} activeOpacity={0.75}
-                    style={[s.filterTab, isOn && s.filterTabOn]}>
-                    <Text style={[s.filterTabTxt, isOn && s.filterTabTxtOn]}>{f.label}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </ScrollView>
-          </View>
+          {selectedDate && (
+            <TouchableOpacity onPress={() => setSelectedDate(null)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99, backgroundColor: '#6366F1' }}>
+                <Feather name="calendar" size={11} color="#fff" />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{selectedDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
+                <Feather name="x" size={11} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* ── SCROLLABLE CONTENT ── */}
-
-        {/* Tonight's Vibe card */}
-        {tonightVibe && (() => {
-          const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
-          const drinksIcon = tonightVibe.drinks === "Don't drink" ? '🚫' : tonightVibe.drinks === 'Rarely' ? '🥤' : '🥂'
-          const smokingIcon = tonightVibe.smoking === 'Non-smoker' ? '🚭' : tonightVibe.smoking === 'Social' ? '🌬️' : '🚬'
-          return (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
-              style={{ marginHorizontal: 16, marginTop: 10, marginBottom: 2 }}
-            >
-              <LinearGradient
-                colors={['#1E1B4B', '#312E81', '#3730A3']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={{ borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center' }}
-              >
-                {/* Left — energy emoji + label */}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: 'rgba(199,210,254,0.7)', fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Tonight's vibe</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 22 }}>{energyInfo.emoji}</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>{energyInfo.label}</Text>
-                  </View>
-                </View>
-                {/* Right — lifestyle pills */}
-                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Text style={{ fontSize: 13 }}>{drinksIcon}</Text>
-                  </View>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Text style={{ fontSize: 13 }}>{smokingIcon}</Text>
-                  </View>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Text style={{ fontSize: 11, color: 'rgba(199,210,254,0.9)', fontWeight: '600' }}>Edit</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )
-        })()}
-
-        {/* Vibe Edit Modal */}
-        <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
-          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 }}>
-            {/* Handle */}
-            <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 16 }}>Tonight's vibe</Text>
-
-            {/* Energy */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-              {SOCIAL_ENERGY.map(e => {
-                const on = draftVibe?.energy === e.id
-                return (
-                  <TouchableOpacity key={e.id} onPress={() => setDraftVibe((v: any) => ({ ...v, energy: e.id }))}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 16 }}>{e.emoji}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{e.label}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
-            {/* Drinks */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Alcohol</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-              {["Don't drink", 'Rarely', 'Social drinker'].map(opt => {
-                const on = draftVibe?.drinks === opt
-                return (
-                  <TouchableOpacity key={opt} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt }))}
-                    style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt === "Don't drink" ? '🚫' : opt === 'Rarely' ? '🥤' : '🥂'}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3 }}>{opt}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
-            {/* Smoking */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Smoking</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
-              {['Non-smoker', 'Social', 'Smoker'].map(opt => {
-                const on = draftVibe?.smoking === opt
-                return (
-                  <TouchableOpacity key={opt} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt }))}
-                    style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt === 'Non-smoker' ? '🚭' : opt === 'Social' ? '🌬️' : '🚬'}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3 }}>{opt}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-
-            {/* Save */}
-            <TouchableOpacity onPress={() => { setTonightVibe(draftVibe); setVibeEditOpen(false) }}
-              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save vibe</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-
-        {/* Featured card */}
-        {featured && (
-          <TouchableOpacity onPress={() => onEventPress(featured)} activeOpacity={0.92} style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 6 }}>
-            <LinearGradient colors={featured.gradient as any} style={s.featuredCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {featured.type === 'official' && (
-                    <View style={s.officialBadge}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.5 }}>OFFICIAL</Text>
-                    </View>
-                  )}
-                  {featured.time.toLowerCase().includes('today') && (
-                    <View style={[s.officialBadge, { backgroundColor: 'rgba(239,68,68,0.75)' }]}>
-                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff', marginRight: 4 }} />
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>TODAY</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={s.categoryCircle}>
-                  <Text style={{ fontSize: 20 }}>{CATEGORY_EMOJI[featured.category] || '📍'}</Text>
-                </View>
-              </View>
-              <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-                <Text style={s.featuredTitle} numberOfLines={2}>{featured.title}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 14 }}>
-                  <View style={s.infoPill}><Text style={s.infoPillTxt}>🕐 {featured.time.split(', ')[1] || featured.time}</Text></View>
-                  <View style={s.infoPill}><Text style={s.infoPillTxt}>📍 {featured.distance}</Text></View>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {featured.seekerColors.slice(0, 4).map((c: string, i: number) => (
-                      <View key={i} style={[s.avatarDot, { backgroundColor: c, marginLeft: i > 0 ? -8 : 0, zIndex: 10 - i }]}>
-                        <Ionicons name="person" size={11} color="rgba(255,255,255,0.9)" />
-                      </View>
-                    ))}
-                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', marginLeft: 10, fontWeight: '600' }}>
-                      {featured.seekingCount} looking for company
-                    </Text>
-                  </View>
-                  <JoinButton ev={featured} onDark />
-                </View>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
-        {/* Today section - horizontal scroll */}
-        {todayEvents.length > 0 && (
+        {/* ── OFFICIAL EVENTS ── */}
+        {officialEvents.length > 0 && (
           <>
-            <View style={s.sectionRow}>
-              <Text style={s.sectionHeader}>🔥 Happening Today</Text>
-              <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '700' }}>{todayEvents.length} events</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
+              <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700' }}>{officialEvents.length} events</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 4 }}>
-              {todayEvents.map(ev => (
-                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.85} style={s.compactCardShadow}>
-                  <View style={s.compactCard}>
-                    <LinearGradient colors={ev.gradient as any} style={s.compactCardGrad}>
-                      <Text style={{ fontSize: 26 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
-                      {ev.type === 'official' && (
-                        <View style={[s.officialBadge, { position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2 }]}>
-                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>★</Text>
-                        </View>
-                      )}
-                      {ev.isHosted && (
-                        <View style={{ position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: '#F59E0B' }}>
-                          <Text style={{ fontSize: 8, fontWeight: '800', color: '#fff' }}>👤</Text>
-                        </View>
-                      )}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
+              {officialEvents.map((ev: any) => (
+                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
+                  style={{ width: 210, borderRadius: 22, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 4 }}>
+                  {/* Image or gradient */}
+                  {ev.image_url ? (
+                    <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 130 }} resizeMode="cover" />
+                  ) : (
+                    <LinearGradient colors={ev.gradient as any || ['#667eea','#764ba2']} style={{ width: '100%', height: 130, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 40 }}>{CATEGORY_EMOJI[ev.category] || '🎉'}</Text>
                     </LinearGradient>
-                    <View style={s.compactCardBody}>
-                      <Text style={s.compactCardTitle} numberOfLines={2}>{ev.title}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                        {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
-                          <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
-                        ))}
-                        <Text style={{ fontSize: 10, color: '#94A3B8', marginLeft: 6 }}>{ev.time.split(', ')[1] || ev.time} · {ev.seekingCount} going</Text>
+                  )}
+                  {/* Category badge overlay */}
+                  <View style={{ position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(30,27,75,0.65)' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.4, textTransform: 'capitalize' }}>{ev.category || 'Event'}</Text>
+                  </View>
+                  <View style={{ padding: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6 }} numberOfLines={2}>{ev.title}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Feather name="calendar" size={11} color="#94A3B8" />
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
+                    </View>
+                    {(ev.location || ev.distance) && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                        <Feather name="map-pin" size={11} color="#94A3B8" />
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance}</Text>
+                      </View>
+                    )}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="people-outline" size={13} color="#94A3B8" />
+                        <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '500' }}>{ev.capacity ?? ev.maxParticipants ?? '—'}</Text>
                       </View>
                       <TouchableOpacity
                         onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
-                        activeOpacity={getJoinState(ev) === 'full' ? 1 : 0.75}
-                        style={{ marginTop: 8, backgroundColor: getJoinState(ev) === 'full' ? 'rgba(100,116,139,0.1)' : getJoinState(ev) === 'joined' ? 'rgba(34,197,94,0.12)' : getJoinState(ev) === 'pending' ? 'rgba(251,191,36,0.15)' : '#6366F1', borderRadius: 10, paddingVertical: 7, alignItems: 'center', opacity: getJoinState(ev) === 'full' ? 0.55 : 1 }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: getJoinState(ev) === 'full' ? '#94A3B8' : getJoinState(ev) === 'joined' ? '#16a34a' : getJoinState(ev) === 'pending' ? '#d97706' : '#fff' }}>
-                          {getJoinState(ev) === 'full' ? 'Full' : getJoinState(ev) === 'joined' ? 'Joined ✓' : getJoinState(ev) === 'pending' ? (ev.isHosted ? 'Requested…' : 'Pending…') : ev.type === 'official' ? 'I\'m Going →' : ev.isHosted ? 'Request →' : 'Join →'}
-                        </Text>
+                        style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, backgroundColor: '#6366F1' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>I'm Going</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2064,76 +1910,185 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           </>
         )}
 
-        {/* Upcoming - vertical list */}
-        {upcoming.length > 0 && (
-          <>
-            <View style={s.sectionRow}>
-              <Text style={s.sectionHeader}>📅 Coming Up</Text>
-            </View>
-            <View style={{ paddingHorizontal: 16, gap: 10 }}>
-              {upcoming.map(ev => (
-                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88} style={s.listCardShadow}>
-                  <View style={s.listCard}>
-                    <LinearGradient colors={ev.gradient as any} style={s.listCardLeft}>
-                      <Text style={{ fontSize: 24 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
-                    </LinearGradient>
-                    <View style={s.listCardBody}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                        {ev.type === 'official' && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FCD34D' }}>
-                            <Text style={{ fontSize: 9 }}>🌟</Text>
-                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#D97706' }}>OFFICIAL EVENT</Text>
-                          </View>
-                        )}
-                        {ev.isHosted && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#A5B4FC' }}>
-                            <Text style={{ fontSize: 9 }}>👥</Text>
-                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#4338CA' }}>COMMUNITY SOCIAL</Text>
-                          </View>
-                        )}
-                        {!ev.type || ev.type === 'community' && !ev.isHosted && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#86EFAC' }}>
-                            <Text style={{ fontSize: 9 }}>👥</Text>
-                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#16A34A' }}>COMMUNITY</Text>
-                          </View>
-                        )}
-                        <Text style={{ fontSize: 11, color: '#94A3B8' }}>{ev.distance}</Text>
-                      </View>
-                      <Text style={s.listCardTitle} numberOfLines={1}>{ev.title}</Text>
-                      <Text style={s.listCardTime}>{ev.time}</Text>
+        {/* ── COMMUNITY ── */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
+          <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>👥 Community</Text>
+          <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>{communityEvents.length} events</Text>
+        </View>
+
+        {/* Category filter chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 14 }}>
+          <TouchableOpacity onPress={() => setCategoryFilter(null)}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: !categoryFilter ? '#6366F1' : '#fff' }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: !categoryFilter ? '#fff' : '#64748B' }}>All</Text>
+          </TouchableOpacity>
+          {CAT_FILTERS.map(f => {
+            const isOn = categoryFilter === f.id
+            return (
+              <TouchableOpacity key={f.id} onPress={() => setCategoryFilter(isOn ? null : f.id)}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: isOn ? '#6366F1' : '#fff' }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : '#64748B' }}>{f.label}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+
+        {/* Tonight's Vibe card */}
+        {tonightVibe && (() => {
+          const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
+          const drinksIcon = tonightVibe.drinks === "Don't drink" ? '🚫' : tonightVibe.drinks === 'Rarely' ? '🥤' : '🥂'
+          const smokingIcon = tonightVibe.smoking === 'Non-smoker' ? '🚭' : tonightVibe.smoking === 'Social' ? '🌬️' : '🚬'
+          return (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
+              style={{ marginHorizontal: 16, marginBottom: 12 }}>
+              <LinearGradient colors={['#1E1B4B', '#3730A3']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: 'rgba(199,210,254,0.7)', fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>Tonight's vibe</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 20 }}>{energyInfo.emoji}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>{energyInfo.label}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  {[drinksIcon, smokingIcon].map((ic, i) => (
+                    <View key={i} style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
+                      <Text style={{ fontSize: 13 }}>{ic}</Text>
                     </View>
-                    <View style={{ alignItems: 'flex-end', gap: 6, paddingRight: 14 }}>
-                      <View style={{ flexDirection: 'row' }}>
-                        {ev.seekerColors.slice(0, 3).map((c: string, i: number) => (
-                          <View key={i} style={[s.avatarDotSm, { backgroundColor: c, marginLeft: i > 0 ? -5 : 0 }]} />
-                        ))}
+                  ))}
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }}>
+                    <Text style={{ fontSize: 10, color: 'rgba(199,210,254,0.9)', fontWeight: '600' }}>Edit</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          )
+        })()}
+
+        {/* Community event list */}
+        {communityEvents.length > 0 ? (
+          <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 8 }}>
+            {communityEvents.map((ev: any) => {
+              const filled = ev.participantsCount || 0
+              const total = ev.maxParticipants || 10
+              const pct = Math.min(1, filled / total)
+              const free = Math.max(0, total - filled)
+              return (
+                <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
+                  style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
+                  {/* Top row: avatar + title + badge */}
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+                    <LinearGradient colors={ev.gradient as any || ['#6366F1','#818CF8']}
+                      style={{ width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Text style={{ fontSize: 22 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
+                    </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#4338CA', textTransform: 'capitalize' }}>{ev.category}</Text>
+                        </View>
                       </View>
-                      <JoinButton ev={ev} />
+                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>{ev.organizer?.name || 'Community'}</Text>
                     </View>
                   </View>
+                  {/* Date + location row */}
+                  <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Feather name="calendar" size={12} color="#94A3B8" />
+                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.time}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Feather name="map-pin" size={12} color="#94A3B8" />
+                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.distance || ev.location || 'See details'}</Text>
+                    </View>
+                  </View>
+                  {/* Progress + join */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '500' }}>{filled} of {total} spots</Text>
+                        <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '700' }}>{free} free</Text>
+                      </View>
+                      <View style={{ height: 4, backgroundColor: '#EEF2FF', borderRadius: 99 }}>
+                        <View style={{ height: 4, width: `${Math.round(pct * 100)}%` as any, backgroundColor: pct >= 0.8 ? '#EF4444' : '#6366F1', borderRadius: 99 }} />
+                      </View>
+                    </View>
+                    <JoinButton ev={ev} />
+                  </View>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
-
-        {visibleEvents.length === 0 && (
-          <View style={{ alignItems: 'center', paddingTop: 80 }}>
-            <Text style={{ fontSize: 48, marginBottom: 14 }}>🌴</Text>
-            <Text style={{ fontSize: 17, fontWeight: '800', color: '#1E1B4B' }}>Nothing here yet</Text>
-            <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6 }}>Try another vibe or check back later</Text>
+              )
+            })}
+          </View>
+        ) : (
+          <View style={{ alignItems: 'center', paddingTop: 40, paddingBottom: 20 }}>
+            <Text style={{ fontSize: 40, marginBottom: 12 }}>🌴</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>Nothing here yet</Text>
+            <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>Try a different category or date</Text>
           </View>
         )}
+
       </ScrollView>
 
-      {/* ── Join Bottom Sheet ──────────────────────────────────────── */}
+      {/* ── Vibe Edit Modal ── */}
+      <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 }}>
+          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 16 }}>Tonight's vibe</Text>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+            {SOCIAL_ENERGY.map(e => {
+              const on = draftVibe?.energy === e.id
+              return (
+                <TouchableOpacity key={e.id} onPress={() => setDraftVibe((v: any) => ({ ...v, energy: e.id }))}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 16 }}>{e.emoji}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{e.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Alcohol</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+            {["Don't drink", 'Rarely', 'Social drinker'].map(opt => {
+              const on = draftVibe?.drinks === opt
+              return (
+                <TouchableOpacity key={opt} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt }))}
+                  style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt === "Don't drink" ? '🚫' : opt === 'Rarely' ? '🥤' : '🥂'}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3 }}>{opt}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Smoking</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
+            {['Non-smoker', 'Social', 'Smoker'].map(opt => {
+              const on = draftVibe?.smoking === opt
+              return (
+                <TouchableOpacity key={opt} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt }))}
+                  style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt === 'Non-smoker' ? '🚭' : opt === 'Social' ? '🌬️' : '🚬'}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3 }}>{opt}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+          <TouchableOpacity onPress={() => { setTonightVibe(draftVibe); setVibeEditOpen(false) }}
+            style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save vibe</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* ── Join Bottom Sheet ── */}
       <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,8,30,0.75)' }} activeOpacity={1} onPress={closeJoinSheet} />
         <View style={s.joinSheetWrap}>
           <View style={s.joinSheetHandle} />
 
-          {/* Step indicator — only for official events (2 steps) */}
           {joinSheet.ev?.type === 'official' && (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -4447,7 +4402,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} />}
+          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />}
           {activeTab === 'vibecheck' && <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={MOCK_EVENTS}
