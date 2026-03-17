@@ -4612,12 +4612,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onVibeCheck={() => setActiveTab('vibecheck')}
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
-              // Remove any group chats linked to this event
-              setChatList(prev => prev.map(c =>
-                c.event === ev.title
-                  ? { ...c, lastMsg: 'You left this event 📅' }
-                  : c
-              ))
+              setChatList(prev => prev.filter(c => c.event !== ev.title))
               showToast("Spot freed. Others can join now 🎟️")
             }}
             onUpdatePlans={ev => {
