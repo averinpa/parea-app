@@ -2377,7 +2377,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                               <Text style={{ fontSize: 11, fontWeight: '800', color: '#ef4444' }}>TODAY</Text>
                             </View>
                           )}
-                          <Text style={{ fontSize: 12, color: '#64748B' }}>⏰ {ev.time}  ·  📍 {ev.distance}</Text>
+                          <Text style={{ fontSize: 12, color: '#64748B' }}>⏰ {ev.time}</Text>
                         </View>
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
