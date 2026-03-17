@@ -1731,7 +1731,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     else                          { bg = '#6366F1'; textColor = '#fff' }
     return (
       <TouchableOpacity
-        onPress={() => { if (isFull) return; if (state === 'none' && ev.type !== 'community') openJoinSheet(ev); else if (state !== 'joined') onJoin(ev) }}
+        onPress={() => {
+          if (isFull) return
+          if (state === 'pending' && ev.type === 'community' && !ev.isHosted) return // waiting for host
+          if (state === 'none') openJoinSheet(ev)
+          else if (state === 'joined') onJoin(ev)
+        }}
         activeOpacity={isFull ? 1 : 0.75}
         style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 12, backgroundColor: bg, opacity: isFull ? 0.55 : 1 }}>
         <Text style={{ fontSize: 13, fontWeight: '700', color: textColor }}>{label}</Text>
@@ -2189,10 +2194,10 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   )
                 })}
               </View>
-              {joinSheet.ev?.isHosted && (
+              {(joinSheet.ev?.isHosted || joinSheet.ev?.type === 'community') && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 12, marginTop: 16, marginBottom: -4, borderWidth: 1, borderColor: 'rgba(245,158,11,0.25)' }}>
                   <Text style={{ fontSize: 15 }}>👤</Text>
-                  <Text style={{ flex: 1, fontSize: 12, color: '#92400E', lineHeight: 17 }}>Community social — the host reviews and approves requests.</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: '#92400E', lineHeight: 17 }}>The host will see your transport preference and reviews compatibility before approving.</Text>
                 </View>
               )}
               <TouchableOpacity
@@ -2200,7 +2205,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 disabled={!joinSheet.transport}
                 onPress={confirmJoin}>
                 <Text style={s.joinSheetNextTxt}>
-                  {joinSheet.ev?.isHosted ? 'Send Request →' : joinSheet.ev?.type === 'official' ? "I'm Going 🎉" : "Join Event →"}
+                  {joinSheet.ev?.type === 'official' ? "I'm Going 🎉" : "Send Request →"}
                 </Text>
               </TouchableOpacity>
             </>
@@ -3121,7 +3126,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     </View>
   )
 
-  if (myEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0) {
+  if (myEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
