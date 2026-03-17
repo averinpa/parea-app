@@ -1623,7 +1623,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   // Official: DB events + MOCK official fallback (if DB empty)
   const officialMock = MOCK_EVENTS.filter(e => e.city === city && e.type === 'official' && !isEventPast(e.time))
   const officialAll: any[] = officialDbEvents.length > 0
-    ? officialDbEvents.map(e => ({ ...e, _fromDb: true, gradient: ['#667eea', '#764ba2'] }))
+    ? officialDbEvents.map(e => ({ ...e, _fromDb: true, type: 'official', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.max_participants ?? e.capacity ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
     : officialMock
 
   // Community: MOCK community + user-created extra events
@@ -2556,7 +2556,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           backgroundColor: '#6366F1',
                           alignItems: 'center', justifyContent: 'center',
                           borderWidth: 2.5, borderColor: '#fff',
-                          zIndex: 0, elevation: 0,
+                          zIndex: photos.length + 1, elevation: photos.length + 1,
                         }}>
                           <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
                         </View>
@@ -5158,15 +5158,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               <SafeAreaView style={s.fill}>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {/* Header */}
-                  <LinearGradient colors={eventDetail.gradient as any} style={{ paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20 }}>
-                    <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { alignSelf: 'flex-start', marginBottom: 16 }]}>
+                  <View style={{ position: 'relative' }}>
+                    {eventDetail.image_url ? (
+                      <Image source={{ uri: eventDetail.image_url }} style={{ width: '100%', height: 220 }} resizeMode="cover" />
+                    ) : (
+                      <LinearGradient colors={eventDetail.gradient as any} style={{ height: 220 }} />
+                    )}
+                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 40, paddingHorizontal: 20, paddingBottom: 20 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
+                        {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()} · {eventDetail.distance}
+                      </Text>
+                      <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28 }}>{eventDetail.title}</Text>
+                    </LinearGradient>
+                    <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { position: 'absolute', top: 52, left: 20 }]}>
                       <Ionicons name="chevron-back" size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
-                      {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()} · {eventDetail.distance}
-                    </Text>
-                    <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28 }}>{eventDetail.title}</Text>
-                  </LinearGradient>
+                  </View>
 
                   <View style={{ padding: 16, gap: 10 }}>
                     {/* Time + Location + Address link — one compact card */}
@@ -5177,7 +5184,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </View>
                         <View>
                           <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date & Time</Text>
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{eventDetail.time}</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{eventDetail.date_label ? `${eventDetail.date_label}${eventDetail.time_label ? '\n' + eventDetail.time_label : ''}` : eventDetail.time_label || eventDetail.time || '—'}</Text>
                         </View>
                       </View>
                       <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
@@ -5187,9 +5194,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Location</Text>
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{eventDetail.city} · {eventDetail.distance} from you</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{eventDetail.location || eventDetail.city}{eventDetail.distance && eventDetail.distance !== '0km' ? ` · ${eventDetail.distance} from you` : ''}</Text>
                         </View>
-                        <TouchableOpacity onPress={() => Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(eventDetail.city)}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                        <TouchableOpacity onPress={() => Linking.openURL(`https://maps.google.com/?q=${encodeURIComponent(eventDetail.location || eventDetail.city)}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>Open</Text>
                           <Feather name="external-link" size={12} color="#6366F1" />
                         </TouchableOpacity>
@@ -5238,8 +5245,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     )}
 
                     {/* Get Tickets */}
-                    {eventDetail.ticketLink && (
-                      <TouchableOpacity style={s.ticketBtn} onPress={() => Linking.openURL(eventDetail.ticketLink)} activeOpacity={0.8}>
+                    {(eventDetail.ticketLink || eventDetail.ticket_link) && (
+                      <TouchableOpacity style={s.ticketBtn} onPress={() => Linking.openURL(eventDetail.ticketLink || eventDetail.ticket_link)} activeOpacity={0.8}>
                         <Ionicons name="ticket-outline" size={16} color="#6366F1" style={{ marginRight: 6 }} />
                         <Text style={{ fontSize: 14, fontWeight: '700', color: '#6366F1' }}>Get Tickets 🎫</Text>
                       </TouchableOpacity>
