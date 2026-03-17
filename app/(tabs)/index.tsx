@@ -5268,25 +5268,24 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             <StatusBar style="dark" />
             <SafeAreaView style={s.fill}>
               <View style={[s.chatHeader, { paddingTop: Math.max(insets.top, 12) }]}>
-                <TouchableOpacity onPress={() => setOpenChat(null)}>
-                  <Ionicons name="chevron-back" size={24} color="#1E1B4B" />
+                <TouchableOpacity onPress={() => setOpenChat(null)} style={{ padding: 4 }}>
+                  <Ionicons name="chevron-back" size={26} color="#1E1B4B" />
                 </TouchableOpacity>
                 {openChat.type === 'duo' ? (
                   <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 4 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 6 }}
                     onPress={() => { if (openChat.partnerProfile) { setChatPartnerPreview(openChat.partnerProfile); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) } }}
                     activeOpacity={openChat.partnerProfile ? 0.7 : 1}
                   >
                     <View style={[s.chatHeaderAvatar, { backgroundColor: openChat.color, alignItems: 'center', justifyContent: 'center' }]}>
-                      {openChat.photo ? <Image source={{ uri: openChat.photo }} style={{ width: '100%', height: '100%', borderRadius: 20 }} /> : <Text style={{ fontSize: 22 }}>👤</Text>}
+                      {openChat.photo ? <Image source={{ uri: openChat.photo }} style={{ width: '100%', height: '100%', borderRadius: 20 }} /> : <Text style={{ fontSize: 20 }}>👤</Text>}
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B' }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.2 }} numberOfLines={1}>
                         {`${openChat.name}, ${openChat.age}`}
                       </Text>
-                      <Text style={{ fontSize: 12, color: '#64748B' }}>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }} numberOfLines={1}>
                         {openChat.eventEmoji} {openChat.event}
-                        {openChat.partnerProfile ? '  · View profile' : ''}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -6060,7 +6059,7 @@ const s = StyleSheet.create({
   subTabTxtOn: { fontSize: 13, fontWeight: '700', color: '#4338CA' },
 
   // Chat screen
-  chatHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: 'rgba(255,255,255,0.8)', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)', gap: 8 },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.07)', gap: 4 },
   chatHeaderAvatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', marginLeft: 8 },
   msgBubbleMe: { backgroundColor: '#6366F1', borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
   msgBubbleThem: { backgroundColor: '#fff', borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
