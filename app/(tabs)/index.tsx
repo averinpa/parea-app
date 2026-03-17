@@ -4512,62 +4512,61 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const handleJoinEvent = (ev: any) => {
     const isFull = ev.participantsCount >= ev.maxParticipants
     if (isFull) return
+    const currentState = joinedEvents[ev.id]
+    // Pure state update — no side effects inside
     setJoinedEvents(prev => {
-      if (!prev[ev.id]) {
-        // Community events: send request to host, simulate approval after 5s
-        if (ev.type === 'community' && !ev.isHosted) {
-          // Compute compatibility with this event
-          const userLangsNow: string[] = userData?.langs || []
-          const hostLangsNow: string[] = ev.hostLangs || []
-          const langMatchNow = userLangsNow.some((l: string) => hostLangsNow.includes(l))
-          const interestMatchNow = (userData?.interests || []).includes(ev.category)
-          const compatScoreNow = (langMatchNow ? 35 : 10) + (interestMatchNow ? 40 : 5) + 20
-          const isGoodMatch = compatScoreNow >= 60
-          setTimeout(() => {
-            setJoinedEvents(cur => {
-              if (cur[ev.id] !== 'pending') return cur
-              if (!isGoodMatch) {
-                // Rejected — remove from pending
-                const next = { ...cur }
-                delete next[ev.id]
-                return next
-              }
-              return { ...cur, [ev.id]: 'joined' }
-            })
-            if (isGoodMatch) {
-              addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request!', body: ev.title })
-            } else {
-              addNotif({ type: 'crew_ready', emoji: '😔', color: '#F87171', title: 'Request not approved', body: `"${ev.title}" — complete your profile to improve your match score` })
-            }
-            // Create group chat
-            const members = QUEUE_PROFILES.slice(0, Math.min(3, (ev.participantsCount || 3)))
-            setChatList(prev => [{
-              id: Date.now(),
-              name: ev.title,
-              type: 'group',
-              event: ev.title,
-              eventId: ev.id,
-              lastMsg: '👋 Welcome to the group!',
-              time: 'now',
-              unread: 1,
-              gradient: ev.gradient,
-              photos: members.map((m: any) => m.photo),
-              messages: [{ id: 1, from: 'system', text: `Welcome! You've been approved to join "${ev.title}" 🎉`, time: 'now' }],
-            }, ...prev])
-          }, 5000)
-        }
-        return { ...prev, [ev.id]: 'pending' }
-      }
+      if (!prev[ev.id]) return { ...prev, [ev.id]: 'pending' }
       if (prev[ev.id] === 'pending') {
-        // For non-community events, second press confirms; for community wait for host
-        if (ev.type === 'community' && !ev.isHosted) return prev
+        if (ev.type === 'community' && !ev.isHosted) return prev // wait for host
         return { ...prev, [ev.id]: 'joined' }
       }
-      // joined → unjoin
       const next = { ...prev }
       delete next[ev.id]
       return next
     })
+    // Side effects OUTSIDE the state updater
+    if (!currentState && ev.type === 'community' && !ev.isHosted) {
+      // Compute compatibility
+      const userLangsNow: string[] = userData?.langs || []
+      const hostLangsNow: string[] = ev.hostLangs || []
+      const langMatchNow = userLangsNow.some((l: string) => hostLangsNow.includes(l))
+      const interestMatchNow = (userData?.interests || []).includes(ev.category)
+      const compatScoreNow = (langMatchNow ? 35 : 10) + (interestMatchNow ? 40 : 5) + 20
+      const isGoodMatch = compatScoreNow >= 60
+      setTimeout(() => {
+        setJoinedEvents(cur => {
+          if (cur[ev.id] !== 'pending') return cur
+          if (!isGoodMatch) { const next = { ...cur }; delete next[ev.id]; return next }
+          return { ...cur, [ev.id]: 'joined' }
+        })
+        if (isGoodMatch) {
+          addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request!', body: ev.title })
+          // Create group chat with correct structure
+          const chatId = Date.now()
+          const members = QUEUE_PROFILES.slice(0, Math.min(3, ev.participantsCount || 3))
+          setChatList(prev => [{
+            id: chatId,
+            type: 'group',
+            event: ev.title,
+            eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+            members: members.length + 1,
+            avatars: members.map((m: any) => m.photo).filter(Boolean),
+            colors: members.map((m: any) => m.color),
+            memberProfiles: members,
+            lastMsg: '🎉 You\'ve been approved! Welcome',
+            time: 'now',
+            isNew: true,
+            expiresIn: 48,
+          }, ...prev])
+          setChatMessages((prev: any) => ({
+            ...prev,
+            [chatId]: [{ id: 1, from: 'system', text: `You've been approved to join "${ev.title}" 🎉 Welcome!`, time: 'now' }],
+          }))
+        } else {
+          addNotif({ type: 'crew_ready', emoji: '😔', color: '#F87171', title: 'Request not approved', body: `"${ev.title}" — complete your profile to improve your match score` })
+        }
+      }, 5000)
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
   }
 
