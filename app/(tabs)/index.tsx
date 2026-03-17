@@ -5426,26 +5426,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
       {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
 
-      {/* ── Floating Bell (non-home tabs only) ─────────────────────────────── */}
-      {activeTab !== 'home' && !createOpen && !eventDetail && !openChat && (
-        <Animated.View style={{
-          position: 'absolute', top: 52, right: 20, zIndex: 500,
-          transform: [{ rotate: bellShake.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) }],
-        }}>
-          <TouchableOpacity onPress={openNotifPanel} activeOpacity={0.85}
-            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-              shadowColor: '#6366F1', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
-            <Ionicons name="notifications-outline" size={22} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
-          </TouchableOpacity>
-          {unreadCount > 0 && (
-            <View style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
-              backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
-              paddingHorizontal: 4, borderWidth: 2, borderColor: '#F5F3FF' }}>
-              <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-            </View>
-          )}
-        </Animated.View>
-      )}
 
       {/* ── Notification Panel ─────────────────────────────────────────────── */}
       {notifOpen && (
