@@ -1679,7 +1679,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       if (!(ev.title || '').toLowerCase().includes(q) && !(ev.category || '').toLowerCase().includes(q)) return false
     }
     if (selectedDate) {
-      const evDate = parseEventDate(ev.time || ev.date_label || '')
+      const evDate = parseEventDate(ev.date_label || ev.time || '')
       if (!evDate || evDate.toDateString() !== selectedDate.toDateString()) return false
     }
     return true
@@ -1854,8 +1854,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             const firstDay = new Date(calYear, calMonth, 1).getDay()
             const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
             const monthName = new Date(calYear, calMonth).toLocaleDateString('en', { month: 'long', year: 'numeric' })
-            const officialDates = new Set(communityAll.filter(ev => ev.type === 'official').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
-            const socialDates = new Set(communityAll.filter(ev => ev.type !== 'official').map(ev => parseEventDate(ev.time)?.toDateString()).filter(Boolean))
+            const officialDates = new Set([...officialAll, ...communityAll.filter(ev => ev.type === 'official')].map(ev => parseEventDate(ev.time || ev.date_label || '')?.toDateString()).filter(Boolean))
+            const socialDates = new Set(communityAll.filter(ev => ev.type !== 'official').map(ev => parseEventDate(ev.time || '')?.toDateString()).filter(Boolean))
             const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
             while (cells.length % 7 !== 0) cells.push(null)
             return (
