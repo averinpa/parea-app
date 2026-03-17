@@ -2231,8 +2231,8 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
     meet: { emoji: '📍', label: 'Meeting there' },
   }
 
-  const isToday = (t: string) => t.startsWith('Today')
-  const isTomorrow = (t: string) => t.startsWith('Tomorrow')
+  const isToday = (t: string) => !!t?.startsWith('Today')
+  const isTomorrow = (t: string) => !!t?.startsWith('Tomorrow')
 
   return (
     <View style={{ flex: 1 }}>
