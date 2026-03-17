@@ -2511,39 +2511,76 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
                   </View>
                 ) : (() => {
-                  const shown = (chat.avatars || []).slice(0, 3)
-                  const extra = (chat.members || 1) - 1 - shown.length
-                  const cols = (chat.colors || ['#818CF8', '#6366F1', '#4F46E5'])
-                  if (shown.length === 0) {
-                    const gc0 = (cols[0] && typeof cols[0] === 'string') ? cols[0] : '#818CF8'
-                    const gc1 = (cols[1] && typeof cols[1] === 'string') ? cols[1] : '#6366F1'
+                  const allAvatars = chat.avatars || []
+                  const cols = (chat.colors || ['#818CF8', '#6366F1', '#4F46E5', '#7C3AED'])
+                  const totalOthers = (chat.members || 1) - 1
+                  const gc0 = (cols[0] && typeof cols[0] === 'string') ? cols[0] : '#818CF8'
+                  const gc1 = (cols[1] && typeof cols[1] === 'string') ? cols[1] : '#6366F1'
+
+                  if (allAvatars.length === 0) {
                     return (
                       <LinearGradient colors={[gc0, gc1]}
-                        style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center',
-                          shadowColor: gc0, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }}>
+                        style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', elevation: 4 }}>
                         <Text style={{ fontSize: 26 }}>{chat.eventEmoji || '🎉'}</Text>
                       </LinearGradient>
                     )
                   }
-                  // Single avatar: same size as duo
-                  if (shown.length === 1 && extra === 0) {
+
+                  // Telegram-style: 2×2 grid clipped to circle
+                  // Show up to 4 cells; fill missing with color swatches
+                  const cells = allAvatars.slice(0, 4)
+                  const numCells = Math.min(totalOthers, 4)
+                  const HALF = 27
+                  const GAP = 1.5
+
+                  const CellView = ({ av, idx }: { av?: string; idx: number }) => {
+                    const bg = (cols[idx] && typeof cols[idx] === 'string') ? cols[idx] : '#818CF8'
                     return (
-                      <View style={{ width: 54, height: 54, borderRadius: 27, overflow: 'hidden', backgroundColor: cols[0] || '#818CF8', elevation: 4 }}>
-                        <Image source={{ uri: shown[0] }} style={{ width: '100%', height: '100%' }} />
+                      <View style={{ width: HALF, height: HALF, backgroundColor: bg, overflow: 'hidden' }}>
+                        {av ? <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} /> : null}
                       </View>
                     )
                   }
-                  const stackW = shown.length === 1 ? 54 : shown.length === 2 ? 58 : 70
+
+                  const extra = Math.max(0, totalOthers - cells.length)
+
                   return (
-                    <View style={{ width: stackW, height: 48, position: 'relative' }}>
-                      {shown.map((av: string, ai: number) => (
-                        <View key={ai} style={{ position: 'absolute', left: ai * 20, top: ai === 1 ? 4 : 0, width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
-                          <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
+                    <View style={{ width: 54, height: 54, borderRadius: 27, overflow: 'hidden', elevation: 4, backgroundColor: '#E2E8F0' }}>
+                      {numCells === 1 ? (
+                        <View style={{ flex: 1, backgroundColor: gc0 }}>
+                          {cells[0] && <Image source={{ uri: cells[0] }} style={{ width: '100%', height: '100%' }} />}
                         </View>
-                      ))}
-                      {extra > 0 && (
-                        <View style={{ position: 'absolute', right: -6, bottom: 0, minWidth: 22, height: 22, borderRadius: 11, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' }}>
-                          <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
+                      ) : numCells === 2 ? (
+                        <View style={{ flex: 1, flexDirection: 'row', gap: GAP }}>
+                          <CellView av={cells[0]} idx={0} />
+                          <CellView av={cells[1]} idx={1} />
+                        </View>
+                      ) : numCells === 3 ? (
+                        <View style={{ flex: 1, gap: GAP }}>
+                          <View style={{ flexDirection: 'row', gap: GAP, flex: 1 }}>
+                            <CellView av={cells[0]} idx={0} />
+                            <CellView av={cells[1]} idx={1} />
+                          </View>
+                          <View style={{ flex: 1, backgroundColor: (cols[2] && typeof cols[2] === 'string') ? cols[2] : '#4F46E5', overflow: 'hidden' }}>
+                            {cells[2] && <Image source={{ uri: cells[2] }} style={{ width: '100%', height: '100%' }} />}
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={{ flex: 1, gap: GAP }}>
+                          <View style={{ flexDirection: 'row', gap: GAP, flex: 1 }}>
+                            <CellView av={cells[0]} idx={0} />
+                            <CellView av={cells[1]} idx={1} />
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: GAP, flex: 1 }}>
+                            <CellView av={cells[2]} idx={2} />
+                            {extra > 0 ? (
+                              <View style={{ width: HALF, height: HALF, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff' }}>+{extra + 1}</Text>
+                              </View>
+                            ) : (
+                              <CellView av={cells[3]} idx={3} />
+                            )}
+                          </View>
                         </View>
                       )}
                     </View>
