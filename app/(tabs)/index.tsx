@@ -4187,20 +4187,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }
   const closeNotifPanel = () => {
     Animated.timing(notifPanelY, { toValue: -600, duration: 260, useNativeDriver: true }).start(() => setNotifOpen(false))
-    // Bell panel only marks general/info notifications as read
-    setNotifications(prev => prev.map(n => BELL_TYPES.includes(n.type) ? { ...n, read: true } : n))
+    // Remove bell-type notifications when panel is closed (they've been seen)
+    setNotifications(prev => prev.filter(n => !BELL_TYPES.includes(n.type)))
   }
 
   const markNotifsReadForChat = (chatId: number) => {
-    setNotifications(prev => prev.map(n =>
-      (CHAT_TYPES.includes(n.type) && (!n.chatId || n.chatId === chatId)) ? { ...n, read: true } : n
+    // Remove chat-linked notifications when that chat is opened
+    setNotifications(prev => prev.filter(n =>
+      !(CHAT_TYPES.includes(n.type) && (!n.chatId || n.chatId === chatId))
     ))
   }
 
   const markNotifsReadForPlans = () => {
-    setNotifications(prev => prev.map(n =>
-      PLANS_TYPES.includes(n.type) ? { ...n, read: true } : n
-    ))
+    // Remove plans-linked notifications when Plans/VibeCheck is opened
+    setNotifications(prev => prev.filter(n => !PLANS_TYPES.includes(n.type)))
   }
 
   const dismissNotif = (id: string) => {
