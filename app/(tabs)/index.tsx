@@ -4063,6 +4063,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
+  const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
+
+  useEffect(() => {
+    supabase.from('official_events').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, _fromDb: true, type: 'official', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.max_participants ?? e.capacity ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
+  }, [])
   const persistLoaded = useRef(false)
 
   // Load profiles from DB, fall back to MOCK_SEEKERS if empty
@@ -4503,7 +4509,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />}
           {activeTab === 'vibecheck' && <VibeCheckTab
             joinedEvents={joinedEvents}
-            allEvents={MOCK_EVENTS}
+            allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents]}
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
             userData={userData}
