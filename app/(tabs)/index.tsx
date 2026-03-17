@@ -1954,11 +1954,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance}</Text>
                       </View>
                     )}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="people-outline" size={13} color="#94A3B8" />
-                        <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '500' }}>{ev.capacity ?? ev.maxParticipants ?? '—'}</Text>
-                      </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10 }}>
+                      <View />
                       <TouchableOpacity
                         onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
                         style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, backgroundColor: '#6366F1' }}>
@@ -5241,8 +5238,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       </View>
                     )}
 
-                    {/* Participants */}
-                    <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    {/* Participants — only for community events */}
+                    {eventDetail.type !== 'official' && <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
                         <Feather name="users" size={18} color="#6366F1" />
                       </View>
@@ -5255,7 +5252,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <View style={{ backgroundColor: evIsFull ? '#fef2f2' : '#f0fdf4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
                         <Text style={{ fontSize: 12, fontWeight: '700', color: evIsFull ? '#EF4444' : '#22c55e' }}>{evIsFull ? 'Full' : 'Open'}</Text>
                       </View>
-                    </View>
+                    </View>}
 
                     {/* Organizer (official) */}
                     {eventDetail.type === 'official' && eventDetail.organizer && (
