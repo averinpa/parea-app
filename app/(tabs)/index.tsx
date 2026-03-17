@@ -2525,15 +2525,24 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       </LinearGradient>
                     )
                   }
+                  // Single avatar: same size as duo
+                  if (shown.length === 1 && extra === 0) {
+                    return (
+                      <View style={{ width: 54, height: 54, borderRadius: 27, overflow: 'hidden', backgroundColor: cols[0] || '#818CF8', elevation: 4 }}>
+                        <Image source={{ uri: shown[0] }} style={{ width: '100%', height: '100%' }} />
+                      </View>
+                    )
+                  }
+                  const stackW = shown.length === 1 ? 54 : shown.length === 2 ? 58 : 70
                   return (
-                    <View style={{ width: 66, height: 44, position: 'relative' }}>
+                    <View style={{ width: stackW, height: 48, position: 'relative' }}>
                       {shown.map((av: string, ai: number) => (
-                        <View key={ai} style={{ position: 'absolute', left: ai * 18, top: ai === 1 ? 2 : 0, width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
+                        <View key={ai} style={{ position: 'absolute', left: ai * 20, top: ai === 1 ? 4 : 0, width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#fff', overflow: 'hidden', backgroundColor: cols[ai] || '#818CF8', zIndex: 3 - ai }}>
                           <Image source={{ uri: av }} style={{ width: '100%', height: '100%' }} />
                         </View>
                       ))}
                       {extra > 0 && (
-                        <View style={{ position: 'absolute', right: -4, bottom: -2, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' }}>
+                        <View style={{ position: 'absolute', right: -6, bottom: 0, minWidth: 22, height: 22, borderRadius: 11, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#fff' }}>
                           <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>+{extra}</Text>
                         </View>
                       )}
@@ -2543,11 +2552,11 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 
                 {/* Text content */}
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: chat.isNew ? '#4338CA' : '#1E1B4B', letterSpacing: -0.2 }} numberOfLines={1}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: chat.isNew ? '#4338CA' : '#1E1B4B', letterSpacing: -0.2, flex: 1 }} numberOfLines={1}>
                       {chat.type === 'duo' ? `${chat.name}, ${chat.age}` : chat.event}
                     </Text>
-                    <Text style={{ fontSize: 11, color: chat.isNew ? '#818CF8' : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8 }}>{chat.time}</Text>
+                    <Text style={{ fontSize: 11, color: chat.isNew ? '#818CF8' : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8, flexShrink: 0 }}>{chat.time}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                     <Text style={{ fontSize: 13 }}>{chat.eventEmoji || '📍'}</Text>
@@ -5528,7 +5537,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   {openChat.eventEmoji} {openChat.members} members
                 </Text>
               </View>
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
+              <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
                 {/* You — host */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.06)', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.15)' }}>
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
