@@ -1932,9 +1932,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   style={{ width: 210, borderRadius: 22, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 4 }}>
                   {/* Image or gradient */}
                   {ev.image_url ? (
-                    <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 130 }} resizeMode="cover" />
+                    <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
                   ) : (
-                    <LinearGradient colors={ev.gradient as any || ['#667eea','#764ba2']} style={{ width: '100%', height: 130, alignItems: 'center', justifyContent: 'center' }}>
+                    <LinearGradient colors={ev.gradient as any || ['#667eea','#764ba2']} style={{ width: '100%', height: 100, alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 40 }}>{CATEGORY_EMOJI[ev.category] || '🎉'}</Text>
                     </LinearGradient>
                   )}
@@ -1943,19 +1943,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.4, textTransform: 'capitalize' }}>{ev.category || 'Event'}</Text>
                   </View>
                   <View style={{ padding: 12 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6 }} numberOfLines={2}>{ev.title}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6, minHeight: 36 }} numberOfLines={2}>{ev.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <Feather name="calendar" size={11} color="#94A3B8" />
                       <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
                     </View>
-                    {(ev.location || ev.distance) && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                        <Feather name="map-pin" size={11} color="#94A3B8" />
-                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance}</Text>
-                      </View>
-                    )}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10 }}>
-                      <View />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3, height: 16 }}>
+                      <Feather name="map-pin" size={11} color={ev.location || ev.distance ? '#94A3B8' : 'transparent'} />
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance || ''}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
                       <TouchableOpacity
                         onPress={() => { const st = getJoinState(ev); if (st === 'none') openJoinSheet(ev); else if (st !== 'full') onJoin(ev) }}
                         style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, backgroundColor: '#6366F1' }}>
@@ -3032,8 +3029,10 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
 }
 
 function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages }: any) {
-  // Official/open events the user joined — shown as crew-finding cards
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted)
+  // Official/concert events — shown as AI crew-finding cards
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && e.type !== 'community')
+  // Community events (host-gated) — shown as request/approval cards
+  const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && e.type === 'community')
   // User-created socials the user requested to join — shown as "awaiting approval"
   const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted)
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
@@ -3163,7 +3162,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-            {hasHostActivity ? '👑 You have join requests' : myEvents.length > 0 ? `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew` : `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`}
+            {hasHostActivity ? '👑 You have join requests' : myEvents.length > 0 ? `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew` : myCommunityEvents.length > 0 ? `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host approval` : `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`}
           </Text>
         </View>
 
@@ -3323,14 +3322,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const cap        = VIBE_FORMAT_MAX[format] || 5
             const threshold  = VIBE_FORMAT_THRESHOLD[format] || cap
             const isParty    = format === 'party'
-            // Crew is always fully assembled — show ready state so user can confirm
-            const partnersFound = cap - 1
-            const found      = cap   // me + all partners
-            const isActive   = found >= threshold
+            const isScanning = joinedEvents?.[ev.id] === 'pending'
+            const partnersFound = isScanning ? 0 : cap - 1
+            const found      = isScanning ? 1 : cap   // pending = just me; joined = full crew
+            const isActive   = !isScanning && found >= threshold
             const partners   = aiRankedProfiles.slice(0, partnersFound) // AI-ranked partners
 
             // Status label
-            const statusLabel = isActive
+            const statusLabel = isScanning
+              ? 'SCANNING…'
+              : isActive
               ? (isParty ? 'GROUP ACTIVE 🔥' : 'READY ✓')
               : 'SCANNING…'
             const statusColor = isActive ? '#43E97B' : '#818CF8'
@@ -3455,6 +3456,88 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       </TouchableOpacity>
                     </View>
                   )}
+                </View>
+              </View>
+            )
+          })}
+
+          {/* Community events — host-approval flow */}
+          {myCommunityEvents.map((ev: any) => {
+            const isPending = joinedEvents?.[ev.id] === 'pending'
+            const total = ev.maxParticipants || ev.capacity || 20
+            const filled = (ev.participantsCount || 0) + (isPending ? 0 : 1)
+            const free = Math.max(0, total - filled)
+            // Compatibility score: interest match + language overlap
+            const userLangs: string[] = userData?.langs || []
+            const hostLangs: string[] = ev.hostLangs || []
+            const langMatch = userLangs.some((l: string) => hostLangs.includes(l))
+            const interestMatch = (userData?.interests || []).includes(ev.category)
+            const compatScore = (langMatch ? 35 : 10) + (interestMatch ? 40 : 5) + 20
+            const compatColor = compatScore >= 70 ? '#43E97B' : compatScore >= 50 ? '#FBBF24' : '#F87171'
+            const compatLabel = compatScore >= 70 ? 'Great match' : compatScore >= 50 ? 'Good fit' : 'Low match'
+            return (
+              <View key={`community-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.35)' : 'rgba(67,233,123,0.35)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+                <View style={{ padding: 20 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time} · {ev.distance}</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: isPending ? 'rgba(245,158,11,0.15)' : 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.4)' : 'rgba(67,233,123,0.4)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: isPending ? '#FBBF24' : '#43E97B' }}>{isPending ? 'PENDING ⏳' : 'APPROVED ✓'}</Text>
+                    </View>
+                  </View>
+
+                  {/* Compatibility with this event */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 10 }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${compatColor}22`, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: compatColor }}>{compatScore}%</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: compatColor }}>{compatLabel} ✦</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                        {interestMatch ? `Matches your interest in ${ev.category}` : 'AI matched based on your profile'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Real capacity bar */}
+                  <View style={{ marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '700', letterSpacing: 0.5 }}>SPOTS FILLED</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.7)' }}>{filled} / {total} · {free} free</Text>
+                    </View>
+                    <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
+                      <LinearGradient
+                        colors={['#6366F1', '#818CF8']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={{ height: 3, borderRadius: 99, width: `${Math.min(100, (filled / total) * 100)}%` as any }}
+                      />
+                    </View>
+                  </View>
+
+                  {isPending ? (
+                    <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 14 }}>
+                      <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 19 }}>
+                        ⏳ Request sent. The host reviews compatibility scores — {compatScore >= 60 ? 'your chances look great! 🔥' : 'keep your profile complete for better chances.'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => onConfirm?.(ev, [], 'community')}
+                      style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat 💬</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => onLeave?.(ev)}
+                    style={{ borderRadius: 99, paddingVertical: 12, alignItems: 'center', marginTop: 8 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.3)' }}>Cancel request</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )
@@ -4430,8 +4513,56 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const isFull = ev.participantsCount >= ev.maxParticipants
     if (isFull) return
     setJoinedEvents(prev => {
-      if (!prev[ev.id]) return { ...prev, [ev.id]: 'pending' }
-      if (prev[ev.id] === 'pending') return { ...prev, [ev.id]: 'joined' }
+      if (!prev[ev.id]) {
+        // Community events: send request to host, simulate approval after 5s
+        if (ev.type === 'community' && !ev.isHosted) {
+          // Compute compatibility with this event
+          const userLangsNow: string[] = userData?.langs || []
+          const hostLangsNow: string[] = ev.hostLangs || []
+          const langMatchNow = userLangsNow.some((l: string) => hostLangsNow.includes(l))
+          const interestMatchNow = (userData?.interests || []).includes(ev.category)
+          const compatScoreNow = (langMatchNow ? 35 : 10) + (interestMatchNow ? 40 : 5) + 20
+          const isGoodMatch = compatScoreNow >= 60
+          setTimeout(() => {
+            setJoinedEvents(cur => {
+              if (cur[ev.id] !== 'pending') return cur
+              if (!isGoodMatch) {
+                // Rejected — remove from pending
+                const next = { ...cur }
+                delete next[ev.id]
+                return next
+              }
+              return { ...cur, [ev.id]: 'joined' }
+            })
+            if (isGoodMatch) {
+              addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request!', body: ev.title })
+            } else {
+              addNotif({ type: 'crew_ready', emoji: '😔', color: '#F87171', title: 'Request not approved', body: `"${ev.title}" — complete your profile to improve your match score` })
+            }
+            // Create group chat
+            const members = QUEUE_PROFILES.slice(0, Math.min(3, (ev.participantsCount || 3)))
+            setChatList(prev => [{
+              id: Date.now(),
+              name: ev.title,
+              type: 'group',
+              event: ev.title,
+              eventId: ev.id,
+              lastMsg: '👋 Welcome to the group!',
+              time: 'now',
+              unread: 1,
+              gradient: ev.gradient,
+              photos: members.map((m: any) => m.photo),
+              messages: [{ id: 1, from: 'system', text: `Welcome! You've been approved to join "${ev.title}" 🎉`, time: 'now' }],
+            }, ...prev])
+          }, 5000)
+        }
+        return { ...prev, [ev.id]: 'pending' }
+      }
+      if (prev[ev.id] === 'pending') {
+        // For non-community events, second press confirms; for community wait for host
+        if (ev.type === 'community' && !ev.isHosted) return prev
+        return { ...prev, [ev.id]: 'joined' }
+      }
       // joined → unjoin
       const next = { ...prev }
       delete next[ev.id]
