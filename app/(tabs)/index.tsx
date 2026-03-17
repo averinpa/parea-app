@@ -3957,15 +3957,15 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         {/* Actions */}
         <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
           {[
-            { icon: 'settings', label: 'Settings', color: '#334155' },
-            { icon: 'shield', label: 'Privacy Policy', color: '#334155' },
-            { icon: 'file-text', label: 'Terms of Service', color: '#334155' },
-            { icon: 'log-out', label: 'Log Out', color: '#EF4444' },
-            { icon: 'trash-2', label: 'Delete Account', color: '#EF4444' },
+            { icon: 'settings',   label: 'Settings',        iconColor: '#6366F1', bg: '#EEF2FF' },
+            { icon: 'shield',     label: 'Privacy Policy',  iconColor: '#3B82F6', bg: '#EFF6FF' },
+            { icon: 'file-text',  label: 'Terms of Service',iconColor: '#F59E0B', bg: '#FFFBEB' },
+            { icon: 'log-out',    label: 'Log Out',         iconColor: '#EF4444', bg: '#FEF2F2' },
+            { icon: 'trash-2',    label: 'Delete Account',  iconColor: '#EF4444', bg: '#FEF2F2' },
           ].map((item, idx, arr) => (
             <React.Fragment key={item.label}>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13 }}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}
                 onPress={() => {
                   if (item.label === 'Log Out') { onLogOut?.(); return }
                   if (item.label === 'Delete Account') {
@@ -3978,11 +3978,13 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                     ])
                   }
                 }}>
-                <Feather name={item.icon as any} size={16} color={item.color} style={{ marginRight: 12 }} />
-                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: item.color }}>{item.label}</Text>
+                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  <Feather name={item.icon as any} size={17} color={item.iconColor} />
+                </View>
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: item.label === 'Log Out' || item.label === 'Delete Account' ? '#EF4444' : '#1E1B4B' }}>{item.label}</Text>
                 <Feather name="chevron-right" size={15} color="#CBD5E1" />
               </TouchableOpacity>
-              {idx < arr.length - 1 && <View style={{ height: 1, backgroundColor: '#F1F5F9', marginLeft: 44 }} />}
+              {idx < arr.length - 1 && <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />}
             </React.Fragment>
           ))}
         </View>
