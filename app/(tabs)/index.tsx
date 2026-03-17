@@ -1723,51 +1723,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
         {/* ── STICKY HEADER ── */}
         <View style={{ backgroundColor: '#F8F7FF', zIndex: 600, paddingBottom: 4 }}>
-          {/* Greeting row */}
-          <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 15, color: '#94A3B8', fontWeight: '500' }}>Hi, {userName} 👋</Text>
-              <TouchableOpacity
-                onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
-                activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-                  paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
-                  backgroundColor: tonightVibe ? '#EEF2FF' : '#F1F5F9' }}>
-                {tonightVibe ? (() => {
-                  const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
-                  const drinksIcon = tonightVibe.drinks === "Don't drink" ? '🚫' : tonightVibe.drinks === 'Rarely' ? '🥤' : '🥂'
-                  const smokingIcon = tonightVibe.smoking === 'Non-smoker' ? '🚭' : tonightVibe.smoking === 'Social' ? '🌬️' : '🚬'
-                  return <>
-                    <Text style={{ fontSize: 13 }}>{energyInfo.emoji}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{energyInfo.label}</Text>
-                    <Text style={{ fontSize: 11 }}>{drinksIcon}</Text>
-                    <Text style={{ fontSize: 11 }}>{smokingIcon}</Text>
-                    <Feather name="edit-2" size={10} color="#94A3B8" />
-                  </>
-                })() : <>
-                  <Text style={{ fontSize: 12 }}>✨</Text>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8' }}>Set your vibe</Text>
-                </>}
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              {/* City */}
-              <TouchableOpacity onPress={() => setCityOpen(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: '#EEF2FF' }}>
-                <Text style={{ fontSize: 11 }}>📍</Text>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city}</Text>
-              </TouchableOpacity>
-              {/* Calendar */}
-              <TouchableOpacity
-                onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
-                style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="calendar" size={16} color={calendarOpen || selectedDate ? '#fff' : '#6366F1'} />
-              </TouchableOpacity>
-              {/* Bell */}
+          {/* Header */}
+          <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
+            {/* Row 1: greeting + bell */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>Hi, {userName} 👋</Text>
               <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
-                  style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+                  style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
                     shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
-                  <Ionicons name="notifications-outline" size={18} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
+                  <Ionicons name="notifications-outline" size={19} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
                 </TouchableOpacity>
                 {unreadCount > 0 && (
                   <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8,
@@ -1776,6 +1741,51 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   </View>
                 )}
               </Animated.View>
+            </View>
+
+            {/* Row 2: city · vibe · calendar — all in one line */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* City */}
+              <TouchableOpacity onPress={() => setCityOpen(true)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+                <Text style={{ fontSize: 11 }}>📍</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city}</Text>
+              </TouchableOpacity>
+
+              {/* Separator */}
+              <View style={{ width: 1, height: 14, backgroundColor: '#E2E8F0' }} />
+
+              {/* Vibe */}
+              <TouchableOpacity onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
+                  backgroundColor: tonightVibe ? '#EEF2FF' : '#F1F5F9' }}>
+                {tonightVibe ? (() => {
+                  const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
+                  return <>
+                    <Text style={{ fontSize: 12 }}>{energyInfo.emoji}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{energyInfo.label}</Text>
+                    <Feather name="chevron-down" size={11} color="#94A3B8" />
+                  </>
+                })() : <>
+                  <Text style={{ fontSize: 12 }}>✨</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8' }}>My Vibe</Text>
+                  <Feather name="chevron-down" size={11} color="#94A3B8" />
+                </>}
+              </TouchableOpacity>
+
+              {/* Separator */}
+              <View style={{ width: 1, height: 14, backgroundColor: '#E2E8F0' }} />
+
+              {/* Calendar */}
+              <TouchableOpacity onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
+                  backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#F1F5F9' }}>
+                <Feather name="calendar" size={13} color={calendarOpen || selectedDate ? '#fff' : '#64748B'} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: calendarOpen || selectedDate ? '#fff' : '#64748B' }}>
+                  {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -1867,15 +1877,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               </View>
             )
           })()}
-          {selectedDate && (
-            <TouchableOpacity onPress={() => setSelectedDate(null)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99, backgroundColor: '#6366F1' }}>
-                <Feather name="calendar" size={11} color="#fff" />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{selectedDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
-                <Feather name="x" size={11} color="#fff" />
-              </View>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* ── OFFICIAL EVENTS ── */}
