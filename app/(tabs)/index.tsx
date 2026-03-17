@@ -2196,11 +2196,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent, onPlansOpen }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
-  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void;
+  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
@@ -2268,7 +2268,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
             { id: 'messages', label: `💬 Chats${chatList.length > 0 ? ` (${chatList.length})` : ''}` },
           ] as const).map(t => (
             <TouchableOpacity key={t.id} activeOpacity={0.8}
-              onPress={() => { setSubTab(t.id); Haptics.selectionAsync() }}
+              onPress={() => { setSubTab(t.id); Haptics.selectionAsync(); if (t.id === 'going') onPlansOpen?.() }}
               style={{ flex: 1, paddingVertical: 9, borderRadius: 99, alignItems: 'center',
                 backgroundColor: subTab === t.id ? '#6366F1' : 'transparent' }}>
               <Text style={{ fontSize: 13, fontWeight: '800', color: subTab === t.id ? '#fff' : '#64748B' }}>{t.label}</Text>
@@ -4148,7 +4148,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   })
 
   // ── Notifications ─────────────────────────────────────────────────────────
-  type Notif = { id: string; type: string; title: string; body: string; emoji: string; color: string; time: number; read: boolean }
+  type Notif = { id: string; type: string; title: string; body: string; emoji: string; color: string; time: number; read: boolean; chatId?: number; eventId?: number }
+
+  // Which types are read only via the bell panel (general info)
+  const BELL_TYPES = ['welcome', 'host_full', 'event_cancelled', 'reminder_24h', 'reminder_2h']
+  // Which types are read when a specific chat is opened
+  const CHAT_TYPES = ['match', 'confirmed', 'group_chat', 'new_message', 'member_joined', 'crew_ready']
+  // Which types are read when Plans / VibeCheck tab is opened
+  const PLANS_TYPES = ['join_request', 'member_left', 'reminder_24h', 'reminder_2h']
   const [notifications, setNotifications] = useState<Notif[]>([])
   const [notifOpen, setNotifOpen] = useState(false)
   const bellShake = useRef(new Animated.Value(0)).current
@@ -4180,7 +4187,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }
   const closeNotifPanel = () => {
     Animated.timing(notifPanelY, { toValue: -600, duration: 260, useNativeDriver: true }).start(() => setNotifOpen(false))
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    // Bell panel only marks general/info notifications as read
+    setNotifications(prev => prev.map(n => BELL_TYPES.includes(n.type) ? { ...n, read: true } : n))
+  }
+
+  const markNotifsReadForChat = (chatId: number) => {
+    setNotifications(prev => prev.map(n =>
+      (CHAT_TYPES.includes(n.type) && (!n.chatId || n.chatId === chatId)) ? { ...n, read: true } : n
+    ))
+  }
+
+  const markNotifsReadForPlans = () => {
+    setNotifications(prev => prev.map(n =>
+      PLANS_TYPES.includes(n.type) ? { ...n, read: true } : n
+    ))
   }
 
   const dismissNotif = (id: string) => {
@@ -4417,6 +4437,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   const handlePass = (id: number) => setVibeResults(prev => ({ ...prev, [id]: 'pass' }))
 
+  const DUO_REPLIES = [
+    "Sounds great! 😊", "Yeah, totally! See you there 🙌", "Perfect, can't wait!",
+    "Nice, looking forward to it ✨", "Sure thing! 👍", "Awesome! Should be a good one 🎉",
+    "Cool, see you soon!", "Great, I'll be there 🙂", "Sounds like a plan!",
+    "That works for me 💯",
+  ]
+  const GROUP_REPLIES = [
+    "Looking forward to it! 🎉", "Anyone need a lift? 🚗", "What time should we meet?",
+    "I'll be there! 🙌", "Can't wait! ✨", "This is going to be great 🔥",
+    "See you all there!", "So excited for this 🌊", "Who else is coming early?",
+  ]
+
   const handleSend = () => {
     if (!chatInput.trim() || !openChat) return
     const text = chatInput.trim()
@@ -4425,6 +4457,42 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: 'now' } : c))
     setChatInput('')
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
+
+    // Mock auto-reply
+    const chatId = openChat.id
+    const delay = 1500 + Math.random() * 1500
+    if (openChat.type === 'duo') {
+      const replyText = DUO_REPLIES[Math.floor(Math.random() * DUO_REPLIES.length)]
+      setTimeout(() => {
+        const replyMsg = { from: 'them', text: replyText, time: 'now' }
+        setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), replyMsg] }))
+        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: replyText, time: 'now', isNew: true } : c))
+        // Notify only if chat is not currently open
+        setOpenChat((cur: any) => {
+          if (!cur || cur.id !== chatId) {
+            addNotif({ type: 'new_message', emoji: '💬', color: '#6366F1', title: openChat.name || 'New message', body: replyText, chatId })
+          }
+          return cur
+        })
+      }, delay)
+    } else if (openChat.type === 'group') {
+      const profiles: any[] = openChat.memberProfiles || []
+      if (profiles.length > 0) {
+        const sender = profiles[Math.floor(Math.random() * profiles.length)]
+        const replyText = GROUP_REPLIES[Math.floor(Math.random() * GROUP_REPLIES.length)]
+        setTimeout(() => {
+          const replyMsg = { from: 'them', text: replyText, time: 'now', senderName: sender.name, senderPhoto: sender.photo, senderColor: sender.color }
+          setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), replyMsg] }))
+          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: `${sender.name}: ${replyText}`, time: 'now', isNew: true } : c))
+          setOpenChat((cur: any) => {
+            if (!cur || cur.id !== chatId) {
+              addNotif({ type: 'new_message', emoji: '💬', color: '#6366F1', title: `${sender.name} in ${openChat.event}`, body: replyText, chatId })
+            }
+            return cur
+          })
+        }, delay)
+      }
+    }
   }
 
   return (
@@ -4463,9 +4531,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                 partnerProfile: partners[0] || null,
               }
+              const createdChatId = newChat.id
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
-              addNotif({ type: 'confirmed', emoji: '✅', color: '#10B981', title: 'You\'re in!', body: `Your crew for "${ev.title}" is ready` })
+              addNotif({ type: 'confirmed', emoji: '✅', color: '#10B981', title: 'You\'re in!', body: `Your crew for "${ev.title}" is ready`, chatId: createdChatId })
+              // Schedule 24h reminder (30s delay for demo)
+              setTimeout(() => addNotif({ type: 'reminder_24h', emoji: '⏰', color: '#F59E0B', title: `Reminder: ${ev.title}`, body: `Your event is tomorrow! Check your crew 👥`, eventId: ev.id }), 30000)
               showToast(`Chat created! 🎉`)
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
@@ -4505,7 +4576,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   partnerProfile: joiner,
                 }
                 setChatList(prev => [newChat, ...prev])
-                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} is joining you!`, body: ev?.title || 'Check your chats' })
+                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} is joining you!`, body: ev?.title || 'Check your chats', chatId: Date.now() })
                 setTimeout(() => {
                   setMessagesInitialSubTab('messages')
                   setActiveTab('messages')
@@ -4547,6 +4618,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   }
                 })
               }
+              // member_joined notif for group chats — find the chat we just updated
+              if (!isDuo) {
+                setChatList(latest => {
+                  const chat = latest.find(c => c.hostEventId === eventId)
+                  if (chat) addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${joiner.name} joined the group`, body: ev?.title || '', chatId: chat.id })
+                  return latest
+                })
+              }
               showToast(`${joiner.name} approved! ✅`)
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
             }}
@@ -4579,6 +4658,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onOpenChat={(chat) => {
               setOpenChat(chat)
               setChatList(prev => prev.map(c => c.id === chat.id ? { ...c, isNew: false } : c))
+              markNotifsReadForChat(chat.id)
             }}
             hostedEvents={userCreatedEvents}
             onLeaveChat={(id, addSystemMsg) => {
@@ -4607,9 +4687,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
+              addNotif({ type: 'event_cancelled', emoji: '🗑️', color: '#EF4444', title: 'Event cancelled', body: `"${ev.title}" has been removed` })
               showToast("Event cancelled 🗑️")
             }}
-            onVibeCheck={() => setActiveTab('vibecheck')}
+            onVibeCheck={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}
+            onPlansOpen={markNotifsReadForPlans}
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.event !== ev.title))
@@ -4629,7 +4711,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             <Feather name="home" size={22} color={activeTab === 'home' ? '#6366F1' : '#94A3B8'} />
             <Text style={[s.navLabel, activeTab === 'home' && { color: '#6366F1' }]}>Home</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('vibecheck')}>
+          <TouchableOpacity style={s.navItem} onPress={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}>
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
               {(Object.keys(joinedEvents).length > 0 || Object.values(pendingJoinRequests).some(r => r.length > 0)) && (
@@ -5643,6 +5725,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                   ...prev,
                                   [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: `🚫 ${p.name} was removed from the group`, time: 'now' }],
                                 }))
+                                addNotif({ type: 'member_left', emoji: '👋', color: '#F59E0B', title: `${p.name} left the group`, body: openChat.event || '' })
                                 setGroupMembersOpen(false)
                                 showToast(`${p.name} removed`)
                               }},
