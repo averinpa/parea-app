@@ -4541,8 +4541,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
               addNotif({ type: 'confirmed', emoji: '✅', color: '#10B981', title: 'You\'re in!', body: `Your crew for "${ev.title}" is ready`, chatId: createdChatId })
-              // Schedule 24h reminder (30s delay for demo)
-              setTimeout(() => addNotif({ type: 'reminder_24h', emoji: '⏰', color: '#F59E0B', title: `Reminder: ${ev.title}`, body: `Your event is tomorrow! Check your crew 👥`, eventId: ev.id }), 30000)
               showToast(`Chat created! 🎉`)
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
