@@ -4636,8 +4636,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
-          {activeTab === 'home' && <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />}
-          {activeTab === 'vibecheck' && <VibeCheckTab
+          <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />
+          </View>
+          <View style={{ flex: 1, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
+          <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents]}
             userEventFormat={userEventFormat}
@@ -4785,8 +4788,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
             }}
-          />}
-          {activeTab === 'messages' && <MessagesTab
+          />
+          </View>
+          <View style={{ flex: 1, display: activeTab === 'messages' ? 'flex' : 'none' }}>
+          <MessagesTab
             initialSubTab={messagesInitialSubTab}
             chatList={chatList}
             onOpenChat={(chat) => {
@@ -4837,8 +4842,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setActiveTab('home')
               setTimeout(() => setPendingJoinEv(ev), 150)
             }}
-          />}
-          {activeTab === 'profile' && <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} />}
+          />
+          </View>
+          <View style={{ flex: 1, display: activeTab === 'profile' ? 'flex' : 'none' }}>
+            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} />
+          </View>
         </View>
 
         {/* Bottom nav */}
