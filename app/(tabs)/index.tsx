@@ -4150,7 +4150,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 const isChecking = status === 'checking'
                 const isRejected = status === 'rejected'
                 if (uri) return (
-                  <TouchableOpacity key={i} activeOpacity={0.85}
+                  <TouchableOpacity key={`${i}_${uri}`} activeOpacity={0.85}
                     onPress={() => {
                       if (isChecking || isRejected) return
                       const acts: any[] = [{ text: '📷  Replace', onPress: () => pickProfilePhoto(i) }]
