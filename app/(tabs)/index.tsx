@@ -6156,7 +6156,24 @@ export default function App() {
   if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onSendOtp={(method, cred) => { setAuthMethod(method); setAuthCredential(cred); setScreen('otp') }} />
   if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} method={authMethod} credential={authCredential} onVerify={handleOtpVerify} />
   if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} />
-  return <FeedScreen userData={userData} onUpdateUserData={(patch: any) => setUserData((prev: any) => ({ ...prev, ...patch }))} onLogOut={handleLogOut} />
+  const handleUpdateUserData = async (patch: any) => {
+    setUserData((prev: any) => ({ ...prev, ...patch }))
+    if (userData?.dbId) {
+      const dbPatch: any = {}
+      if (patch.photos      !== undefined) dbPatch.photos        = patch.photos
+      if (patch.langs       !== undefined) dbPatch.langs         = patch.langs
+      if (patch.interests   !== undefined) dbPatch.interests     = patch.interests
+      if (patch.musicGenres !== undefined) dbPatch.music_genres  = patch.musicGenres
+      if (patch.socialEnergy!== undefined) dbPatch.social_energy = patch.socialEnergy
+      if (patch.drinksPref  !== undefined) dbPatch.drinks_pref   = patch.drinksPref
+      if (patch.smokingPref !== undefined) dbPatch.smoking_pref  = patch.smokingPref
+      if (patch.bio         !== undefined) dbPatch.bio           = patch.bio
+      if (Object.keys(dbPatch).length > 0) {
+        await supabase.from('profiles').update(dbPatch).eq('id', userData.dbId)
+      }
+    }
+  }
+  return <FeedScreen userData={userData} onUpdateUserData={handleUpdateUserData} onLogOut={handleLogOut} />
 }
 
 // ─── STYLES ───────────────────────────────────────────────────────────────────
