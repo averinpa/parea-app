@@ -4230,10 +4230,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                       { text: 'Cancel', style: 'cancel' },
                       { text: 'Delete', style: 'destructive', onPress: async () => {
                         try {
-                          const { data: { session } } = await supabase.auth.getSession()
-                          const res = await supabase.functions.invoke('delete-account', {
-                            headers: { Authorization: `Bearer ${session?.access_token}` },
-                          })
+                          const res = await supabase.functions.invoke('delete-account')
                           if (res.error) throw res.error
                         } catch (e: any) {
                           Alert.alert('Error', String(e?.message || e))
