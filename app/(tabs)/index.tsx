@@ -4795,6 +4795,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }}
             onLeave={(ev: any) => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              if (ev.type === 'official' && userData?.dbId) {
+                supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
+              }
               showToast("We let them know your plans changed 📅")
             }}
             hostedEvents={userCreatedEvents}
@@ -4951,6 +4954,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.event !== ev.title))
+              if (ev.type === 'official' && userData?.dbId) {
+                supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
+              }
               showToast("Spot freed. Others can join now 🎟️")
             }}
             onUpdatePlans={ev => {
