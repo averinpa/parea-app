@@ -4154,7 +4154,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                     onPress={() => {
                       if (isChecking || isRejected) return
                       const acts: any[] = [{ text: '📷  Replace', onPress: () => pickProfilePhoto(i) }]
-                      if (!(isMain && userPhotos.length === 1)) acts.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
+                      if (!isMain) acts.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
                       acts.push({ text: 'Cancel', style: 'cancel' })
                       Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, acts)
                     }}
