@@ -20,6 +20,25 @@ import { supabase } from '../../lib/supabase'
 const { width: W } = Dimensions.get('window')
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY || ''
 
+// ─── UPLOAD PHOTO TO SUPABASE STORAGE ────────────────────────────────────────
+const uploadPhotoToStorage = async (uri: string, userId: string, slot: number): Promise<string | null> => {
+  try {
+    const response = await fetch(uri)
+    const blob = await response.blob()
+    const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg'
+    const path = `${userId}/${slot}_${Date.now()}.${ext}`
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, blob, { upsert: true, contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}` })
+    if (error) { console.warn('Storage upload error:', error.message); return null }
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    return data.publicUrl
+  } catch (e) {
+    console.warn('Upload failed:', e)
+    return null
+  }
+}
+
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
 const LANDING_SLIDES = [
@@ -3735,11 +3754,22 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
               onUpdateUserData?.({ photos: photosBeforePick })
               setSlot(targetIdx, null)
               Alert.alert('Photo removed 🚫', 'This photo doesn\'t meet our content guidelines. Please choose a different one.')
-            }, 1200) // show 'rejected' state for 1.2s before removing
+            }, 1200)
             return
           }
         } catch { /* keep photo on moderation error */ }
         setSlot(targetIdx, null)
+      }
+
+      // Upload to Supabase Storage and replace local URI with public URL
+      const userId = userData?.authId || userData?.dbId
+      if (userId) {
+        const publicUrl = await uploadPhotoToStorage(uri, userId, targetIdx)
+        if (publicUrl) {
+          const uploadedPhotos = [...newPhotos]
+          uploadedPhotos[targetIdx] = publicUrl
+          onUpdateUserData?.({ photos: uploadedPhotos })
+        }
       }
     } catch { /* picker cancelled or error */ }
   }
@@ -6078,12 +6108,20 @@ export default function App() {
   const saveProfileToDB = async (data: any, userId: string) => {
     try {
       const color = PROFILE_COLORS[Math.floor(Math.random() * PROFILE_COLORS.length)]
+      // Upload local photos to Storage before saving
+      const localPhotos: string[] = (data.photos || []).filter(Boolean)
+      const uploadedPhotos = await Promise.all(
+        localPhotos.map((uri: string, idx: number) =>
+          uri.startsWith('http') ? Promise.resolve(uri) : uploadPhotoToStorage(uri, userId, idx)
+        )
+      )
+      const finalPhotos = uploadedPhotos.filter(Boolean) as string[]
       const { data: row, error } = await supabase.from('profiles').insert({
         auth_id: userId,
         name: data.name,
         age: parseInt(data.age) || null,
         bio: data.bio,
-        photos: data.photos?.filter(Boolean) || [],
+        photos: finalPhotos,
         langs: data.langs || [],
         interests: data.interests || [],
         social_energy: data.socialEnergy,
