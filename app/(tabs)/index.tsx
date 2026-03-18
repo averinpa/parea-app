@@ -1559,6 +1559,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [searchQuery, setSearchQuery] = useState('')
   const [officialDbEvents, setOfficialDbEvents] = useState<any[]>([])
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
   const now = Date.now()
 
   useEffect(() => {
@@ -1641,9 +1642,19 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // Official: DB events + MOCK official fallback (if DB empty)
   const officialMock = MOCK_EVENTS.filter(e => e.city === city && e.type === 'official' && !isEventPast(e.time))
-  const officialAll: any[] = officialDbEvents.length > 0
+  const officialAll: any[] = (officialDbEvents.length > 0
     ? officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
     : officialMock
+  ).sort((a: any, b: any) => {
+    if (a.is_promoted && !b.is_promoted) return -1
+    if (!a.is_promoted && b.is_promoted) return 1
+    const da = parseEventDate(a.date_label || a.time || '')
+    const db = parseEventDate(b.date_label || b.time || '')
+    if (!da && !db) return 0
+    if (!da) return 1
+    if (!db) return -1
+    return da.getTime() - db.getTime()
+  })
 
   // Community: MOCK community + user-created extra events
   const communityAll = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
@@ -1929,13 +1940,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
-              <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700' }}>{officialEvents.length} events</Text>
+              {officialEvents.length > 3 && (
+                <TouchableOpacity onPress={() => setShowAllOfficialModal(true)}>
+                  <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700' }}>See all {officialEvents.length} →</Text>
+                </TouchableOpacity>
+              )}
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
-              {officialEvents.map((ev: any) => (
+              {officialEvents.slice(0, 3).map((ev: any) => (
                 <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
                   style={{ width: 210, borderRadius: 22, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 4 }}>
-                  {/* Image or gradient */}
                   {ev.image_url ? (
                     <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
                   ) : (
@@ -1943,10 +1957,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <Text style={{ fontSize: 40 }}>{CATEGORY_EMOJI[ev.category] || '🎉'}</Text>
                     </LinearGradient>
                   )}
-                  {/* Category badge overlay */}
                   <View style={{ position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(30,27,75,0.65)' }}>
                     <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.4, textTransform: 'capitalize' }}>{ev.category || 'Event'}</Text>
                   </View>
+                  {ev.is_promoted && (
+                    <View style={{ position: 'absolute', top: 10, right: 10, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#f59e0b' }}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>📌 FEATURED</Text>
+                    </View>
+                  )}
                   <View style={{ padding: 12 }}>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6, minHeight: 36 }} numberOfLines={2}>{ev.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -1972,7 +1990,59 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   </View>
                 </TouchableOpacity>
               ))}
+              {officialEvents.length > 3 && (
+                <TouchableOpacity onPress={() => setShowAllOfficialModal(true)} activeOpacity={0.85}
+                  style={{ width: 90, borderRadius: 22, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 22 }}>🎟</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'center' }}>+{officialEvents.length - 3}{'\n'}more</Text>
+                </TouchableOpacity>
+              )}
             </ScrollView>
+
+            {/* ── ALL OFFICIAL EVENTS MODAL ── */}
+            <Modal visible={showAllOfficialModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAllOfficialModal(false)}>
+              <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F7FF' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#EEF2FF' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
+                  <TouchableOpacity onPress={() => setShowAllOfficialModal(false)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="x" size={18} color="#6366F1" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+                  {officialEvents.map((ev: any) => (
+                    <TouchableOpacity key={ev.id} onPress={() => { setShowAllOfficialModal(false); setTimeout(() => onEventPress(ev), 300) }} activeOpacity={0.88}
+                      style={{ backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', flexDirection: 'row', shadowColor: '#6366F1', shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 }}>
+                      {ev.image_url ? (
+                        <Image source={{ uri: ev.image_url }} style={{ width: 90, height: 90 }} resizeMode="cover" />
+                      ) : (
+                        <LinearGradient colors={ev.gradient as any || ['#667eea','#764ba2']} style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 30 }}>{CATEGORY_EMOJI[ev.category] || '🎉'}</Text>
+                        </LinearGradient>
+                      )}
+                      <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', flex: 1, marginRight: 8 }} numberOfLines={2}>{ev.title}</Text>
+                          {ev.is_promoted && <Text style={{ fontSize: 9, fontWeight: '800', color: '#f59e0b' }}>📌</Text>}
+                        </View>
+                        <View style={{ gap: 3, marginTop: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Feather name="calendar" size={11} color="#94A3B8" />
+                            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
+                          </View>
+                          {(ev.location || ev.distance) && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Feather name="map-pin" size={11} color="#94A3B8" />
+                              <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance}</Text>
+                            </View>
+                          )}
+                          {ev.price && <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>{ev.price}</Text>}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </SafeAreaView>
+            </Modal>
           </>
         )}
 
@@ -3358,7 +3428,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3, lineHeight: 21 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time} · {ev.distance}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
                     </View>
                     <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: statusBg, borderWidth: 1, borderColor: statusBorder }}>
                       <Text style={{ fontSize: 10, fontWeight: '800', color: statusColor }}>{statusLabel}</Text>
@@ -3492,7 +3562,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time} · {ev.distance}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
                     </View>
                     <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: isPending ? 'rgba(245,158,11,0.15)' : 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.4)' : 'rgba(67,233,123,0.4)' }}>
                       <Text style={{ fontSize: 10, fontWeight: '800', color: isPending ? '#FBBF24' : '#43E97B' }}>{isPending ? 'PENDING ⏳' : 'APPROVED ✓'}</Text>
@@ -5351,6 +5421,30 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     {eventDetail.description && (
                       <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14 }}>
                         <Text style={{ fontSize: 14, color: '#334155', lineHeight: 21 }}>{eventDetail.description}</Text>
+                      </View>
+                    )}
+
+                    {/* Price / Language / Age — official events */}
+                    {eventDetail.type === 'official' && (eventDetail.price || eventDetail.language || eventDetail.age_restriction) && (
+                      <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                        {eventDetail.price && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F0FDF4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
+                            <Text style={{ fontSize: 13 }}>🎟</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#16a34a' }}>{eventDetail.price}</Text>
+                          </View>
+                        )}
+                        {eventDetail.language && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
+                            <Text style={{ fontSize: 13 }}>🌍</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>{eventDetail.language}</Text>
+                          </View>
+                        )}
+                        {eventDetail.age_restriction && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF7ED', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
+                            <Text style={{ fontSize: 13 }}>🔞</Text>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#ea580c' }}>{eventDetail.age_restriction}</Text>
+                          </View>
+                        )}
                       </View>
                     )}
 
