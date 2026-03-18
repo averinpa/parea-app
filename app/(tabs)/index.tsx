@@ -4300,6 +4300,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const officialJoined = Object.keys(joinedEvents)
       .map(Number)
       .filter(id => joinedEvents[id] && id > 100000) // official events have offset id
+    // Clear stale entries for events no longer joined
+    setEventAttendeesMap(prev => {
+      const cleaned: Record<number, any[]> = {}
+      officialJoined.forEach(id => { if (prev[id]) cleaned[id] = prev[id] })
+      return cleaned
+    })
     if (officialJoined.length === 0 || !userData?.dbId) return
     const fetchAttendees = async () => {
       const map: Record<number, any[]> = {}
