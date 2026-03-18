@@ -4328,6 +4328,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       setEventAttendeesMap(map)
     }
     fetchAttendees()
+    // Poll every 60 seconds for new attendees
+    const interval = setInterval(fetchAttendees, 60000)
+    return () => clearInterval(interval)
   }, [Object.keys(joinedEvents).join(','), userData?.dbId])
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
@@ -4414,6 +4417,23 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     ]).start()
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
   }
+
+  // Notify when new real attendees appear in eventAttendeesMap
+  const prevAttendeesRef = useRef<Record<number, string[]>>({})
+  useEffect(() => {
+    Object.entries(eventAttendeesMap).forEach(([evIdStr, attendees]) => {
+      const evId = Number(evIdStr)
+      const prevIds = prevAttendeesRef.current[evId] || []
+      const newPeople = attendees.filter(p => !prevIds.includes(p.id))
+      if (prevIds.length > 0 && newPeople.length > 0) {
+        // Only notify if we already had a previous fetch (not first load)
+        newPeople.forEach(p => {
+          addNotif({ type: 'crew_match', emoji: '🎯', color: '#6366F1', title: `${p.name} is also going!`, body: 'Tap Vibe to vet your crew' })
+        })
+      }
+      prevAttendeesRef.current[evId] = attendees.map(p => p.id)
+    })
+  }, [eventAttendeesMap])
 
   const openNotifPanel = () => {
     setNotifOpen(true)
@@ -5865,6 +5885,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       } else if (n.type === 'crew_ready') {
                         setMessagesInitialSubTab('going')
                         setActiveTab('messages')
+                      } else if (n.type === 'crew_match') {
+                        setActiveTab('vibecheck')
                       }
                     }
                     return (
