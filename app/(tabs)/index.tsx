@@ -3178,7 +3178,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {} }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite }: any) {
   // Official/concert events + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   // Community events pending host approval — shown as waiting cards
@@ -3466,6 +3466,49 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
               </View>
             )
           })}
+          {/* ── Incoming crew invites ── */}
+          {incomingCrewInvites.map((invite: any) => {
+            const inviter = invite.inviter || {}
+            return (
+              <View key={invite.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.45)' }}>
+                <LinearGradient colors={['#6366F1', '#818CF8']} style={{ height: 4 }} />
+                <View style={{ padding: 18 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                    {inviter.photos?.[0] ? (
+                      <Image source={{ uri: inviter.photos[0] }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+                    ) : (
+                      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 20, fontWeight: '800', color: '#fff' }}>{(inviter.name || '?')[0]}</Text>
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'} wants to crew up!</Text>
+                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{invite.event_title}</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.2)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#818CF8' }}>INVITE 🎯</Text>
+                    </View>
+                  </View>
+                  {inviter.bio ? <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 14, lineHeight: 17 }} numberOfLines={2}>{inviter.bio}</Text> : null}
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => onAcceptInvite?.(invite)}
+                      style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => onDeclineInvite?.(invite)}
+                      style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )
+          })}
+
           {myEvents.map((ev: any) => {
             const isCommunity = ev.type === 'community'
             const format     = userEventFormat?.[ev.id]    || (ev.type === 'official' ? '1+1' : 'squad')
@@ -3488,6 +3531,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const statusColor = (isActive || hasReal) ? '#43E97B' : '#FBBF24'
             const statusBg    = (isActive || hasReal) ? 'rgba(67,233,123,0.15)' : 'rgba(251,191,36,0.13)'
             const statusBorder= (isActive || hasReal) ? 'rgba(67,233,123,0.35)' : 'rgba(251,191,36,0.28)'
+            // Invite state: have we sent invites to all real attendees?
+            const realPartners = partners.filter((p: any) => p._real)
+            const inviteSentToAll = realPartners.length > 0 && realPartners.every((p: any) => !!sentCrewInvites[`${ev.id}_${p.id}`])
 
             return (
               <View key={ev.id} style={{
@@ -3564,8 +3610,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <Text style={{ fontSize: 10, color: '#818CF8', textAlign: 'center', marginTop: 4, fontWeight: '700' }}>You</Text>
                       </View>
                       {/* Partners */}
-                      {partners.map((p, i) => {
-                        const match = aiMatches.find(m => m.id === p.id)
+                      {partners.map((p: any, i: number) => {
+                        const match = aiMatches.find((m: any) => m.id === p.id)
                         const isReal = !!p._real
                         return (
                           <TouchableOpacity key={i} onPress={() => { setPreviewProfile({ ...p, flag: FLAG_MAP[p.langs?.[0]] || '🌍', langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: match?.score ?? 50, aiReason: match?.reason ?? 'Ready to connect' }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
@@ -3610,11 +3656,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   {isActive && (
                     <View style={{ gap: 10 }}>
                       <TouchableOpacity
-                        activeOpacity={0.85}
+                        activeOpacity={inviteSentToAll ? 1 : 0.85}
+                        disabled={inviteSentToAll}
                         onPress={() => onConfirm?.(ev, partners, format)}
-                        style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>
-                          {isCommunity ? 'Confirm & Open Chat 🚀' : isParty ? 'Join the chat 🚀' : "Let's go! 🚀"}
+                        style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: inviteSentToAll ? 'rgba(67,233,123,0.25)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: inviteSentToAll ? 0 : 0.4, shadowRadius: 12, elevation: inviteSentToAll ? 0 : 6 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: inviteSentToAll ? '#43E97B' : '#052e16' }}>
+                          {isCommunity ? 'Confirm & Open Chat 🚀' : isParty ? 'Join the chat 🚀' : inviteSentToAll ? 'Invite sent ✓' : "Let's go! 🚀"}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -4295,6 +4342,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
   const [eventAttendeesMap, setEventAttendeesMap] = useState<Record<number, any[]>>({})
+  const [incomingCrewInvites, setIncomingCrewInvites] = useState<any[]>([])
+  const [sentCrewInvites, setSentCrewInvites] = useState<Record<string, string>>({}) // `${eventId}_${profileId}` -> 'pending'|'accepted'
+  const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     const officialJoined = Object.keys(joinedEvents)
@@ -4307,15 +4357,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       return cleaned
     })
     if (officialJoined.length === 0 || !userData?.dbId) return
+    const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
     const fetchAttendees = async () => {
       const map: Record<number, any[]> = {}
       await Promise.all(officialJoined.map(async (evId) => {
+        const [userMin, userMax] = FORMAT_SIZES[userEventFormat[evId]] || [2, 5]
         const { data } = await supabase
           .from('event_attendees')
           .select('*, profiles(*)')
           .eq('event_ref_id', evId)
           .neq('profile_id', userData.dbId)
           .eq('status', 'looking')
+          .lte('group_size_min', userMax)
+          .gte('group_size_max', userMin)
           .limit(20)
         if (data) {
           map[evId] = data.map((row: any) => {
@@ -4337,7 +4391,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     // Poll every 60 seconds for new attendees
     const interval = setInterval(fetchAttendees, 60000)
     return () => clearInterval(interval)
-  }, [Object.keys(joinedEvents).join(','), userData?.dbId])
+  }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
@@ -4370,6 +4424,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (saved.chatList) setChatList(saved.chatList)
         if (saved.chatMessages) setChatMessages(saved.chatMessages)
+        if (saved.sentCrewInvites) setSentCrewInvites(saved.sentCrewInvites)
       } catch {}
       persistLoaded.current = true
     })
@@ -4379,9 +4434,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!persistLoaded.current) return
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userCreatedEvents, pendingJoinRequests,
-      approvedJoiners, passedRequests, chatList, chatMessages,
+      approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites,
     }))
-  }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages])
+  }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites])
 
   // ── Tonight's Vibe ────────────────────────────────────────────────────────
   const [tonightVibe, setTonightVibe] = useState({
@@ -4440,6 +4495,61 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       prevAttendeesRef.current[evId] = attendees.map(p => p.id)
     })
   }, [eventAttendeesMap])
+
+  // ── Poll for incoming crew invites (invitee side) ─────────────────────────
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('crew_invites')
+        .select('*, inviter:profiles!crew_invites_inviter_id_fkey(*)')
+        .eq('invitee_id', userData.dbId)
+        .eq('status', 'pending')
+      if (data) setIncomingCrewInvites(data)
+    }
+    fetch()
+    const interval = setInterval(fetch, 30000)
+    return () => clearInterval(interval)
+  }, [userData?.dbId])
+
+  // ── Poll for accepted invites (inviter side) — sync chat to local state ───
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const check = async () => {
+      const { data } = await supabase
+        .from('crew_invites')
+        .select('*, invitee:profiles!crew_invites_invitee_id_fkey(*)')
+        .eq('inviter_id', userData.dbId)
+        .eq('status', 'accepted')
+      if (!data) return
+      for (const inv of data) {
+        const key = `${inv.event_ref_id}_${inv.invitee_id}`
+        if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
+        acceptedInviteKeysRef.current.add(key)
+        setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+        setChatList(prev => {
+          if (prev.some(c => c.id === inv.chat_id)) return prev
+          const partner = inv.invitee
+          return [{
+            id: inv.chat_id, type: 'duo',
+            name: partner?.name || 'Your crew',
+            age: partner?.age || '',
+            color: partner?.color || '#818CF8',
+            photo: partner?.photos?.[0] || '',
+            lastMsg: '🎉 Crew confirmed! Say hi',
+            time: 'now', isNew: true, expiresIn: 24,
+            event: inv.event_title, eventEmoji: '🎉',
+            partnerProfile: partner,
+          }, ...prev]
+        })
+        setJoinedEvents(prev => ({ ...prev, [inv.event_ref_id]: 'confirmed' }))
+        addNotif({ type: 'crew_accepted', emoji: '🎉', color: '#43E97B', title: `${inv.invitee?.name} accepted your invite!`, body: `For "${inv.event_title}" — say hi 💬` })
+      }
+    }
+    check()
+    const interval = setInterval(check, 15000)
+    return () => clearInterval(interval)
+  }, [userData?.dbId])
 
   const openNotifPanel = () => {
     setNotifOpen(true)
@@ -4787,8 +4897,34 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userData={userData}
             tonightVibe={tonightVibe}
             eventAttendeesMap={eventAttendeesMap}
+            incomingCrewInvites={incomingCrewInvites}
+            sentCrewInvites={sentCrewInvites}
             onGoHome={() => setActiveTab('home')}
-            onConfirm={(ev: any, partners: any[], format: string) => {
+            onConfirm={async (ev: any, partners: any[], format: string) => {
+              // For official events with real attendees → send invites, don't create chat yet
+              const realPartners = partners.filter((p: any) => p._real)
+              if (ev.type === 'official' && realPartners.length > 0) {
+                const newSent: Record<string, string> = {}
+                for (const partner of realPartners) {
+                  const key = `${ev.id}_${partner.id}`
+                  if (sentCrewInvites[key]) continue
+                  await supabase.from('crew_invites').upsert({
+                    event_ref_id: ev.id,
+                    event_title: ev.title,
+                    inviter_id: userData?.dbId,
+                    invitee_id: partner.id,
+                    status: 'pending',
+                  }, { onConflict: 'event_ref_id,inviter_id,invitee_id' })
+                  newSent[key] = 'pending'
+                }
+                if (Object.keys(newSent).length > 0) {
+                  setSentCrewInvites(prev => ({ ...prev, ...newSent }))
+                  showToast('Invite sent! 🎯')
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                }
+                return
+              }
+              // Community / non-official / no real attendees → create chat immediately
               const isGroup = format !== '1+1'
               const newChat = isGroup ? {
                 id: Date.now(), type: 'group',
@@ -4819,10 +4955,55 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
             }}
+            onAcceptInvite={async (invite: any) => {
+              const { data: chatData } = await supabase
+                .from('chats')
+                .insert({ type: 'duo', last_msg: '🎉 Crew confirmed!' })
+                .select()
+                .single()
+              if (!chatData) { showToast('Something went wrong, try again'); return }
+              await supabase.from('chat_members').insert([
+                { chat_id: chatData.id, profile_id: userData?.dbId },
+                { chat_id: chatData.id, profile_id: invite.inviter_id },
+              ])
+              await supabase.from('crew_invites')
+                .update({ status: 'accepted', chat_id: chatData.id })
+                .eq('id', invite.id)
+              const inviter = invite.inviter || {}
+              const newChat = {
+                id: chatData.id, type: 'duo',
+                name: inviter.name || 'Your crew',
+                age: inviter.age || '',
+                color: inviter.color || '#818CF8',
+                photo: inviter.photos?.[0] || '',
+                lastMsg: '🎉 Crew confirmed! Say hi',
+                time: 'now', isNew: true, expiresIn: 24,
+                event: invite.event_title, eventEmoji: '🎉',
+                partnerProfile: inviter,
+              }
+              setChatList(prev => [newChat, ...prev])
+              setJoinedEvents(prev => ({ ...prev, [invite.event_ref_id]: 'confirmed' }))
+              setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
+              showToast('Crew confirmed! 🎉')
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+              setMessagesInitialSubTab('messages')
+              setActiveTab('messages')
+            }}
+            onDeclineInvite={async (invite: any) => {
+              await supabase.from('crew_invites').update({ status: 'declined' }).eq('id', invite.id)
+              setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
+              showToast('Declined')
+            }}
             onLeave={(ev: any) => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               if (ev.type === 'official' && userData?.dbId) {
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
+                setSentCrewInvites(prev => {
+                  const next = { ...prev }
+                  Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
+                  return next
+                })
               }
               showToast("We let them know your plans changed 📅")
             }}
@@ -4982,6 +5163,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => prev.filter(c => c.event !== ev.title))
               if (ev.type === 'official' && userData?.dbId) {
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
+                setSentCrewInvites(prev => {
+                  const next = { ...prev }
+                  Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
+                  return next
+                })
               }
               showToast("Spot freed. Others can join now 🎟️")
             }}
@@ -5891,8 +6078,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       } else if (n.type === 'crew_ready') {
                         setMessagesInitialSubTab('going')
                         setActiveTab('messages')
-                      } else if (n.type === 'crew_match') {
+                      } else if (n.type === 'crew_match' || n.type === 'crew_invite') {
                         setActiveTab('vibecheck')
+                      } else if (n.type === 'crew_accepted') {
+                        setMessagesInitialSubTab('messages')
+                        setActiveTab('messages')
                       }
                     }
                     return (

@@ -84,6 +84,33 @@ create table if not exists notifications (
   created_at timestamptz default now()
 );
 
+-- ─── EVENT ATTENDEES (crew matching for official events) ─────────────────────
+create table if not exists event_attendees (
+  id bigserial primary key,
+  event_ref_id bigint not null,
+  event_title text,
+  profile_id uuid references profiles(id) on delete cascade,
+  group_size_min integer default 2,
+  group_size_max integer default 5,
+  transport text,
+  status text default 'looking',
+  created_at timestamptz default now(),
+  unique(event_ref_id, profile_id)
+);
+
+-- ─── CREW INVITES ─────────────────────────────────────────────────────────────
+create table if not exists crew_invites (
+  id bigserial primary key,
+  event_ref_id bigint not null,
+  event_title text,
+  inviter_id uuid references profiles(id) on delete cascade,
+  invitee_id uuid references profiles(id) on delete cascade,
+  status text default 'pending',
+  chat_id bigint,
+  created_at timestamptz default now(),
+  unique(event_ref_id, inviter_id, invitee_id)
+);
+
 -- ─── DISABLE RLS (for development) ───────────────────────────────────────────
 alter table profiles disable row level security;
 alter table events disable row level security;
@@ -92,3 +119,5 @@ alter table chats disable row level security;
 alter table chat_members disable row level security;
 alter table messages disable row level security;
 alter table notifications disable row level security;
+alter table event_attendees disable row level security;
+alter table crew_invites disable row level security;
