@@ -2854,14 +2854,13 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
     Animated.timing(slideAnim, { toValue: 400, duration: 220, useNativeDriver: true }).start(onClose)
   }
 
-  // 3 gradient combos per person as photo placeholders
+  // Support both photos array and single photo fallback
+  const allPhotos: string[] = profile.photos?.filter(Boolean).length > 0
+    ? profile.photos.filter(Boolean)
+    : profile.photo ? [profile.photo] : []
   const c0 = (profile.colors?.[0]) || profile.color || '#6366F1'
   const c1 = (profile.colors?.[1]) || profile.color || '#818CF8'
-  const photoPalettes = [
-    [c0, c1],
-    [c1, '#0A0812'],
-    ['#0A0812', c0],
-  ]
+  const totalSlots = Math.max(allPhotos.length, 1)
 
   return (
     <Modal transparent animationType="none" onRequestClose={close}>
@@ -2873,22 +2872,25 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
       }}>
         {/* Photo carousel */}
         <View style={{ height: 280, position: 'relative' }}>
-          <LinearGradient colors={photoPalettes[photoIdx] as any} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            {profile.photo && photoIdx === 0
-              ? <Image source={{ uri: profile.photo }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              : <Text style={{ fontSize: 72 }}>{profile.emoji}</Text>
-            }
-          </LinearGradient>
+          {allPhotos[photoIdx] ? (
+            <Image source={{ uri: allPhotos[photoIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          ) : (
+            <LinearGradient colors={[c0, c1]} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 72 }}>{profile.emoji || '👤'}</Text>
+            </LinearGradient>
+          )}
           {/* Gradient overlay bottom */}
           <LinearGradient colors={['transparent', '#100D20']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }} />
           {/* Dot indicators */}
-          <View style={{ position: 'absolute', bottom: 14, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            {photoPalettes.map((_, i) => (
-              <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
-                <View style={{ width: i === photoIdx ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.3)' }} />
-              </TouchableOpacity>
-            ))}
-          </View>
+          {totalSlots > 1 && (
+            <View style={{ position: 'absolute', bottom: 14, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              {Array.from({ length: totalSlots }).map((_, i) => (
+                <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
+                  <View style={{ width: i === photoIdx ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.3)' }} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           {/* Swipe areas */}
           <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', paddingLeft: 14, opacity: photoIdx > 0 ? 1 : 0 }}
             onPress={() => setPhotoIdx(i => Math.max(0, i - 1))}>
@@ -2896,8 +2898,8 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
               <Feather name="chevron-left" size={22} color="#fff" />
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={{ position: 'absolute', right: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', alignItems: 'flex-end', paddingRight: 14, opacity: photoIdx < photoPalettes.length - 1 ? 1 : 0 }}
-            onPress={() => setPhotoIdx(i => Math.min(photoPalettes.length - 1, i + 1))}>
+          <TouchableOpacity style={{ position: 'absolute', right: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', alignItems: 'flex-end', paddingRight: 14, opacity: photoIdx < totalSlots - 1 ? 1 : 0 }}
+            onPress={() => setPhotoIdx(i => Math.min(totalSlots - 1, i + 1))}>
             <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
               <Feather name="chevron-right" size={22} color="#fff" />
             </View>
@@ -3711,7 +3713,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
   const userPhotos: string[] = (userData?.photos || []).filter(Boolean)
-  const [previewIdx, setPreviewIdx] = useState<number | null>(null)
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [langEditOpen, setLangEditOpen] = useState(false)
   const [interestsEditOpen, setInterestsEditOpen] = useState(false)
@@ -3804,115 +3805,22 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
   return (
     <View style={{ flex: 1 }}>
 
-      {/* ── Profile Card Preview Modal ─────────────────────────────────────── */}
-      <Modal visible={profilePreviewOpen} animationType="slide" onRequestClose={() => setProfilePreviewOpen(false)}>
-        <View style={{ flex: 1 }}>
-          {/* Full-screen photo */}
-          {userPhotos[0] ? (
-            <Image source={{ uri: userPhotos[0] }} style={{ ...StyleSheet.absoluteFillObject }} resizeMode="cover" />
-          ) : (
-            <LinearGradient colors={['#6366F1', '#818CF8']} style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 80 }}>👤</Text>
-            </LinearGradient>
-          )}
-          {/* Dark gradient at bottom */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']}
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%' }}
-          />
-          {/* Top label + close */}
-          <SafeAreaView style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 }}>
-              <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(0,0,0,0.35)' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.9)' }}>👁  Profile preview</Text>
-              </View>
-              <TouchableOpacity onPress={() => setProfilePreviewOpen(false)}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="x" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-          {/* Info overlaid at bottom */}
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 24, paddingBottom: 48 }}>
-            <Text style={{ fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: -0.5, marginBottom: 6 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
-            {userData?.bio ? (
-              <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 20, marginBottom: 12 }} numberOfLines={2}>{userData.bio}</Text>
-            ) : null}
-            {(userData?.interests || []).length > 0 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                {(userData.interests as string[]).slice(0, 4).map((item: string) => (
-                  <View key={item} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
-                    <Text style={{ fontSize: 13, color: '#fff', fontWeight: '600' }}>{item}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            {(userData?.langs || []).length > 0 && (
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {(userData.langs as string[]).map((code: string) => {
-                  const l = LANGUAGES_LIST.find(x => x.code === code)
-                  return l ? <Text key={code} style={{ fontSize: 22 }}>{l.flag}</Text> : null
-                })}
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Single photo full-screen preview ──────────────────────────────── */}
-      <Modal visible={previewIdx !== null} transparent animationType="fade" onRequestClose={() => setPreviewIdx(null)}>
-        <View style={{ flex: 1, backgroundColor: '#000' }}>
-          {previewIdx !== null && userPhotos[previewIdx] && (
-            <Image source={{ uri: userPhotos[previewIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-          )}
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 60 }}>
-            <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }}>{nm}{ag ? `, ${ag}` : ''}</Text>
-            {userData?.bio ? <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 6, lineHeight: 20 }}>{userData.bio}</Text> : null}
-            {(userData?.interests || []).length > 0 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
-                {(userData.interests || []).map((item: string) => (
-                  <View key={item} style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 4 }}>
-                    <Text style={{ fontSize: 13, color: '#fff', fontWeight: '600' }}>{item}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            {(userData?.langs || []).length > 0 && (
-              <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
-                {(userData.langs || []).map((code: string) => {
-                  const l = LANGUAGES_LIST.find(x => x.code === code)
-                  return l ? <Text key={code} style={{ fontSize: 18 }}>{l.flag}</Text> : null
-                })}
-              </View>
-            )}
-          </LinearGradient>
-          {previewIdx !== null && previewIdx > 0 && (
-            <TouchableOpacity onPress={() => setPreviewIdx(i => (i !== null ? i - 1 : i))}
-              style={{ position: 'absolute', left: 16, top: '45%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name="chevron-left" size={26} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {previewIdx !== null && previewIdx < userPhotos.length - 1 && (
-            <TouchableOpacity onPress={() => setPreviewIdx(i => (i !== null ? i + 1 : i))}
-              style={{ position: 'absolute', right: 16, top: '45%', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name="chevron-right" size={26} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {userPhotos.length > 1 && (
-            <View style={{ flexDirection: 'row', gap: 6, position: 'absolute', top: 52, alignSelf: 'center', left: 0, right: 0, justifyContent: 'center' }}>
-              {userPhotos.map((_, i) => (
-                <TouchableOpacity key={i} onPress={() => setPreviewIdx(i)}>
-                  <View style={{ width: previewIdx === i ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: previewIdx === i ? '#fff' : 'rgba(255,255,255,0.4)' }} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          <TouchableOpacity onPress={() => setPreviewIdx(null)}
-            style={{ position: 'absolute', top: 44, right: 20, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
-            <Feather name="x" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      {/* ── Profile Preview (same sheet as other users) ─────────────────────── */}
+      {profilePreviewOpen && (
+        <ProfilePreviewSheet
+          profile={{
+            name: nm,
+            age: ag,
+            bio: userData?.bio || '',
+            photos: userPhotos,
+            interests: userData?.interests || [],
+            langs: userData?.langs || [],
+            color: userData?.color || '#6366F1',
+            emoji: '👤',
+          }}
+          onClose={() => setProfilePreviewOpen(false)}
+        />
+      )}
 
       {/* Vibe Edit Modal */}
       <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
