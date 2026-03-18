@@ -4226,11 +4226,21 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 onPress={() => {
                   if (item.label === 'Log Out') { onLogOut?.(); return }
                   if (item.label === 'Delete Account') {
-                    Alert.alert('Delete Account', 'This will permanently delete your profile and all your data.', [
+                    Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
                       { text: 'Cancel', style: 'cancel' },
                       { text: 'Delete', style: 'destructive', onPress: async () => {
-                        if (userData?.dbId) await supabase.from('profiles').delete().eq('id', userData.dbId)
-                        await supabase.auth.signOut(); onLogOut?.()
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession()
+                          const res = await supabase.functions.invoke('delete-account', {
+                            headers: { Authorization: `Bearer ${session?.access_token}` },
+                          })
+                          if (res.error) throw res.error
+                        } catch (e: any) {
+                          Alert.alert('Error', String(e?.message || e))
+                          return
+                        }
+                        await supabase.auth.signOut()
+                        onLogOut?.()
                       }},
                     ])
                   }
