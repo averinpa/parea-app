@@ -6234,7 +6234,12 @@ export default function App() {
     setUserData((prev: any) => ({ ...prev, ...patch }))
     if (userData?.dbId) {
       const dbPatch: any = {}
-      if (patch.photos      !== undefined) dbPatch.photos        = patch.photos
+      // Only save photos to DB if all are public HTTPS URLs (not local file:// URIs)
+      // Local URIs are saved to DB separately after Storage upload in pickProfilePhoto
+      if (patch.photos !== undefined) {
+        const hasLocalUri = patch.photos.some((p: any) => p && !p.startsWith('http'))
+        if (!hasLocalUri) dbPatch.photos = patch.photos
+      }
       if (patch.langs       !== undefined) dbPatch.langs         = patch.langs
       if (patch.interests   !== undefined) dbPatch.interests     = patch.interests
       if (patch.musicGenres !== undefined) dbPatch.music_genres  = patch.musicGenres
