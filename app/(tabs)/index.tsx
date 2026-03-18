@@ -1781,7 +1781,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {/* ── STICKY HEADER ── */}
         <View style={{ backgroundColor: '#F8F7FF', zIndex: 600, paddingBottom: 4 }}>
           {/* Header */}
-          <View style={{ paddingTop: (Platform.OS === 'android' ? RNStatusBar.currentHeight ?? insets.top : insets.top) + 6, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
+          <View style={{ paddingTop: Platform.OS === 'android' ? 10 : insets.top + 6, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
             {/* Row 1: greeting + bell */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>Hi, {userName} 👋</Text>
