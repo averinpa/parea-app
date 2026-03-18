@@ -2941,11 +2941,14 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
             <>
               <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>LANGUAGES</Text>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
-                {(profile.langs || []).map((l: string, i: number) => (
-                  <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
-                    <Text style={{ fontSize: 14 }}>{l}</Text>
-                  </View>
-                ))}
+                {(profile.langs || []).map((l: string, i: number) => {
+                  const lang = LANGUAGES_LIST.find(x => x.code === l)
+                  return (
+                    <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
+                      <Text style={{ fontSize: 14 }}>{lang ? `${lang.flag} ${lang.label}` : l}</Text>
+                    </View>
+                  )
+                })}
               </View>
             </>
           )}
