@@ -3768,14 +3768,17 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         setSlot(targetIdx, null)
       }
 
-      // Upload to Supabase Storage and replace local URI with public URL
+      // Upload to Supabase Storage — save public URL to DB but keep local URI in UI
       const userId = userData?.authId || userData?.dbId
       if (userId && base64) {
         const publicUrl = await uploadPhotoToStorage(base64, userId, targetIdx)
         if (publicUrl) {
           const uploadedPhotos = [...newPhotos]
           uploadedPhotos[targetIdx] = publicUrl
-          onUpdateUserData?.({ photos: uploadedPhotos })
+          // Only update DB, not local state (local URI stays visible instantly)
+          if (userData?.dbId) {
+            supabase.from('profiles').update({ photos: uploadedPhotos }).eq('id', userData.dbId)
+          }
         }
       }
     } catch { /* picker cancelled or error */ }
