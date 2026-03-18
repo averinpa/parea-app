@@ -886,7 +886,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const pickPhoto = async (idx: number) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, allowsEditing: true, aspect: [3, 4] })
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.4, base64: true, exif: false })
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
 
@@ -1552,7 +1552,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 24 : insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
+        <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 8) + 8 : insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
           {step === TOTAL ? (
             <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
               <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
@@ -1584,13 +1584,17 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [searchQuery, setSearchQuery] = useState('')
   const [officialDbEvents, setOfficialDbEvents] = useState<any[]>([])
+  const [officialDbLoading, setOfficialDbLoading] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
   const now = Date.now()
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { if (data && data.length > 0) setOfficialDbEvents(data) })
+      .then(({ data }) => {
+        if (data && data.length > 0) setOfficialDbEvents(data)
+        setOfficialDbLoading(false)
+      })
   }, [])
 
   // Parse event time string → Date (for calendar matching)
@@ -1666,12 +1670,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     { id: 'gaming',   label: '🎲 Gaming' },
   ]
 
-  // Official: DB events + MOCK official fallback (if DB empty)
-  const officialMock = MOCK_EVENTS.filter(e => e.city === city && e.type === 'official' && !isEventPast(e.time))
-  const officialAll: any[] = (officialDbEvents.length > 0
+  // Official: DB events only (no mock fallback to avoid flicker)
+  const officialAll: any[] = officialDbLoading ? [] : (officialDbEvents.length > 0
     ? officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
         .filter((e: any) => !isEventPast(e.date_label || e.time || ''))
-    : officialMock
+    : []
   ).sort((a: any, b: any) => {
     if (a.is_promoted && !b.is_promoted) return -1
     if (!a.is_promoted && b.is_promoted) return 1
@@ -1979,7 +1982,26 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         </View>
 
         {/* ── OFFICIAL EVENTS ── */}
-        {officialEvents.length > 0 && (
+        {officialDbLoading && (
+          <>
+            <View style={{ paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
+              {[1, 2].map(i => (
+                <View key={i} style={{ width: 210, height: 200, borderRadius: 22, backgroundColor: '#F1F5F9', overflow: 'hidden' }}>
+                  <View style={{ height: 6, backgroundColor: '#E2E8F0' }} />
+                  <View style={{ padding: 14, gap: 10 }}>
+                    <View style={{ height: 14, width: '70%', backgroundColor: '#E2E8F0', borderRadius: 7 }} />
+                    <View style={{ height: 10, width: '50%', backgroundColor: '#E2E8F0', borderRadius: 5 }} />
+                    <View style={{ height: 10, width: '60%', backgroundColor: '#E2E8F0', borderRadius: 5 }} />
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </>
+        )}
+        {!officialDbLoading && officialEvents.length > 0 && (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
@@ -3771,10 +3793,9 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        quality: 0.6,
+        quality: 0.4,
         base64: true,
-        allowsEditing: true,
-        aspect: [3, 4],
+        exif: false,
       })
       if (result.canceled || !result.assets?.[0]) return
       const { uri, base64 } = result.assets[0]
