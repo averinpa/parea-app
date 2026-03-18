@@ -4230,8 +4230,21 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                       { text: 'Cancel', style: 'cancel' },
                       { text: 'Delete', style: 'destructive', onPress: async () => {
                         try {
-                          const res = await supabase.functions.invoke('delete-account')
-                          if (res.error) throw res.error
+                          const { data: { session } } = await supabase.auth.getSession()
+                          if (!session?.access_token) throw new Error('Not logged in')
+                          const resp = await fetch(
+                            `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${session.access_token}`,
+                                'Content-Type': 'application/json',
+                                'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+                              },
+                            }
+                          )
+                          const json = await resp.json()
+                          if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`)
                         } catch (e: any) {
                           Alert.alert('Error', String(e?.message || e))
                           return
