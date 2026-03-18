@@ -1725,13 +1725,13 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   })
 
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
-  const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2; format: string; transport: string }>(
-    { visible: false, ev: null, step: 1, format: '', transport: '' }
+  const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2 | 3; format: string; transport: string; groupMin: number; groupMax: number }>(
+    { visible: false, ev: null, step: 1, format: '', transport: '', groupMin: 2, groupMax: 5 }
   )
 
   const openJoinSheet = (ev: any) => {
     const startStep = ev?.type === 'official' ? 1 : 2
-    setJoinSheet({ visible: true, ev, step: startStep, format: '', transport: '' })
+    setJoinSheet({ visible: true, ev, step: startStep as any, format: '', transport: '', groupMin: 2, groupMax: 5 })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
@@ -1741,11 +1741,27 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   const closeJoinSheet = () => setJoinSheet(prev => ({ ...prev, visible: false }))
 
-  const confirmJoin = () => {
+  const confirmJoin = async () => {
     onJoin(joinSheet.ev)
     if (joinSheet.ev?.id) {
       if (joinSheet.format)    setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.format }))
       if (joinSheet.transport) setUserEventTransport?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.transport }))
+    }
+    // Save to event_attendees for official events (crew matching)
+    if (joinSheet.ev?.type === 'official' && userData?.dbId) {
+      const formatSizes: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
+      const [gMin, gMax] = formatSizes[joinSheet.format] || [2, 5]
+      const { error } = await supabase.from('event_attendees').upsert({
+        event_ref_id: joinSheet.ev.id,
+        event_title: joinSheet.ev.title,
+        profile_id: userData.dbId,
+        group_size_min: gMin,
+        group_size_max: gMax,
+        transport: joinSheet.transport,
+        status: 'looking',
+      }, { onConflict: 'event_ref_id,profile_id' })
+      if (error) console.warn('event_attendees upsert error:', error.message)
+      else console.log('✅ Saved to event_attendees')
     }
     onJoinConfirmed?.(joinSheet.ev, joinSheet.format, joinSheet.transport)
     closeJoinSheet()
@@ -2322,11 +2338,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {} }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>; allEvents?: any[]; onEventDetail?: (ev: any) => void;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
-  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void;
+  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
@@ -2473,19 +2489,19 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const format        = userEventFormat[ev.id] || (ev.type === 'official' ? '1+1' : 'squad')
               const cap           = VIBE_FORMAT_MAX[format] || 5
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
-              // Crew is always fully assembled (mirrors VibeCheck simulation)
-              const found         = cap
-              const partnersFound = cap - 1
-              const isActive      = found >= threshold
-              const crewProfiles  = QUEUE_PROFILES.slice(0, partnersFound)
+              const realAttendees = ev.type === 'official' ? (eventAttendeesMap[ev.id] || []) : []
+              const hasReal       = realAttendees.length > 0
+              const found         = hasReal ? realAttendees.length + 1 : 1
+              const isActive      = hasReal && found >= threshold
+              const crewProfiles  = hasReal ? realAttendees.slice(0, cap - 1) : QUEUE_PROFILES.slice(0, 3)
 
               // Smart status badge
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
               const statusLabel = isConfirmed ? 'Confirmed ✅'
-                : isActive ? 'Group Ready!'
-                : partnersFound > 0 ? 'Building crew...' : 'Matching...'
-              const statusColor = isConfirmed ? '#16a34a' : isActive ? '#16a34a' : partnersFound > 0 ? '#6366F1' : '#d97706'
-              const statusBg    = isConfirmed ? 'rgba(34,197,94,0.12)' : isActive ? 'rgba(34,197,94,0.12)' : partnersFound > 0 ? 'rgba(99,102,241,0.1)' : 'rgba(251,191,36,0.15)'
+                : hasReal ? `${realAttendees.length} found 🎯`
+                : 'Looking...'
+              const statusColor = isConfirmed ? '#16a34a' : hasReal ? '#16a34a' : '#d97706'
+              const statusBg    = isConfirmed ? 'rgba(34,197,94,0.12)' : hasReal ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.15)'
 
               return (
                 <TouchableOpacity key={ev.id} activeOpacity={0.85} onPress={() => onEventDetail?.(ev)} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: isActive ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.08)' }}>
@@ -3140,7 +3156,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {} }: any) {
   // Official/concert events + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   // Community events pending host approval — shown as waiting cards
@@ -3436,16 +3452,20 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const cap        = isCommunity ? Math.min(ev.participantsCount || 5, 5) : (VIBE_FORMAT_MAX[format] || 5)
             const threshold  = isCommunity ? cap : (VIBE_FORMAT_THRESHOLD[format] || cap)
             const isParty    = !isCommunity && format === 'party'
-            const partnersFound = cap - 1
-            const found      = cap
-            const isActive   = true // community joined = host approved = always active
-            const partners   = aiRankedProfiles.slice(0, partnersFound)
+            // For official events: use real attendees from DB; for community: use mock
+            const realAttendees = (!isCommunity && ev.type === 'official') ? (eventAttendeesMap[ev.id] || []) : []
+            const hasRealAttendees = realAttendees.length > 0
+            // found = me (1) + real partners; if no real data yet show 1/cap
+            const found      = isCommunity ? cap : (hasRealAttendees ? realAttendees.length + 1 : 1)
+            const isActive   = hasRealAttendees || isCommunity
+            const partners   = hasRealAttendees ? realAttendees : aiRankedProfiles.slice(0, cap - 1)
 
             // Status label
-            const statusLabel = isCommunity ? 'HOST APPROVED ✓' : (isParty ? 'GROUP ACTIVE 🔥' : 'READY ✓')
-            const statusColor = isActive ? '#43E97B' : '#818CF8'
-            const statusBg    = isActive ? 'rgba(67,233,123,0.15)' : 'rgba(99,102,241,0.13)'
-            const statusBorder= isActive ? 'rgba(67,233,123,0.35)' : 'rgba(99,102,241,0.28)'
+            const statusLabel = isCommunity ? 'HOST APPROVED ✓' : partners.some((p: any) => p._real) ? `${partners.filter((p: any) => p._real).length} found 🎯` : (isParty ? 'GROUP ACTIVE 🔥' : 'Looking...')
+            const hasReal = partners.some((p: any) => p._real)
+            const statusColor = (isActive || hasReal) ? '#43E97B' : '#FBBF24'
+            const statusBg    = (isActive || hasReal) ? 'rgba(67,233,123,0.15)' : 'rgba(251,191,36,0.13)'
+            const statusBorder= (isActive || hasReal) ? 'rgba(67,233,123,0.35)' : 'rgba(251,191,36,0.28)'
 
             return (
               <View key={ev.id} style={{
@@ -3524,17 +3544,26 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       {/* Partners */}
                       {partners.map((p, i) => {
                         const match = aiMatches.find(m => m.id === p.id)
+                        const isReal = !!p._real
                         return (
                           <TouchableOpacity key={i} onPress={() => { setPreviewProfile({ ...p, flag: FLAG_MAP[p.langs?.[0]] || '🌍', langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: match?.score ?? 50, aiReason: match?.reason ?? 'Ready to connect' }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
                             <View style={{ alignItems: 'center' }}>
-                              <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
-                                <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
-                              </LinearGradient>
-                              {match && (
+                              {isReal && p.photo ? (
+                                <Image source={{ uri: p.photo }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }} />
+                              ) : (
+                                <LinearGradient colors={p.colors as any} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                                  <Text style={{ fontSize: 22 }}>{p.emoji || '🎵'}</Text>
+                                </LinearGradient>
+                              )}
+                              {isReal ? (
+                                <View style={{ marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.2)' }}>
+                                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#43E97B' }}>REAL</Text>
+                                </View>
+                              ) : match ? (
                                 <View style={{ marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: match.score >= 75 ? 'rgba(67,233,123,0.2)' : 'rgba(129,140,248,0.2)' }}>
                                   <Text style={{ fontSize: 9, fontWeight: '800', color: match.score >= 75 ? '#43E97B' : '#818CF8' }}>{match.score}%</Text>
                                 </View>
-                              )}
+                              ) : null}
                               <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2, fontWeight: '600' }}>{p.name}</Text>
                             </View>
                           </TouchableOpacity>
@@ -3550,6 +3579,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </View>
 
                   {/* CTA */}
+                  {!isActive && !isCommunity && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' }}>
+                      <Text style={{ fontSize: 18 }}>🔍</Text>
+                      <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>We're looking for people going to this event. You'll get notified when someone matches!</Text>
+                    </View>
+                  )}
                   {isActive && (
                     <View style={{ gap: 10 }}>
                       <TouchableOpacity
@@ -4238,6 +4273,41 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
+  const [eventAttendeesMap, setEventAttendeesMap] = useState<Record<number, any[]>>({})
+
+  useEffect(() => {
+    const officialJoined = Object.keys(joinedEvents)
+      .map(Number)
+      .filter(id => joinedEvents[id] && id > 100000) // official events have offset id
+    if (officialJoined.length === 0 || !userData?.dbId) return
+    const fetchAttendees = async () => {
+      const map: Record<number, any[]> = {}
+      await Promise.all(officialJoined.map(async (evId) => {
+        const { data } = await supabase
+          .from('event_attendees')
+          .select('*, profiles(*)')
+          .eq('event_ref_id', evId)
+          .neq('profile_id', userData.dbId)
+          .eq('status', 'looking')
+          .limit(20)
+        if (data) {
+          map[evId] = data.map((row: any) => {
+            const p = row.profiles || {}
+            return {
+              id: p.id, name: p.name || 'User', age: p.age || '',
+              color: p.color || '#818CF8', colors: [p.color || '#818CF8', p.color ? p.color + 'AA' : '#6366F1'],
+              emoji: '🎵', photo: p.photos?.[0] || null, photos: p.photos || [],
+              bio: p.bio || '', langs: p.langs || [],
+              transport: row.transport, groupMin: row.group_size_min, groupMax: row.group_size_max,
+              _real: true,
+            }
+          })
+        }
+      }))
+      setEventAttendeesMap(map)
+    }
+    fetchAttendees()
+  }, [Object.keys(joinedEvents).join(','), userData?.dbId])
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
@@ -4669,6 +4739,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userEventTransport={userEventTransport}
             userData={userData}
             tonightVibe={tonightVibe}
+            eventAttendeesMap={eventAttendeesMap}
             onGoHome={() => setActiveTab('home')}
             onConfirm={(ev: any, partners: any[], format: string) => {
               const isGroup = format !== '1+1'
@@ -4845,6 +4916,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
             approvedJoiners={approvedJoiners}
+            eventAttendeesMap={eventAttendeesMap}
             onCancelHostedEvent={(ev) => {
               setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id))
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
