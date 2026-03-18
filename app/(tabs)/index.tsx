@@ -21,15 +21,15 @@ const { width: W } = Dimensions.get('window')
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY || ''
 
 // ─── UPLOAD PHOTO TO SUPABASE STORAGE ────────────────────────────────────────
-const uploadPhotoToStorage = async (uri: string, userId: string, slot: number): Promise<string | null> => {
+const uploadPhotoToStorage = async (base64: string, userId: string, slot: number): Promise<string | null> => {
   try {
-    const response = await fetch(uri)
-    const blob = await response.blob()
-    const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg'
-    const path = `${userId}/${slot}_${Date.now()}.${ext}`
+    const path = `${userId}/${slot}_${Date.now()}.jpg`
+    const byteChars = atob(base64)
+    const byteArr = new Uint8Array(byteChars.length)
+    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i)
     const { error } = await supabase.storage
       .from('avatars')
-      .upload(path, blob, { upsert: true, contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}` })
+      .upload(path, byteArr, { upsert: true, contentType: 'image/jpeg' })
     if (error) { console.warn('Storage upload error:', error.message); return null }
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
     return data.publicUrl
@@ -724,7 +724,7 @@ const DEALBREAKERS = [
   { id: 'no_kids',      emoji: '👶', label: 'Adults only',        desc: 'No kids around' },
 ]
 
-function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: (data: any) => void }) {
+function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; onFinish: (data: any) => void; userId?: string }) {
   const insets = useSafeAreaInsets()
   const TOTAL = 5
   const [step, setStep] = useState(1)
@@ -908,7 +908,13 @@ function OnboardingScreen({ onBack, onFinish }: { onBack: () => void; onFinish: 
       return
     }
 
-    setPhotos(p => { const n = [...p]; n[idx] = asset.uri; return n })
+    // Upload to Storage if userId available, otherwise keep local URI
+    let finalUri = asset.uri
+    if (userId && asset.base64) {
+      const publicUrl = await uploadPhotoToStorage(asset.base64, userId, idx)
+      if (publicUrl) finalUri = publicUrl
+    }
+    setPhotos(p => { const n = [...p]; n[idx] = finalUri; return n })
     setPhotoStatus(s => { const n = [...s]; n[idx] = 'verified'; return n })
     setPhotoError(e => { const n = [...e]; n[idx] = null; return n })
     setPhotoBadge(b => { const n = [...b]; n[idx] = true; return n })
@@ -3726,7 +3732,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.6,
-        base64: !!ANTHROPIC_KEY,
+        base64: true,
         allowsEditing: true,
         aspect: [3, 4],
       })
@@ -3763,8 +3769,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
 
       // Upload to Supabase Storage and replace local URI with public URL
       const userId = userData?.authId || userData?.dbId
-      if (userId) {
-        const publicUrl = await uploadPhotoToStorage(uri, userId, targetIdx)
+      if (userId && base64) {
+        const publicUrl = await uploadPhotoToStorage(base64, userId, targetIdx)
         if (publicUrl) {
           const uploadedPhotos = [...newPhotos]
           uploadedPhotos[targetIdx] = publicUrl
@@ -6108,14 +6114,8 @@ export default function App() {
   const saveProfileToDB = async (data: any, userId: string) => {
     try {
       const color = PROFILE_COLORS[Math.floor(Math.random() * PROFILE_COLORS.length)]
-      // Upload local photos to Storage before saving
-      const localPhotos: string[] = (data.photos || []).filter(Boolean)
-      const uploadedPhotos = await Promise.all(
-        localPhotos.map((uri: string, idx: number) =>
-          uri.startsWith('http') ? Promise.resolve(uri) : uploadPhotoToStorage(uri, userId, idx)
-        )
-      )
-      const finalPhotos = uploadedPhotos.filter(Boolean) as string[]
+      // Use photos as-is (onboarding uploads happen in pickPhoto via base64)
+      const finalPhotos: string[] = (data.photos || []).filter(Boolean)
       const { data: row, error } = await supabase.from('profiles').insert({
         auth_id: userId,
         name: data.name,
@@ -6193,7 +6193,7 @@ export default function App() {
   if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('register')} />
   if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onSendOtp={(method, cred) => { setAuthMethod(method); setAuthCredential(cred); setScreen('otp') }} />
   if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} method={authMethod} credential={authCredential} onVerify={handleOtpVerify} />
-  if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} />
+  if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} userId={authUserId || undefined} />
   const handleUpdateUserData = async (patch: any) => {
     setUserData((prev: any) => ({ ...prev, ...patch }))
     if (userData?.dbId) {
