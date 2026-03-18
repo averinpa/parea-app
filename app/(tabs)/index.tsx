@@ -32,6 +32,7 @@ const uploadPhotoToStorage = async (base64: string, userId: string, slot: number
       .upload(path, byteArr, { upsert: true, contentType: 'image/jpeg' })
     if (error) { console.warn('Storage upload error:', error.message); return null }
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    console.log('✅ Upload success, public URL:', data.publicUrl)
     return data.publicUrl
   } catch (e) {
     console.warn('Upload failed:', e)
