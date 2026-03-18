@@ -1644,6 +1644,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const officialMock = MOCK_EVENTS.filter(e => e.city === city && e.type === 'official' && !isEventPast(e.time))
   const officialAll: any[] = (officialDbEvents.length > 0
     ? officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
+        .filter((e: any) => !isEventPast(e.date_label || e.time || ''))
     : officialMock
   ).sort((a: any, b: any) => {
     if (a.is_promoted && !b.is_promoted) return -1
