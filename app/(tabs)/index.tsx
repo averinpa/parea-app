@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, Image, Linking,
+  ActivityIndicator, Alert, Animated, Dimensions, Image, Keyboard, Linking,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
@@ -4417,6 +4417,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
 
@@ -4427,6 +4428,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [dbCommunityEvents, setDbCommunityEvents] = useState<any[]>([])
   const deletedCommunityEventIds = useRef<Set<number>>(new Set())
   const communityEventChatMap = useRef<Record<number, number>>({}) // eventId → chatId
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      const windowHeight = Dimensions.get('window').height
+      setKeyboardHeight(Math.max(0, windowHeight - e.endCoordinates.screenY))
+    })
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
+    return () => { show.remove(); hide.remove() }
+  }, [])
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
@@ -6522,22 +6533,40 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
-                onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
-                {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
-                  <View key={i} style={{ marginBottom: 10, alignItems: msg.from === 'system' ? 'center' : msg.from === 'me' ? 'flex-end' : 'flex-start' }}>
-                    {msg.from === 'system' && (
-                      <View style={{ paddingHorizontal: 14, paddingVertical: 5, backgroundColor: 'rgba(100,116,139,0.1)', borderRadius: 99 }}>
-                        <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>{msg.text}</Text>
-                      </View>
-                    )}
+              <View style={{ flex: 1, marginBottom: Platform.OS === 'android' ? keyboardHeight : 0 }}>
+                <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
+                  onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+                  {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
+                    <View key={i} style={{ marginBottom: 10, alignItems: msg.from === 'system' ? 'center' : msg.from === 'me' ? 'flex-end' : 'flex-start' }}>
+                      {msg.from === 'system' && (
+                        <View style={{ paddingHorizontal: 14, paddingVertical: 5, backgroundColor: 'rgba(100,116,139,0.1)', borderRadius: 99 }}>
+                          <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>{msg.text}</Text>
+                        </View>
+                      )}
 
-                    {msg.from === 'them' && openChat.type === 'group' && (
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-                        <Image source={{ uri: msg.senderPhoto }} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: msg.senderColor }} />
+                      {msg.from === 'them' && openChat.type === 'group' && (
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+                          <Image source={{ uri: msg.senderPhoto }} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: msg.senderColor }} />
+                          <View style={{ maxWidth: W * 0.72 }}>
+                            {msg.senderName && <Text style={{ fontSize: 11, color: msg.senderColor || '#818CF8', fontWeight: '600', marginBottom: 3, marginLeft: 4 }}>{msg.senderName}</Text>}
+                            <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || 'them' }) }}>
+                              <View style={s.msgBubbleThem}>
+                                {msg.replyTo && (
+                                  <View style={{ backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: '#6366F1' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{msg.replyTo.senderName}</Text>
+                                    <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
+                                  </View>
+                                )}
+                                <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                                <Text style={{ fontSize: 10, color: '#94A3B8', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
+                              </View>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                      {msg.from === 'them' && openChat.type === 'duo' && (
                         <View style={{ maxWidth: W * 0.72 }}>
-                          {msg.senderName && <Text style={{ fontSize: 11, color: msg.senderColor || '#818CF8', fontWeight: '600', marginBottom: 3, marginLeft: 4 }}>{msg.senderName}</Text>}
-                          <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || 'them' }) }}>
+                          <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || openChat.name || 'them' }) }}>
                             <View style={s.msgBubbleThem}>
                               {msg.replyTo && (
                                 <View style={{ backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: '#6366F1' }}>
@@ -6550,45 +6579,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             </View>
                           </TouchableOpacity>
                         </View>
-                      </View>
-                    )}
-                    {msg.from === 'them' && openChat.type === 'duo' && (
-                      <View style={{ maxWidth: W * 0.72 }}>
-                        <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || openChat.name || 'them' }) }}>
-                          <View style={s.msgBubbleThem}>
-                            {msg.replyTo && (
-                              <View style={{ backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: '#6366F1' }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{msg.replyTo.senderName}</Text>
-                                <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
-                              </View>
-                            )}
-                            <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
-                            <Text style={{ fontSize: 10, color: '#94A3B8', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    {msg.from === 'me' && (
-                      <View style={{ maxWidth: W * 0.72 }}>
-                        <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: 'You' }) }}>
-                          <View style={s.msgBubbleMe}>
-                            {msg.replyTo && (
-                              <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: 'rgba(255,255,255,0.6)' }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.9)' }}>{msg.replyTo.senderName}</Text>
-                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }} numberOfLines={2}>{msg.replyTo.text}</Text>
-                              </View>
-                            )}
-                            <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20 }}>{msg.text}</Text>
-                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </ScrollView>
+                      )}
+                      {msg.from === 'me' && (
+                        <View style={{ maxWidth: W * 0.72 }}>
+                          <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: 'You' }) }}>
+                            <View style={s.msgBubbleMe}>
+                              {msg.replyTo && (
+                                <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: 'rgba(255,255,255,0.6)' }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.9)' }}>{msg.replyTo.senderName}</Text>
+                                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }} numberOfLines={2}>{msg.replyTo.text}</Text>
+                                </View>
+                              )}
+                              <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20 }}>{msg.text}</Text>
+                              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
 
-              <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={0}>
                 {replyTo && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.15)', gap: 10 }}>
                     <View style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', alignSelf: 'stretch' }} />
@@ -6601,7 +6612,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                   </View>
                 )}
-                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom + 8, 20) : Math.max(insets.bottom + 6, 16) }]}>
+                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'android' && keyboardHeight > 0 ? 8 : Math.max(insets.bottom + 6, 16) }]}>
                   <TextInput
                     style={s.chatInput} value={chatInput} onChangeText={setChatInput}
                     placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
@@ -6611,7 +6622,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <Ionicons name="arrow-up" size={20} color={chatInput.trim() ? '#fff' : '#94A3B8'} />
                   </TouchableOpacity>
                 </View>
-              </KeyboardAvoidingView>
+              </View>
           </View>
         </Modal>
       )}
