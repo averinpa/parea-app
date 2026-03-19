@@ -4138,8 +4138,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         </View>
       </Modal>
 
-      {/* ── Main Profile (no scroll) ───────────────────────────────────────── */}
-      <View style={{ flex: 1, paddingBottom: Math.max(insets.bottom, 16) }}>
+      {/* ── Main Profile ─────────────────────────────────────────────────────── */}
+      <View style={{ flex: 1 }}>
 
         {/* Header */}
         <View style={{ paddingTop: Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -4151,6 +4151,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
             <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Preview</Text>
           </TouchableOpacity>
         </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}>
 
         {/* Photos: 3 equal squares */}
         {(() => {
@@ -4266,6 +4268,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
           ))}
         </View>
 
+        </ScrollView>
       </View>
     </View>
   )
