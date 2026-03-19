@@ -6420,10 +6420,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {/* Chat screen */}
       {openChat && (
         <Modal visible animationType="slide" onRequestClose={() => setOpenChat(null)}>
-          <StatusBar style="dark" />
+          <StatusBar style="dark" backgroundColor="#ffffff" />
           <View style={{ flex: 1, backgroundColor: '#F0F2F5' }}>
-            {/* Header — extends behind status bar */}
-            <View style={{ backgroundColor: '#fff', paddingTop: insets.top, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 4 }}>
+            {/* Header */}
+            <View style={{ backgroundColor: '#fff', paddingTop: insets.top, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 }}>
               <View style={s.chatHeader}>
                 <TouchableOpacity onPress={() => { setOpenChat(null); setReplyTo(null) }} style={{ padding: 4 }}>
                   <Ionicons name="chevron-back" size={26} color="#1E1B4B" />
@@ -7275,7 +7275,7 @@ const s = StyleSheet.create({
   subTabTxtOn: { fontSize: 13, fontWeight: '700', color: '#4338CA' },
 
   // Chat screen
-  chatHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.07)', gap: 4 },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, backgroundColor: '#fff', gap: 4 },
   chatHeaderAvatar: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', marginLeft: 8 },
   msgBubbleMe: { backgroundColor: '#6366F1', borderRadius: 18, borderBottomRightRadius: 4, paddingHorizontal: 14, paddingVertical: 10 },
   msgBubbleThem: { backgroundColor: '#fff', borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
