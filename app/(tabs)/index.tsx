@@ -4405,6 +4405,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
   const [dbCommunityEvents, setDbCommunityEvents] = useState<any[]>([])
   const deletedCommunityEventIds = useRef<Set<number>>(new Set())
+  const communityEventChatMap = useRef<Record<number, number>>({}) // eventId → chatId
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
@@ -4881,16 +4882,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       return changed ? updated : prev
     })
     if (deletedIds.length > 0) {
-      // Add system message to any chats linked to deleted events, then remove them
       deletedIds.forEach(evId => {
+        const mappedChatId = communityEventChatMap.current[evId]
         setChatList(prev => {
-          const chat = prev.find(c => c.communityEventId === evId)
+          const chat = prev.find(c => c.id === mappedChatId || c.communityEventId === evId)
           if (!chat) return prev
           setChatMessages(msgs => ({
             ...msgs,
             [chat.id]: [...(msgs[chat.id] || []), { from: 'system', text: '🗑️ Host cancelled this event', time: 'now' }],
           }))
-          return prev.filter(c => c.communityEventId !== evId)
+          delete communityEventChatMap.current[evId]
+          return prev.filter(c => c.id !== chat.id)
         })
       })
     }
@@ -5188,6 +5190,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 communityEventId: ev.id,
               }
               const createdChatId = newChat.id
+              if (ev.type === 'community') communityEventChatMap.current[ev.id] = createdChatId
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
               addNotif({ type: 'confirmed', emoji: '✅', color: '#10B981', title: 'You\'re in!', body: `Your crew for "${ev.title}" is ready`, chatId: createdChatId })
