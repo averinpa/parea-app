@@ -4417,6 +4417,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+  const realtimeChatRef = useRef<any>(null)
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
@@ -5153,7 +5154,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setChatInput('')
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
 
-    // Mock auto-reply
+    // Для community-чатов — пишем в Supabase, не делаем мок-ответ
+    if (openChat.communityEventId && userData?.dbId) {
+      supabase.from('messages').insert({
+        community_event_id: openChat.communityEventId,
+        sender_id: userData.dbId,
+        text,
+      }).then(({ error }) => { if (error) console.warn('message insert error:', error.message) })
+      return
+    }
+
+    // Mock auto-reply (только для не-community чатов)
     const chatId = openChat.id
     const delay = 1500 + Math.random() * 1500
     if (openChat.type === 'duo') {
@@ -5189,6 +5200,86 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
     }
   }
+
+  // Realtime чат для community events
+  useEffect(() => {
+    if (realtimeChatRef.current) {
+      supabase.removeChannel(realtimeChatRef.current)
+      realtimeChatRef.current = null
+    }
+    if (!openChat?.communityEventId || !userData?.dbId) return
+
+    const evId = openChat.communityEventId
+    const chatId = openChat.id
+
+    // Загружаем историю сообщений
+    supabase.from('messages')
+      .select('id, sender_id, text, created_at')
+      .eq('community_event_id', evId)
+      .order('created_at', { ascending: true })
+      .limit(100)
+      .then(({ data }) => {
+        if (!data) return
+        const profilesInChat: any[] = openChat.memberProfiles || []
+        const msgs = data.map((m: any) => {
+          const isMe = m.sender_id === userData.dbId
+          const sender = profilesInChat.find((p: any) => p.id === m.sender_id)
+          const t = new Date(m.created_at)
+          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          return {
+            from: isMe ? 'me' : 'them',
+            text: m.text,
+            time,
+            senderName: isMe ? '' : (sender?.name || ''),
+            senderPhoto: isMe ? '' : (sender?.photo || ''),
+            senderColor: isMe ? '' : (sender?.color || '#818CF8'),
+            _dbId: m.id,
+          }
+        })
+        setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 80)
+      })
+
+    // Подписка на новые сообщения
+    const channel = supabase.channel(`community_chat_${evId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `community_event_id=eq.${evId}`,
+      }, (payload: any) => {
+        const m = payload.new
+        if (m.sender_id === userData.dbId) return // своё уже добавили оптимистично
+        const profilesInChat: any[] = openChat.memberProfiles || []
+        const sender = profilesInChat.find((p: any) => p.id === m.sender_id)
+        const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const newMsg = {
+          from: 'them',
+          text: m.text,
+          time,
+          senderName: sender?.name || '',
+          senderPhoto: sender?.photo || '',
+          senderColor: sender?.color || '#818CF8',
+          _dbId: m.id,
+        }
+        setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: `${sender?.name || 'Someone'}: ${m.text}`, time: 'now', isNew: true } : c))
+        setOpenChat((cur: any) => {
+          if (!cur || cur.id !== chatId) {
+            addNotif({ type: 'new_message', emoji: '💬', color: '#6366F1', title: sender?.name || openChat.event, body: m.text, chatId })
+          }
+          return cur
+        })
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
+      })
+      .subscribe()
+
+    realtimeChatRef.current = channel
+    return () => {
+      supabase.removeChannel(channel)
+      realtimeChatRef.current = null
+    }
+  }, [openChat?.id, openChat?.communityEventId, userData?.dbId])
 
   return (
     <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
