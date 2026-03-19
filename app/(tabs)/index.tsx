@@ -3370,11 +3370,15 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-            {hasHostActivity ? '👑 You have join requests'
-              : myEvents.length > 0 ? `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew`
-              : myApprovedCommunityEvents.length > 0 ? `✅ You're in ${myApprovedCommunityEvents.length} group${myApprovedCommunityEvents.length > 1 ? 's' : ''} · open the chat`
-              : myCommunityEvents.length > 0 ? `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host approval`
-              : `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`}
+            {(() => {
+              if (hasHostActivity) return '👑 You have join requests'
+              const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
+              if (myEvents.length > 0 && totalReal > 0) return `${totalReal} people going · tap to see them`
+              if (myEvents.length > 0) return `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · looking for crew... 🔍`
+              if (myApprovedCommunityEvents.length > 0) return `✅ You're in — open the chat`
+              if (myCommunityEvents.length > 0) return `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host`
+              return `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`
+            })()}
           </Text>
         </View>
 
