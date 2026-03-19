@@ -101,14 +101,7 @@ const MOCK_EVENTS = [
   { id: 2,  city: 'Limassol', type: 'official',   title: 'Limassol Wine Festival 2025',          time: 'Tomorrow, 20:00', distance: '1.2km', category: 'wine',    gradient: ['#f093fb', '#f5576c'], seekerColors: ['#9C27B0', '#E91E63'],                     seekingCount: 28, participantsCount: 40, maxParticipants: 200, organizer: { name: 'SoldOut Tickets',              emoji: '🍷' }, ticketLink: 'https://soldout.com.cy/wine-festival', source: 'SoldOut Tickets',  description: 'The biggest wine celebration on the island. 40+ local wineries, live music, and Cypriot mezze. Ticket includes unlimited tastings from 20:00 to midnight.' },
   { id: 9,  city: 'Limassol', type: 'official',   title: 'CyprusTech Conference 2025',           time: 'Sat, 10:00',     distance: '3km',   category: 'tech',    gradient: ['#0f2027', '#2c5364'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0', '#22c55e'], seekingCount: 7,  participantsCount: 80, maxParticipants: 150, organizer: { name: 'CyprusTech Events',             emoji: '💻' }, ticketLink: 'https://cyprustech.io/2025',           source: 'Official Website', description: 'Annual tech conference with speakers from EU startups, AI panels, and networking sessions. Great for founders, devs, and investors looking to connect in Cyprus.' },
   { id: 5,  city: 'Paphos',   type: 'official',   title: 'Sunset Hike to Troodos',               time: 'Sat, 07:00',     distance: '8km',   category: 'sports',  gradient: ['#fa8231', '#f7b731'], seekerColors: ['#334155', '#818CF8', '#22c55e'],          seekingCount: 9,  participantsCount: 14, maxParticipants: 20,  organizer: { name: 'Paphos Outdoor Club',          emoji: '🥾' }, ticketLink: null,                                  source: 'Official Website', description: 'Guided 12km trail through pine forest with panoramic summit views. Moderate difficulty. Bring water, snacks, and layers — it gets cool at the top.' },
-  { id: 3,  city: 'Limassol', type: 'community',  title: 'Morning Coffee & Chat',               time: 'Today, 09:30',   distance: '0.5km', category: 'coffee',  gradient: ['#4facfe', '#00c6fb'], seekerColors: ['#FF9800', '#03A9F4', '#8BC34A', '#FF5722'], seekingCount: 4,  participantsCount: 8,  maxParticipants: 8,  description: 'Casual meetup at a specialty café near the marina. No agenda, just good coffee and good conversation. Perfect for remote workers and people new to the city.' },
-  { id: 4,  city: 'Nicosia',  type: 'community',  title: 'Board Games Night',                   time: 'Fri, 19:00',     distance: '3km',   category: 'gaming',  gradient: ['#43e97b', '#38f9d7'], seekerColors: ['#FF5722', '#9C27B0'],                     seekingCount: 2,  participantsCount: 3,  maxParticipants: 10, description: 'Friendly evening of strategy and party games — Catan, Codenames, Ticket to Ride and more. All experience levels welcome. Snacks provided, BYO drinks.' },
-  { id: 6,  city: 'Nicosia',  type: 'community',  title: 'Specialty Coffee Tour',               time: 'Sun, 11:00',     distance: '1km',   category: 'coffee',  gradient: ['#a18cd1', '#fbc2eb'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 2,  participantsCount: 6,  maxParticipants: 6,  description: 'Walk through 3 of Nicosia\'s best third-wave coffee spots. Each stop features a different brew method. Great way to explore the old city on foot.' },
-  { id: 7,  city: 'Larnaca',  type: 'community',  title: 'Beach Volleyball',                    time: 'Today, 17:00',   distance: '4km',   category: 'sports',  gradient: ['#ffecd2', '#fcb69f'], seekerColors: ['#2196F3', '#FF9800', '#9C27B0'],          seekingCount: 3,  participantsCount: 12, maxParticipants: 12, description: 'Casual 3v3 volleyball on Mackenzie Beach. All skill levels welcome — we play for fun, not for points. Bring sunscreen, we\'re usually there till sunset.' },
-  { id: 8,  city: 'Larnaca',  type: 'community',  title: 'Wine & Jazz Evening',                 time: 'Sat, 20:00',     distance: '2km',   category: 'wine',    gradient: ['#c471f5', '#fa71cd'], seekerColors: ['#818CF8', '#4CAF50'],                     seekingCount: 5,  participantsCount: 8,  maxParticipants: 20, description: 'Laid-back evening with live jazz duo, Cypriot wines, and a selection of local cheeses. Held in a rooftop bar overlooking the salt lake. No reservation needed.' },
-  { id: 10, city: 'Limassol', type: 'community',  title: 'Sunset Picnic at Dasoudi Beach',      time: 'Today, 17:30',   distance: '1.5km', category: 'outdoors',gradient: ['#134e5e', '#71b280'], seekerColors: ['#818CF8', '#22c55e', '#f59e0b'],          seekingCount: 6,  participantsCount: 9,  maxParticipants: 15, description: 'Bring a blanket and something to share — we\'ll have music, golden hour views, and good company on the beachfront. It\'s a vibe, not an event.' },
   { id: 11, city: 'Limassol', type: 'official',   title: 'Mediterranean Food Festival',         time: 'Tomorrow, 12:00',distance: '0.8km', category: 'food',    gradient: ['#f7971e', '#ffd200'], seekerColors: ['#ef4444', '#f97316', '#818CF8'],          seekingCount: 19, participantsCount: 55, maxParticipants: 500, organizer: { name: 'Limassol Municipality',      emoji: '🍕' }, ticketLink: 'https://limassol.gov.cy/food-fest',   source: 'Official Website', description: 'Two-day street food festival celebrating Mediterranean cuisine. 60+ food stalls, cooking demos, and live folk music from Greece, Lebanon, and Cyprus.' },
-  { id: 12, city: 'Limassol', type: 'community',  title: 'Photography Walk — Old Port',         time: 'Sun, 09:00',     distance: '1km',   category: 'culture', gradient: ['#232526', '#414345'], seekerColors: ['#818CF8', '#22c55e'],                     seekingCount: 3,  participantsCount: 7,  maxParticipants: 10, description: 'Slow morning walk through the old port and castle district. Shoot on any camera or phone. We share and discuss photos over coffee at the end.' },
   { id: 13, city: 'Nicosia',  type: 'official',   title: 'Open Air Cinema Night',               time: 'Sat, 21:00',     distance: '2km',   category: 'culture', gradient: ['#0f0c29', '#302b63'], seekerColors: ['#a78bfa', '#f472b6', '#34d399'],          seekingCount: 11, participantsCount: 30, maxParticipants: 50,  organizer: { name: 'Coca-Cola Arena Nicosia',      emoji: '🎬' }, ticketLink: 'https://tickets.cy/cinema-night',     source: 'Coca-Cola Arena',  description: 'Classic film screening under the stars in the courtyard of the Nicosia Municipal Garden. Bring a picnic blanket. This week\'s film announced on the day.' },
 ]
 
@@ -190,6 +183,30 @@ function scoreRequesterForHost(
   if (overlap >= 2) score += 20
   else if (overlap === 1) score += 12
   else if (eventCategory && reqI.includes(eventCategory)) score += 8
+  return Math.min(100, score)
+}
+
+// Score how well an event fits a requester (0–100)
+function scoreEventForRequester(
+  user: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[] },
+  event: { category?: string; title?: string; maxParticipants?: number }
+): number {
+  let score = 30 // base
+  const interests = user.interests || []
+  const category = event.category || ''
+  // Category matches interests (35 pts)
+  if (interests.includes(category)) score += 35
+  else if (interests.some(i => category.includes(i) || i.includes(category))) score += 18
+  // Title keyword match (15 pts)
+  const titleWords = (event.title || '').toLowerCase().split(/\s+/)
+  const titleHits = interests.filter(i => titleWords.some(w => w.includes(i.toLowerCase()) || i.toLowerCase().includes(w))).length
+  score += Math.min(15, titleHits * 8)
+  // Group size preference (20 pts)
+  const max = event.maxParticipants || 5
+  const age = typeof user.age === 'string' ? parseInt(user.age || '25') : (user.age || 25)
+  if (max <= 2) score += age < 28 ? 20 : 12
+  else if (max <= 6) score += 20
+  else score += 10
   return Math.min(100, score)
 }
 
@@ -1574,7 +1591,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData, onCancelHostedEvent }: any) {
   const insets = useSafeAreaInsets()
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [draftVibe, setDraftVibe] = useState(tonightVibe)
@@ -2098,7 +2115,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                             <Feather name="calendar" size={11} color="#94A3B8" />
                             <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
                           </View>
-                          {(ev.location || ev.distance) && (
+                          {(ev.location || (ev.distance && ev.distance !== '0km')) && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                               <Feather name="map-pin" size={11} color="#94A3B8" />
                               <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance}</Text>
@@ -2387,6 +2404,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   const now = Date.now()
   const myEvents = [...MOCK_EVENTS, ...allEvents.filter((e: any) => e._fromDb)].filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
   const activeHostedEvents = hostedEvents.filter(ev => !ev.expiresAt || ev.expiresAt > now)
+  const expiredHostedEvents = hostedEvents.filter(ev => ev.expiresAt && ev.expiresAt <= now)
 
   const FORMAT_CHIP: Record<string, { emoji: string; label: string; color: string }> = {
     '1+1':   { emoji: '👥', label: 'Duo',   color: '#f472b6' },
@@ -2497,7 +2515,24 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               )}
             </View>
           )}
-          {myEvents.length === 0 && activeHostedEvents.length === 0 ? (
+          {/* Expired hosted events — show only for cleanup */}
+          {expiredHostedEvents.length > 0 && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4 }}>Expired 🗂️</Text>
+              {expiredHostedEvents.map((ev: any) => (
+                <View key={ev.id} style={{ borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.35)', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                  <TouchableOpacity
+                    onPress={() => onCancelHostedEvent?.(ev)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={{ fontSize: 16 }}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+          {myEvents.length === 0 && activeHostedEvents.length === 0 && expiredHostedEvents.length === 0 ? (
             <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 }}>
               <Text style={{ fontSize: 44, marginBottom: 14 }}>🎪</Text>
               <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 8 }}>No plans yet</Text>
@@ -2913,9 +2948,9 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
         overflow: 'hidden', transform: [{ translateY: slideAnim }],
       }}>
         {/* Photo carousel */}
-        <View style={{ height: 280, position: 'relative' }}>
+        <View style={{ height: 320, position: 'relative', backgroundColor: '#0A0812' }}>
           {allPhotos[photoIdx] ? (
-            <Image source={{ uri: allPhotos[photoIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            <Image source={{ uri: allPhotos[photoIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           ) : (
             <LinearGradient colors={[c0, c1]} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 72 }}>{profile.emoji || '👤'}</Text>
@@ -3182,7 +3217,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent }: any) {
   // Official/concert events + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   // Community events pending host approval — shown as waiting cards
@@ -3345,6 +3380,19 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)' }}>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST 👑</Text>
                     </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                        Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event.', [
+                          { text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
+                          { text: 'Keep', style: 'cancel' },
+                        ])
+                      }}
+                      activeOpacity={0.7}
+                      style={{ padding: 6 }}
+                    >
+                      <Text style={{ fontSize: 16 }}>🗑️</Text>
+                    </TouchableOpacity>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>
@@ -3389,7 +3437,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                         }} activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                           <View>
-                            <Image source={{ uri: req.photo }} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#333' }} />
+                            <Image source={{ uri: req.photo }} style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#333' }} resizeMode="cover" />
                             {/* Score ring */}
                             <View style={{ position: 'absolute', bottom: -4, right: -6, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 8, backgroundColor: '#1A1730', borderWidth: 1, borderColor: scoreColor }}>
                               <Text style={{ fontSize: 9, fontWeight: '900', color: scoreColor }}>{score}%</Text>
@@ -3688,14 +3736,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const total = ev.maxParticipants || ev.capacity || 20
             const filled = (ev.participantsCount || 0) + (isPending ? 0 : 1)
             const free = Math.max(0, total - filled)
-            // Compatibility score: interest match + language overlap
-            const userLangs: string[] = userData?.langs || []
-            const hostLangs: string[] = ev.hostLangs || []
-            const langMatch = userLangs.some((l: string) => hostLangs.includes(l))
-            const interestMatch = (userData?.interests || []).includes(ev.category)
-            const compatScore = (langMatch ? 35 : 10) + (interestMatch ? 40 : 5) + 20
+            const compatScore = scoreEventForRequester(userData || {}, ev)
             const compatColor = compatScore >= 70 ? '#43E97B' : compatScore >= 50 ? '#FBBF24' : '#F87171'
             const compatLabel = compatScore >= 70 ? 'Great match' : compatScore >= 50 ? 'Good fit' : 'Low match'
+            const interestMatch = (userData?.interests || []).includes(ev.category)
             return (
               <View key={`community-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.35)' : 'rgba(67,233,123,0.35)' }}>
                 <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
@@ -4307,6 +4351,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createDay, setCreateDay] = useState('')
   const [createHour, setCreateHour] = useState('')
   const [createLocation, setCreateLocation] = useState('')
+  const [createDescription, setCreateDescription] = useState('')
   const [createDriving, setCreateDriving] = useState(false)
   const [createLangs, setCreateLangs] = useState<string[]>([])
   const [calViewYear, setCalViewYear] = useState(new Date().getFullYear())
@@ -4333,13 +4378,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
   const [dbCommunityEvents, setDbCommunityEvents] = useState<any[]>([])
+  const deletedCommunityEventIds = useRef<Set<number>>(new Set())
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
   }, [])
 
-  // Load community events from DB (other users' events)
+  // Load community events from DB (other users' events) — poll every 15s
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
@@ -4348,7 +4394,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .order('created_at', { ascending: false })
         .limit(30)
       if (data) {
-        setDbCommunityEvents(data.map(e => ({
+        setDbCommunityEvents(data.filter(e => !deletedCommunityEventIds.current.has(e.id)).map(e => ({
           id: e.id,
           type: 'community',
           city: e.city || '',
@@ -4364,13 +4410,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           seekingCount: 0,
           isHosted: e.host_id === userData?.dbId,
           hostId: e.host_id,
-          description: `Community event · ${e.location || ''}`.trim(),
+          description: e.description || (e.location ? `📍 ${e.location}` : ''),
           _dbCommunity: true,
         })))
       }
     }
     fetch()
-    const interval = setInterval(fetch, 30000)
+    const interval = setInterval(fetch, 15000)
     return () => clearInterval(interval)
   }, [userData?.dbId])
   const persistLoaded = useRef(false)
@@ -4690,12 +4736,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // Poll real join requests from DB for hosted events
   useEffect(() => {
     if (!userData?.dbId || userCreatedEvents.length === 0) return
+    const eventIds = userCreatedEvents.map(e => e.id)
     const fetchRequests = async () => {
-      const { data } = await supabase
+      const { data: reqData, error } = await supabase
         .from('join_requests')
-        .select('*, profiles(*)')
-        .eq('host_id', userData.dbId)
+        .select('id, event_id, requester_id, status')
+        .in('event_id', eventIds)
         .eq('status', 'pending')
+      if (error) console.warn('join_requests poll error:', error.message)
+      const data = await (async () => {
+        if (!reqData || reqData.length === 0) return []
+        const ids = [...new Set(reqData.map((r: any) => r.requester_id))]
+        const { data: profiles } = await supabase.from('profiles').select('*').in('id', ids)
+        const profileMap: Record<string, any> = {}
+        profiles?.forEach((p: any) => { profileMap[p.id] = p })
+        return reqData.map((r: any) => ({ ...r, profiles: profileMap[r.requester_id] || {} }))
+      })()
       if (data) {
         const newRequests: Record<number, any[]> = {}
         data.forEach((req: any) => {
@@ -4736,16 +4792,30 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .select('event_id, status')
         .eq('requester_id', userData.dbId)
       if (data) {
-        data.forEach((req: any) => {
-          if (req.status === 'approved') {
-            setJoinedEvents(prev => {
-              if (prev[req.event_id] === 'pending') {
-                addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: '' })
-                return { ...prev, [req.event_id]: 'joined' }
-              }
-              return prev
-            })
-          }
+        const activeEventIds = new Set(data.map((r: any) => r.event_id))
+        setJoinedEvents(prev => {
+          const updated = { ...prev }
+          let changed = false
+          // Remove stale pending entries for deleted events
+          Object.keys(updated).forEach(id => {
+            if (updated[+id] === 'pending' && !activeEventIds.has(+id)) {
+              delete updated[+id]
+              changed = true
+            }
+          })
+          // Restore pending/approved from DB (in case AsyncStorage was cleared)
+          data.forEach((req: any) => {
+            if (req.status === 'pending' && !updated[req.event_id]) {
+              updated[req.event_id] = 'pending'
+              changed = true
+            }
+            if (req.status === 'approved' && prev[req.event_id] === 'pending') {
+              updated[req.event_id] = 'joined'
+              changed = true
+              addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: '' })
+            }
+          })
+          return changed ? updated : prev
         })
       }
     }
@@ -4981,13 +5051,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
-            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
           </View>
           <View style={{ flex: 1, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
             <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, height: insets.top, backgroundColor: '#0A0812', zIndex: 1 }} />
           <VibeCheckTab
             joinedEvents={joinedEvents}
-            allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents]}
+            allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents, ...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]}
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
             userData={userData}
@@ -5106,6 +5176,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             hostedEvents={userCreatedEvents}
             pendingJoinRequests={pendingJoinRequests}
             approvedJoiners={approvedJoiners}
+            onCancelHostedEvent={(ev: any) => {
+              deletedCommunityEventIds.current.add(ev.id)
+              setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id))
+              setDbCommunityEvents(prev => prev.filter(e => e.id !== ev.id))
+              setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
+              supabase.from('community_events').delete().eq('id', ev.id).then(({ error }) => { if (error) console.warn('community_events delete error:', error.message) })
+              supabase.from('join_requests').delete().eq('event_id', ev.id)
+              showToast("Event cancelled 🗑️")
+            }}
             onApproveJoiner={(eventId: number, joiner: any) => {
               const ev = userCreatedEvents.find(e => e.id === eventId)
               const maxParticipants = ev?.maxParticipants || 5
@@ -5252,10 +5333,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             approvedJoiners={approvedJoiners}
             eventAttendeesMap={eventAttendeesMap}
             onCancelHostedEvent={(ev) => {
+              deletedCommunityEventIds.current.add(ev.id)
               setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id))
+              setDbCommunityEvents(prev => prev.filter(e => e.id !== ev.id))
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
+              supabase.from('community_events').delete().eq('id', ev.id).then(({ error }) => { if (error) console.warn('community_events delete error:', error.message) })
+              supabase.from('join_requests').delete().eq('event_id', ev.id)
               addNotif({ type: 'event_cancelled', emoji: '🗑️', color: '#EF4444', title: 'Event cancelled', body: `"${ev.title}" has been removed` })
               showToast("Event cancelled 🗑️")
             }}
@@ -5339,7 +5424,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCreateStep(cs => cs - 1);
                       } else {
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
-                        setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
+                        setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                       }
@@ -5552,6 +5637,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             placeholder="Café, beach, address..." placeholderTextColor="#94A3B8"
                             style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
                         </View>
+
+                        {/* Description */}
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, marginTop: 16 }}>Description</Text>
+                        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1.5, borderColor: createDescription.length > 0 ? '#6366F1' : 'transparent' }}>
+                          <TextInput
+                            value={createDescription}
+                            onChangeText={setCreateDescription}
+                            placeholder="Tell people what to expect, what to bring, vibe..."
+                            placeholderTextColor="#94A3B8"
+                            multiline
+                            numberOfLines={3}
+                            style={{ fontSize: 14, color: '#1E1B4B', fontWeight: '500', minHeight: 72, textAlignVertical: 'top' }}
+                          />
+                        </View>
                       </View>
                     )
                   })()}
@@ -5659,6 +5758,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               title: actLabel,
                               category: TYPE_TO_CAT[createType || ''] || 'outdoors',
                               location: createLocation,
+                              description: createDescription || null,
                               city,
                               time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
                               max_participants: SIZE_MAX[createSize || 'squad'] || 5,
@@ -5684,7 +5784,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           seekingCount: 0,
                           participantsCount: 1,
                           maxParticipants: SIZE_MAX[createSize || 'squad'] || 5,
-                          description: `A ${createSize || 'squad'} ${actLabel} gathering. ${createLocation ? '📍 ' + createLocation : ''} ${createDriving ? '🚗 Host can give a lift.' : ''}`.trim(),
+                          description: createDescription || `${actLabel}${createLocation ? ' · 📍 ' + createLocation : ''}${createDriving ? ' · 🚗 Host can give a lift' : ''}`,
                           location: createLocation,
                           isHosted: true,
                           hostId: userData?.dbId,
@@ -5697,7 +5797,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                         // Reset form
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
-                        setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
+                        setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                         showToast('Your social is live! 🎉')
@@ -5745,7 +5845,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     )}
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 40, paddingHorizontal: 20, paddingBottom: 20 }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
-                        {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()} · {eventDetail.distance}
+                        {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()}{eventDetail.distance && eventDetail.distance !== '0km' ? ` · ${eventDetail.distance}` : ''}
                       </Text>
                       <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28 }}>{eventDetail.title}</Text>
                     </LinearGradient>
@@ -5869,10 +5969,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             <Text style={{ fontSize: 13, color: '#64748B', marginTop: 3, lineHeight: 18 }} numberOfLines={2}>{evHost.bio}</Text>
                             <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
                               {evHost.langs.map((l: string) => <Text key={l} style={{ fontSize: 15 }}>{FLAG_MAP[l]}</Text>)}
-                              {evHost.transport && <Text style={{ fontSize: 12, color: '#94A3B8', marginLeft: 4 }}>{TRANSPORT_LABEL[evHost.transport]}</Text>}
+                              {evHost.transport && evHost.transport !== 'meet' && <Text style={{ fontSize: 12, color: '#94A3B8', marginLeft: 4 }}>{TRANSPORT_LABEL[evHost.transport]}</Text>}
                             </View>
                           </View>
-                          <Feather name="chevron-right" size={18} color="#CBD5E1" />
                         </TouchableOpacity>
                       </>
                     )}

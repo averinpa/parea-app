@@ -11,10 +11,10 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 | 1 | Registration (name, age, city) | ✅ | City = feed filter only, not saved to profile |
 | 2 | Photo upload from gallery | ✅ | No crop black areas |
 | 3 | Interests selection | ✅ | Continue button ok on Xiaomi 11i and 14 Pro |
-| 4 | Languages / bio / prefs | ⬜ | |
+| 4 | Languages / bio / prefs | ✅ | |
 | 5 | Profile saved to Supabase DB | ✅ | |
 | 6 | Photos uploaded to Supabase Storage (HTTPS URL in DB) | ✅ | |
-| 7 | Login / session restore on reopen | ⬜ | |
+| 7 | Login / session restore on reopen | ✅ | |
 | 8 | Delete Account → removes from profiles + Auth | ✅ | Edge Function delete-account |
 
 ---
@@ -23,7 +23,7 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 9 | Official events load from DB (no mock flicker) | ⬜ | Skeleton shown while loading |
+| 9 | Official events load from DB (no mock flicker) | ✅ | Skeleton shown while loading |
 | 10 | Community events shown | ⬜ | |
 | 11 | Tonight's Vibe picker | ⬜ | |
 | 12 | City filter | ⬜ | |
