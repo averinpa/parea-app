@@ -3271,7 +3271,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     </View>
   )
 
-  if (myEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0) {
+  if (myEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0 && activeHosted.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
