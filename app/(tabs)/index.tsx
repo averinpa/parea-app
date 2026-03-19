@@ -3234,11 +3234,10 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent }: any) {
-  // Official events only — shown as crew-vetting cards
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && e.type !== 'community')
-  // Community events approved by host — shown as simple "open chat" cards
-  const myApprovedCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'joined' && !e.isHosted && e.type === 'community')
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent }: any) {
+  // Official + approved community events — shown as crew cards
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
+  const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
   // Community events pending host approval — shown as waiting cards
   const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && !e.isHosted && e.type === 'community')
   // User-created socials the user requested to join — shown as "awaiting approval"
@@ -3600,16 +3599,18 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const cap        = isCommunity ? Math.min(ev.participantsCount || 5, 5) : (VIBE_FORMAT_MAX[format] || 5)
             const threshold  = isCommunity ? cap : (VIBE_FORMAT_THRESHOLD[format] || cap)
             const isParty    = !isCommunity && format === 'party'
-            // For official events: use real attendees from DB; for community: use mock
-            const realAttendees = (!isCommunity && ev.type === 'official') ? (eventAttendeesMap[ev.id] || []) : []
+            // For official events: use real attendees from DB; for community: use other approved members
+            const realAttendees = isCommunity ? (communityEventMembers[ev.id] || []) : (ev.type === 'official' ? (eventAttendeesMap[ev.id] || []) : [])
             const hasRealAttendees = realAttendees.length > 0
             // found = me (1) + real partners; if no real data yet show 1/cap
-            const found      = isCommunity ? cap : (hasRealAttendees ? realAttendees.length + 1 : 1)
+            const found      = isCommunity ? (hasRealAttendees ? realAttendees.length + 1 : 1) : (hasRealAttendees ? realAttendees.length + 1 : 1)
             const isActive   = hasRealAttendees || isCommunity
-            const partners   = hasRealAttendees ? realAttendees : aiRankedProfiles.slice(0, cap - 1)
+            const partners   = isCommunity ? realAttendees : (hasRealAttendees ? realAttendees : aiRankedProfiles.slice(0, cap - 1))
 
             // Status label
-            const statusLabel = isCommunity ? 'HOST APPROVED ✓' : partners.some((p: any) => p._real) ? `${partners.filter((p: any) => p._real).length} found 🎯` : (isParty ? 'GROUP ACTIVE 🔥' : 'Looking...')
+            const statusLabel = isCommunity
+              ? (hasRealAttendees ? `${realAttendees.length + 1} in group 🎯` : 'HOST APPROVED ✓')
+              : partners.some((p: any) => p._real) ? `${partners.filter((p: any) => p._real).length} found 🎯` : (isParty ? 'GROUP ACTIVE 🔥' : 'Looking...')
             const hasReal = partners.some((p: any) => p._real)
             const statusColor = (isActive || hasReal) ? '#43E97B' : '#FBBF24'
             const statusBg    = (isActive || hasReal) ? 'rgba(67,233,123,0.15)' : 'rgba(251,191,36,0.13)'
@@ -3681,9 +3682,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
                   {/* Clickable avatars */}
                   <View style={{ marginBottom: isActive ? 20 : 0 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, marginBottom: 12 }}>
-                      TAP TO VET YOUR CREW
-                    </Text>
+                    {(partners.length > 0) && (
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, marginBottom: 12 }}>
+                        TAP TO VET YOUR CREW
+                      </Text>
+                    )}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                       {/* Me — always first */}
                       <View>
@@ -3730,6 +3733,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </View>
 
                   {/* CTA */}
+                  {isCommunity && !hasRealAttendees && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(99,102,241,0.2)', marginBottom: 10 }}>
+                      <Text style={{ fontSize: 18 }}>✅</Text>
+                      <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>You're approved! More people may join. Open the chat to say hi.</Text>
+                    </View>
+                  )}
                   {!isActive && !isCommunity && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' }}>
                       <Text style={{ fontSize: 18 }}>🔍</Text>
@@ -3759,34 +3768,6 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
               </View>
             )
           })}
-
-          {/* Community events — approved by host, open chat */}
-          {myApprovedCommunityEvents.map((ev: any) => (
-            <View key={`approved-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.4)' }}>
-              <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
-              <View style={{ padding: 16, gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
-                  <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.4)' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#43E97B' }}>APPROVED ✓</Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</Text>
-                {ev.hostTransport === 'car' && (
-                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>🚗 Host can give a lift</Text>
-                )}
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => onConfirm?.(ev, [], 'community')}
-                  style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', marginTop: 4 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Open Chat 💬</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.8} onPress={() => onLeave?.(ev)} style={{ paddingVertical: 8, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>Cancel request</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
 
           {/* Community events — pending host approval */}
           {myCommunityEvents.map((ev: any) => {
@@ -4455,7 +4436,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const fetch = async () => {
       const { data } = await supabase
         .from('community_events')
-        .select('*')
+        .select('*, host:profiles!host_id(id, name, photos, color, bio, age, langs)')
         .order('created_at', { ascending: false })
         .limit(30)
       if (data) {
@@ -4476,6 +4457,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           isHosted: e.host_id === userData?.dbId,
           hostId: e.host_id,
           hostTransport: e.host_transport || null,
+          hostProfile: e.host ? {
+            id: e.host.id,
+            name: e.host.name || 'Host',
+            photo: e.host.photos?.[0] || null,
+            photos: e.host.photos || [],
+            bio: e.host.bio || '',
+            age: e.host.age || '',
+            langs: e.host.langs || [],
+            color: e.host.color || '#6366F1',
+            colors: [e.host.color || '#6366F1', '#818CF8'],
+            _isHost: true,
+            _real: true,
+          } : null,
           description: e.description || (e.location ? `📍 ${e.location}` : ''),
           _dbCommunity: true,
         })))
@@ -4571,6 +4565,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
+  const [communityEventMembers, setCommunityEventMembers] = useState<Record<number, any[]>>({})
   const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
 
   // ── Persist & restore state ───────────────────────────────────────────────
@@ -4894,6 +4889,43 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           })
           return changed ? updated : prev
         })
+
+        // Fetch other approved members for events where I'm approved
+        const approvedEventIds = validRequests.filter((r: any) => r.status === 'approved').map((r: any) => r.event_id)
+        if (approvedEventIds.length > 0) {
+          const { data: memberRows } = await supabase
+            .from('join_requests')
+            .select('event_id, requester_id')
+            .in('event_id', approvedEventIds)
+            .eq('status', 'approved')
+            .neq('requester_id', userData.dbId)
+          if (memberRows && memberRows.length > 0) {
+            const profileIds = [...new Set(memberRows.map((r: any) => r.requester_id))]
+            const { data: profiles } = await supabase.from('profiles').select('id, name, photos, bio, age, langs, color').in('id', profileIds)
+            const profileMap: Record<string, any> = {}
+            profiles?.forEach((p: any) => { profileMap[p.id] = p })
+            const membersMap: Record<number, any[]> = {}
+            memberRows.forEach((r: any) => {
+              const p = profileMap[r.requester_id] || {}
+              if (!membersMap[r.event_id]) membersMap[r.event_id] = []
+              membersMap[r.event_id].push({
+                id: p.id || r.requester_id,
+                name: p.name || 'Member',
+                photo: p.photos?.[0] || null,
+                photos: p.photos || [],
+                bio: p.bio || '',
+                age: p.age || '',
+                langs: p.langs || [],
+                color: p.color || '#818CF8',
+                colors: [p.color || '#818CF8', '#6366F1'],
+                _real: true,
+              })
+            })
+            setCommunityEventMembers(membersMap)
+          } else {
+            setCommunityEventMembers({})
+          }
+        }
       }
     }
     pollStatus()
@@ -5176,6 +5208,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userData={userData}
             tonightVibe={tonightVibe}
             eventAttendeesMap={eventAttendeesMap}
+            communityEventMembers={communityEventMembers}
             incomingCrewInvites={incomingCrewInvites}
             sentCrewInvites={sentCrewInvites}
             onGoHome={() => setActiveTab('home')}
@@ -5204,14 +5237,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 return
               }
               // Community / non-official / no real attendees → create chat immediately
+              // For community events: prepend host profile to members list
+              const communityHostProfile = ev.type === 'community' && ev.hostProfile && !ev.isHosted ? ev.hostProfile : null
+              const chatMembers = communityHostProfile ? [communityHostProfile, ...partners] : partners
               const isGroup = format !== '1+1'
               const newChat = isGroup ? {
                 id: Date.now(), type: 'group',
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-                members: partners.length + 1,
-                avatars: partners.map((p: any) => p.photo).filter(Boolean),
-                colors: partners.map((p: any) => p.color),
-                memberProfiles: partners,
+                members: chatMembers.length + 1,
+                avatars: chatMembers.map((p: any) => p.photo).filter(Boolean),
+                colors: chatMembers.map((p: any) => p.color),
+                memberProfiles: chatMembers,
                 lastMsg: '🎉 Group chat created! Say hi',
                 time: 'now', isNew: true, expiresIn: 24,
                 communityEventId: ev.id,
@@ -6472,7 +6508,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 </Text>
               </View>
               <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
-                {/* You — host */}
+                {/* You */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.06)', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.15)' }}>
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 24 }}>😊</Text>
@@ -6480,9 +6516,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>You</Text>
-                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#6366F1' }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
-                      </View>
+                      {openChat.hostEventId && (
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#6366F1' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={{ fontSize: 12, color: '#64748B' }}>That's you 👋</Text>
                   </View>
@@ -6511,7 +6549,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}, {p.age}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}{p.age ? `, ${p.age}` : ''}</Text>
+                          {p._isHost && (
+                            <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#6366F1' }}>
+                              <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
+                            </View>
+                          )}
+                        </View>
                         <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
                         <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
                           {(p.langs || []).map((l: string) => (
