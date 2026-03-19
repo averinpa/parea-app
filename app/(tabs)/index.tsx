@@ -5256,6 +5256,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         community_event_id: chatEvId,
         sender_id: userData.dbId,
         text,
+        reply_to_text: replyTo?.text || null,
+        reply_to_sender: replyTo?.senderName || null,
       }).then(({ error }) => { if (error) console.warn('message insert error:', error.message) })
       return
     }
@@ -5310,7 +5312,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
     // Загружаем историю сообщений
     supabase.from('messages')
-      .select('id, sender_id, text, created_at')
+      .select('id, sender_id, text, created_at, reply_to_text, reply_to_sender')
       .eq('community_event_id', evId)
       .order('created_at', { ascending: true })
       .limit(100)
@@ -5329,6 +5331,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             senderName: isMe ? '' : (sender?.name || ''),
             senderPhoto: isMe ? '' : (sender?.photo || ''),
             senderColor: isMe ? '' : (sender?.color || '#818CF8'),
+            replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
             _dbId: m.id,
           }
         })
@@ -5360,6 +5363,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           senderName: sender?.name || '',
           senderPhoto: sender?.photo || '',
           senderColor: sender?.color || '#818CF8',
+          replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
           _dbId: m.id,
         }
         setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
@@ -6542,10 +6546,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                   <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
                                 </View>
                               )}
-                              <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
+                                <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20, flex: 1 }}>{msg.text}</Text>
+                                <Text style={{ fontSize: 10, color: '#94A3B8', marginBottom: 1, flexShrink: 0 }}>{msg.time}</Text>
+                              </View>
                             </View>
                           </TouchableOpacity>
-                          <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3, marginLeft: 4 }}>{msg.time}</Text>
                         </View>
                       </View>
                     )}
@@ -6559,10 +6565,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
                               </View>
                             )}
-                            <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
+                              <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20, flex: 1 }}>{msg.text}</Text>
+                              <Text style={{ fontSize: 10, color: '#94A3B8', marginBottom: 1, flexShrink: 0 }}>{msg.time}</Text>
+                            </View>
                           </View>
                         </TouchableOpacity>
-                        <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3, marginLeft: 4 }}>{msg.time}</Text>
                       </View>
                     )}
                     {msg.from === 'me' && (
@@ -6575,10 +6583,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }} numberOfLines={2}>{msg.replyTo.text}</Text>
                               </View>
                             )}
-                            <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20 }}>{msg.text}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
+                              <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20, flex: 1 }}>{msg.text}</Text>
+                              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1, flexShrink: 0 }}>{msg.time}</Text>
+                            </View>
                           </View>
                         </TouchableOpacity>
-                        <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3, textAlign: 'right', marginRight: 4 }}>{msg.time}</Text>
                       </View>
                     )}
                   </View>
