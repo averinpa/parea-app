@@ -4413,6 +4413,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [openChat, setOpenChat] = useState<any>(null)
   const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
   const [chatInput, setChatInput] = useState('')
+  const [replyTo, setReplyTo] = useState<{ text: string; senderName: string } | null>(null)
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
@@ -5241,10 +5242,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const handleSend = () => {
     if (!chatInput.trim() || !openChat) return
     const text = chatInput.trim()
-    const newMsg = { from: 'me', text, time: 'now' }
+    const newMsg = { from: 'me', text, time: 'now', replyTo: replyTo || undefined }
     setChatMessages(prev => ({ ...prev, [openChat.id]: [...(prev[openChat.id] || []), newMsg] }))
     setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: 'now' } : c))
     setChatInput('')
+    setReplyTo(null)
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
 
     // Для community-чатов — пишем в Supabase, не делаем мок-ответ
@@ -6415,11 +6417,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {/* Chat screen */}
       {openChat && (
         <Modal visible animationType="slide" onRequestClose={() => setOpenChat(null)}>
-          <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
-            <StatusBar style="dark" />
-            <SafeAreaView style={s.fill}>
+          <StatusBar style="dark" />
+          <View style={{ flex: 1, backgroundColor: '#F0F2F5' }}>
+            {/* Header — extends behind status bar */}
+            <View style={{ backgroundColor: '#fff', paddingTop: insets.top, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 4 }}>
               <View style={s.chatHeader}>
-                <TouchableOpacity onPress={() => setOpenChat(null)} style={{ padding: 4 }}>
+                <TouchableOpacity onPress={() => { setOpenChat(null); setReplyTo(null) }} style={{ padding: 4 }}>
                   <Ionicons name="chevron-back" size={26} color="#1E1B4B" />
                 </TouchableOpacity>
                 {openChat.type === 'duo' ? (
@@ -6514,6 +6517,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   <Feather name="more-vertical" size={22} color="#64748B" />
                 </TouchableOpacity>
               </View>
+            </View>
 
               <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                 onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
@@ -6530,26 +6534,50 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <Image source={{ uri: msg.senderPhoto }} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: msg.senderColor }} />
                         <View style={{ maxWidth: W * 0.72 }}>
                           {msg.senderName && <Text style={{ fontSize: 11, color: msg.senderColor || '#818CF8', fontWeight: '600', marginBottom: 3, marginLeft: 4 }}>{msg.senderName}</Text>}
-                          <View style={s.msgBubbleThem}>
-                            <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
-                          </View>
+                          <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || 'them' }) }}>
+                            <View style={s.msgBubbleThem}>
+                              {msg.replyTo && (
+                                <View style={{ backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: '#6366F1' }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{msg.replyTo.senderName}</Text>
+                                  <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
+                                </View>
+                              )}
+                              <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                            </View>
+                          </TouchableOpacity>
                           <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3, marginLeft: 4 }}>{msg.time}</Text>
                         </View>
                       </View>
                     )}
                     {msg.from === 'them' && openChat.type === 'duo' && (
                       <View style={{ maxWidth: W * 0.72 }}>
-                        <View style={s.msgBubbleThem}>
-                          <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
-                        </View>
+                        <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || openChat.name || 'them' }) }}>
+                          <View style={s.msgBubbleThem}>
+                            {msg.replyTo && (
+                              <View style={{ backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: '#6366F1' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{msg.replyTo.senderName}</Text>
+                                <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
+                              </View>
+                            )}
+                            <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                          </View>
+                        </TouchableOpacity>
                         <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3, marginLeft: 4 }}>{msg.time}</Text>
                       </View>
                     )}
                     {msg.from === 'me' && (
                       <View style={{ maxWidth: W * 0.72 }}>
-                        <View style={s.msgBubbleMe}>
-                          <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20 }}>{msg.text}</Text>
-                        </View>
+                        <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: 'You' }) }}>
+                          <View style={s.msgBubbleMe}>
+                            {msg.replyTo && (
+                              <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: 7, marginBottom: 5, borderLeftWidth: 3, borderLeftColor: 'rgba(255,255,255,0.6)' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.9)' }}>{msg.replyTo.senderName}</Text>
+                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }} numberOfLines={2}>{msg.replyTo.text}</Text>
+                              </View>
+                            )}
+                            <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20 }}>{msg.text}</Text>
+                          </View>
+                        </TouchableOpacity>
                         <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3, textAlign: 'right', marginRight: 4 }}>{msg.time}</Text>
                       </View>
                     )}
@@ -6558,7 +6586,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </ScrollView>
 
               <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                <View style={s.chatInputRow}>
+                {replyTo && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.15)', gap: 10 }}>
+                    <View style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', alignSelf: 'stretch' }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>{replyTo.senderName}</Text>
+                      <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>{replyTo.text}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setReplyTo(null)} style={{ padding: 4 }}>
+                      <Feather name="x" size={16} color="#94A3B8" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <View style={[s.chatInputRow, { paddingBottom: Math.max(insets.bottom + 6, 16) }]}>
                   <TextInput
                     style={s.chatInput} value={chatInput} onChangeText={setChatInput}
                     placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
@@ -6569,8 +6609,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   </TouchableOpacity>
                 </View>
               </KeyboardAvoidingView>
-            </SafeAreaView>
-          </LinearGradient>
+          </View>
         </Modal>
       )}
 
