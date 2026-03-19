@@ -4800,46 +4800,76 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!userData?.dbId || userCreatedEvents.length === 0) return
     const eventIds = userCreatedEvents.map(e => e.id)
     const fetchRequests = async () => {
-      const { data: reqData, error } = await supabase
+      const { data: allReqData, error } = await supabase
         .from('join_requests')
         .select('id, event_id, requester_id, status, transport')
         .in('event_id', eventIds)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'approved'])
       if (error) console.warn('join_requests poll error:', error.message)
+      const reqData = (allReqData || []).filter((r: any) => r.status === 'pending')
+      const approvedData = (allReqData || []).filter((r: any) => r.status === 'approved')
+
       const data = await (async () => {
-        if (!reqData || reqData.length === 0) return []
-        const ids = [...new Set(reqData.map((r: any) => r.requester_id))]
-        const { data: profiles } = await supabase.from('profiles').select('*').in('id', ids)
+        const allIds = [...new Set((allReqData || []).map((r: any) => r.requester_id))]
+        if (allIds.length === 0) return []
+        const { data: profiles } = await supabase.from('profiles').select('*').in('id', allIds)
         const profileMap: Record<string, any> = {}
         profiles?.forEach((p: any) => { profileMap[p.id] = p })
-        return reqData.map((r: any) => ({ ...r, profiles: profileMap[r.requester_id] || {} }))
+        return (allReqData || []).map((r: any) => ({ ...r, profiles: profileMap[r.requester_id] || {} }))
       })()
-      if (data) {
-        const newRequests: Record<number, any[]> = {}
-        data.forEach((req: any) => {
-          const p = req.profiles || {}
-          const evId = req.event_id
-          if (!newRequests[evId]) newRequests[evId] = []
-          newRequests[evId].push({
-            id: p.id,
-            requestId: req.id,
-            name: p.name || 'User',
-            age: p.age || '',
-            color: p.color || '#818CF8',
-            colors: [p.color || '#818CF8', '#6366F1'],
-            photo: p.photos?.[0] || null,
-            photos: p.photos || [],
-            bio: p.bio || '',
-            langs: p.langs || [],
-            interests: p.interests || [],
-            drinksPref: p.drinks_pref || '',
-            smokingPref: p.smoking_pref || '',
-            transport: req.transport || null,
-            _real: true,
-          })
+
+      // Pending requests
+      const newRequests: Record<number, any[]> = {}
+      data.filter((r: any) => r.status === 'pending').forEach((req: any) => {
+        const p = req.profiles || {}
+        const evId = req.event_id
+        if (!newRequests[evId]) newRequests[evId] = []
+        newRequests[evId].push({
+          id: p.id,
+          requestId: req.id,
+          name: p.name || 'User',
+          age: p.age || '',
+          color: p.color || '#818CF8',
+          colors: [p.color || '#818CF8', '#6366F1'],
+          photo: p.photos?.[0] || null,
+          photos: p.photos || [],
+          bio: p.bio || '',
+          langs: p.langs || [],
+          interests: p.interests || [],
+          drinksPref: p.drinks_pref || '',
+          smokingPref: p.smoking_pref || '',
+          transport: req.transport || null,
+          _real: true,
         })
-        setPendingJoinRequests(newRequests)
-      }
+      })
+      setPendingJoinRequests(newRequests)
+
+      // Sync approvedJoiners from DB (catches when joiner leaves)
+      const newApproved: Record<number, any[]> = {}
+      data.filter((r: any) => r.status === 'approved').forEach((req: any) => {
+        const p = req.profiles || {}
+        const evId = req.event_id
+        if (!newApproved[evId]) newApproved[evId] = []
+        newApproved[evId].push({
+          id: p.id,
+          requestId: req.id,
+          name: p.name || 'User',
+          age: p.age || '',
+          color: p.color || '#818CF8',
+          colors: [p.color || '#818CF8', '#6366F1'],
+          photo: p.photos?.[0] || null,
+          photos: p.photos || [],
+          bio: p.bio || '',
+          langs: p.langs || [],
+          _real: true,
+        })
+      })
+      setApprovedJoiners(prev => {
+        // Merge: keep events not in current poll (they may not be in eventIds), update ones we polled
+        const merged = { ...prev }
+        eventIds.forEach((id: number) => { merged[id] = newApproved[id] || [] })
+        return merged
+      })
     }
     fetchRequests()
     const interval = setInterval(fetchRequests, 15000)
@@ -5155,9 +5185,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
 
     // Для community-чатов — пишем в Supabase, не делаем мок-ответ
-    if (openChat.communityEventId && userData?.dbId) {
+    const chatEvId = openChat.communityEventId || openChat.hostEventId
+    if (chatEvId && userData?.dbId) {
       supabase.from('messages').insert({
-        community_event_id: openChat.communityEventId,
+        community_event_id: chatEvId,
         sender_id: userData.dbId,
         text,
       }).then(({ error }) => { if (error) console.warn('message insert error:', error.message) })
@@ -5201,15 +5232,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     }
   }
 
-  // Realtime чат для community events
+  // Realtime чат для community events (и для хоста через hostEventId)
   useEffect(() => {
     if (realtimeChatRef.current) {
       supabase.removeChannel(realtimeChatRef.current)
       realtimeChatRef.current = null
     }
-    if (!openChat?.communityEventId || !userData?.dbId) return
+    const evId = openChat?.communityEventId || openChat?.hostEventId
+    if (!evId || !userData?.dbId) return
 
-    const evId = openChat.communityEventId
     const chatId = openChat.id
 
     // Загружаем историю сообщений
@@ -5253,7 +5284,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const profilesInChat: any[] = openChat.memberProfiles || []
         const sender = profilesInChat.find((p: any) => p.id === m.sender_id)
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        const newMsg = {
+        // Системные сообщения (e.g. "X left the group") — показываем по центру
+        const isSystemMsg = m.text?.includes('left the group')
+        const newMsg = isSystemMsg ? {
+          from: 'system', text: m.text, time,
+        } : {
           from: 'them',
           text: m.text,
           time,
@@ -5263,13 +5298,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           _dbId: m.id,
         }
         setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
-        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: `${sender?.name || 'Someone'}: ${m.text}`, time: 'now', isNew: true } : c))
-        setOpenChat((cur: any) => {
-          if (!cur || cur.id !== chatId) {
-            addNotif({ type: 'new_message', emoji: '💬', color: '#6366F1', title: sender?.name || openChat.event, body: m.text, chatId })
-          }
-          return cur
-        })
+        const lastMsgText = isSystemMsg ? m.text : `${sender?.name || 'Someone'}: ${m.text}`
+        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: lastMsgText, time: 'now', isNew: !isSystemMsg } : c))
+        if (!isSystemMsg) {
+          setOpenChat((cur: any) => {
+            if (!cur || cur.id !== chatId) {
+              addNotif({ type: 'new_message', emoji: '💬', color: '#6366F1', title: sender?.name || openChat.event, body: m.text, chatId })
+            }
+            return cur
+          })
+        }
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
       })
       .subscribe()
@@ -5279,7 +5317,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       supabase.removeChannel(channel)
       realtimeChatRef.current = null
     }
-  }, [openChat?.id, openChat?.communityEventId, userData?.dbId])
+  }, [openChat?.id, openChat?.communityEventId, openChat?.hostEventId, userData?.dbId])
 
   return (
     <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
@@ -5558,15 +5596,35 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   [id]: [...(prev[id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
                 }))
               }
-              // If host leaves their own group chat → also remove the hosted event from Plans
               const leavingChat = chatList.find(c => c.id === id)
+
+              if (leavingChat?.communityEventId && !leavingChat?.hostEventId && userData?.dbId) {
+                // Петя выходит из чужого community-чата
+                const evId = leavingChat.communityEventId
+                // Удаляем join_request из DB
+                supabase.from('join_requests')
+                  .delete()
+                  .eq('event_id', evId)
+                  .eq('requester_id', userData.dbId)
+                  .then(({ error }) => { if (error) console.warn('leave join_request delete error:', error.message) })
+                // Пишем системное сообщение в DB → Даша увидит через realtime
+                supabase.from('messages').insert({
+                  community_event_id: evId,
+                  sender_id: userData.dbId,
+                  text: `${userData.name || 'Someone'} left the group`,
+                }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
+                // Убираем ивент из планов Пети
+                setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
+              }
+
+              // Если хост уходит из своего чата → удаляем ивент
               if (leavingChat?.hostEventId) {
                 setUserCreatedEvents(prev => prev.filter(e => e.id !== leavingChat.hostEventId))
                 setPendingJoinRequests(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
                 setApprovedJoiners(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
               }
               setChatList(prev => prev.filter(c => c.id !== id))
-              showToast("Event cancelled and chat removed 🗑️")
+              showToast(leavingChat?.communityEventId && !leavingChat?.hostEventId ? "Left the group" : "Event cancelled and chat removed 🗑️")
             }}
             allEvents={[...feedOfficialDbEvents, ...dbCommunityEvents]}
             onEventDetail={setEventDetail}
