@@ -4327,11 +4327,46 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
+  const [dbCommunityEvents, setDbCommunityEvents] = useState<any[]>([])
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
   }, [])
+
+  // Load community events from DB (other users' events)
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('community_events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30)
+      if (data) {
+        setDbCommunityEvents(data.map(e => ({
+          id: e.id,
+          type: 'community',
+          title: e.title,
+          category: e.category || 'outdoors',
+          location: e.location,
+          time: e.time || 'TBD',
+          distance: '',
+          gradient: e.gradient || ['#667eea', '#764ba2'],
+          maxParticipants: e.max_participants || 5,
+          participantsCount: 1,
+          seekerColors: ['#818CF8'],
+          seekingCount: 0,
+          isHosted: e.host_id === userData?.dbId,
+          hostId: e.host_id,
+          description: `Community event · ${e.location || ''}`.trim(),
+          _dbCommunity: true,
+        })))
+      }
+    }
+    fetch()
+    const interval = setInterval(fetch, 30000)
+    return () => clearInterval(interval)
+  }, [userData?.dbId])
   const persistLoaded = useRef(false)
 
   // Load profiles from DB, fall back to MOCK_SEEKERS if empty
@@ -4644,46 +4679,74 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
   }, [approvedJoiners, userCreatedEvents])
 
-  // Refill pending join requests when pool runs low but slots still open
-  // refillInFlightRef tracks currently scheduled (in-flight) timeouts to avoid double-scheduling
   const refillInFlightRef = useRef<Set<string>>(new Set())
+
+  // Poll real join requests from DB for hosted events
   useEffect(() => {
-    userCreatedEvents.forEach(ev => {
-      const approved = approvedJoiners[ev.id] || []
-      const slotsTotal = (ev.maxParticipants || 5) - 1
-      const slotsLeft = slotsTotal - approved.length
-      if (slotsLeft <= 0) return
-      const pending = pendingJoinRequests[ev.id] || []
-      if (pending.length >= 3) return
-      // Exclude: currently pending, already approved, currently in-flight
-      const pendingIds = new Set(pending.map((r: any) => r.id))
-      const approvedIds = new Set(approved.map((r: any) => r.id))
-      const available = allSeekers.filter((s: any) => {
-        if (s.id === userData?.dbId || s.id === userData?.id) return false
-        if (pendingIds.has(s.id) || approvedIds.has(s.id)) return false
-        if (refillInFlightRef.current.has(`${ev.id}-${s.id}`)) return false
-        return true
-      })
-      const toAdd = available.slice(0, 3 - pending.length)
-      toAdd.forEach((requester: any, i: number) => {
-        const key = `${ev.id}-${requester.id}`
-        refillInFlightRef.current.add(key)
-        const evId = ev.id
-        setTimeout(() => {
-          refillInFlightRef.current.delete(key)
-          setUserCreatedEvents(existing => {
-            if (!existing.some(e => e.id === evId)) return existing
-            setPendingJoinRequests(prev => {
-              const current = prev[evId] || []
-              if (current.some((r: any) => r.id === requester.id)) return prev
-              return { ...prev, [evId]: [...current, { ...requester, requestId: `${evId}-${requester.id}` }] }
-            })
-            return existing
+    if (!userData?.dbId || userCreatedEvents.length === 0) return
+    const fetchRequests = async () => {
+      const { data } = await supabase
+        .from('join_requests')
+        .select('*, profiles(*)')
+        .eq('host_id', userData.dbId)
+        .eq('status', 'pending')
+      if (data) {
+        const newRequests: Record<number, any[]> = {}
+        data.forEach((req: any) => {
+          const p = req.profiles || {}
+          const evId = req.event_id
+          if (!newRequests[evId]) newRequests[evId] = []
+          newRequests[evId].push({
+            id: p.id,
+            requestId: req.id,
+            name: p.name || 'User',
+            age: p.age || '',
+            color: p.color || '#818CF8',
+            colors: [p.color || '#818CF8', '#6366F1'],
+            photo: p.photos?.[0] || null,
+            photos: p.photos || [],
+            bio: p.bio || '',
+            langs: p.langs || [],
+            interests: p.interests || [],
+            drinksPref: p.drinks_pref || '',
+            smokingPref: p.smoking_pref || '',
+            _real: true,
           })
-        }, 1500 + i * 1200)
-      })
-    })
-  }, [pendingJoinRequests, approvedJoiners, userCreatedEvents])
+        })
+        setPendingJoinRequests(newRequests)
+      }
+    }
+    fetchRequests()
+    const interval = setInterval(fetchRequests, 15000)
+    return () => clearInterval(interval)
+  }, [userData?.dbId, userCreatedEvents.length])
+
+  // Poll own join request statuses (requester side)
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const pollStatus = async () => {
+      const { data } = await supabase
+        .from('join_requests')
+        .select('event_id, status')
+        .eq('requester_id', userData.dbId)
+      if (data) {
+        data.forEach((req: any) => {
+          if (req.status === 'approved') {
+            setJoinedEvents(prev => {
+              if (prev[req.event_id] === 'pending') {
+                addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: '' })
+                return { ...prev, [req.event_id]: 'joined' }
+              }
+              return prev
+            })
+          }
+        })
+      }
+    }
+    pollStatus()
+    const interval = setInterval(pollStatus, 15000)
+    return () => clearInterval(interval)
+  }, [userData?.dbId])
 
   // Auto-expire hosted events and their chats 24h after event ends
   useEffect(() => {
@@ -4808,14 +4871,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
     // Side effects OUTSIDE the state updater
     if (!currentState && ev.type === 'community' && !ev.isHosted) {
-      // Simulate host approval after 5s (in real app host approves manually)
-      setTimeout(() => {
-        setJoinedEvents(cur => {
-          if (cur[ev.id] !== 'pending') return cur
-          return { ...cur, [ev.id]: 'joined' }
+      // Insert real join request into DB
+      if (userData?.dbId && ev.hostId) {
+        supabase.from('join_requests').insert({
+          event_id: ev.id,
+          requester_id: userData.dbId,
+          host_id: ev.hostId,
+          status: 'pending',
+        }).then(({ error }) => {
+          if (error) console.warn('join_request insert error:', error.message)
         })
-        addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: ev.title })
-      }, 5000)
+      }
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
   }
@@ -4909,7 +4975,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
-            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />
           </View>
           <View style={{ flex: 1, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
             <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, height: insets.top, backgroundColor: '#0A0812', zIndex: 1 }} />
@@ -5042,6 +5108,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (alreadyApproved >= slotsTotal) {
                 showToast("Event is already full!")
                 return
+              }
+              // Update DB if real joiner
+              if (joiner._real && joiner.requestId) {
+                supabase.from('join_requests')
+                  .update({ status: 'approved' })
+                  .eq('id', joiner.requestId)
+                  .then(({ error }) => { if (error) console.warn('approve error:', error.message) })
               }
               setPendingJoinRequests(prev => ({
                 ...prev,
@@ -5545,7 +5618,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   ) : (
                     <TouchableOpacity
                       style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
-                      onPress={() => {
+                      onPress={async () => {
                         // Build a proper event object
                         const TYPE_TO_CAT: Record<string, string> = {
                           padel:'sports',tennis:'sports',yoga:'sports',gym:'sports',water:'sports',
@@ -5558,8 +5631,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           ['#6366F1','#8B5CF6'],['#EC4899','#F43F5E'],
                           ['#10B981','#059669'],['#F59E0B','#F97316'],
                         ]
-                        const newId = Date.now()
-                        const grad = GRAD_POOL[newId % GRAD_POOL.length]
+                        const tempId = Date.now()
+                        const grad = GRAD_POOL[tempId % GRAD_POOL.length]
                         const actLabel = createCustom.trim() || createType || 'Social'
 
                         // Build expiry timestamp from selected date + time
@@ -5569,6 +5642,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           const d = new Date(createDay)
                           d.setHours(h, m, 0, 0)
                           expiresAt = d.getTime()
+                        }
+
+                        // Save to Supabase, use DB id
+                        let newId = tempId
+                        if (userData?.dbId) {
+                          const { data: dbEv } = await supabase.from('community_events').insert({
+                            host_id: userData.dbId,
+                            title: actLabel,
+                            category: TYPE_TO_CAT[createType || ''] || 'outdoors',
+                            location: createLocation,
+                            time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
+                            max_participants: SIZE_MAX[createSize || 'squad'] || 5,
+                            gradient: grad,
+                          }).select().single()
+                          if (dbEv?.id) newId = dbEv.id
                         }
 
                         const newEvent: any = {
@@ -5587,36 +5675,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           description: `A ${createSize || 'squad'} ${actLabel} gathering. ${createLocation ? '📍 ' + createLocation : ''} ${createDriving ? '🚗 Host can give a lift.' : ''}`.trim(),
                           location: createLocation,
                           isHosted: true,
+                          hostId: userData?.dbId,
                           hostDriving: createDriving,
                           hostLangs: createLangs,
                           hostVibe: createVibe,
                           expiresAt,
                         }
                         setUserCreatedEvents(prev => [...prev, newEvent])
-
-                        // Simulate staggered join requests (demo) — exclude self, no duplicates
-                        const candidatePool = allSeekers.filter((s: any) =>
-                          s.id !== userData?.dbId && s.id !== userData?.id
-                        )
-                        const uniqueCandidates = candidatePool.slice(0, 8)
-                        // Mark initial batch as in-flight so refill effect doesn't double-add
-                        uniqueCandidates.forEach((requester: any) => {
-                          refillInFlightRef.current.add(`${newId}-${requester.id}`)
-                        })
-                        uniqueCandidates.forEach((requester: any, i: number) => {
-                          const delay = 2500 + i * 1800
-                          setTimeout(() => {
-                            refillInFlightRef.current.delete(`${newId}-${requester.id}`)
-                            setUserCreatedEvents(existing => {
-                              if (!existing.some(e => e.id === newId)) return existing
-                              setPendingJoinRequests(prev => ({
-                                ...prev,
-                                [newId]: [...(prev[newId] || []), { ...requester, requestId: `${newId}-${requester.id}` }],
-                              }))
-                              return existing
-                            })
-                          }, delay)
-                        })
 
                         // Reset form
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
