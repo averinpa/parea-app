@@ -2556,19 +2556,26 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const format        = userEventFormat[ev.id] || (ev.type === 'official' ? '1+1' : 'squad')
               const cap           = VIBE_FORMAT_MAX[format] || 5
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
+              const isCommunity   = ev.type === 'community'
               const realAttendees = ev.type === 'official' ? (eventAttendeesMap[ev.id] || []) : []
               const hasReal       = realAttendees.length > 0
               const found         = hasReal ? realAttendees.length + 1 : 1
               const isActive      = hasReal && found >= threshold
-              const crewProfiles  = hasReal ? realAttendees.slice(0, cap - 1) : QUEUE_PROFILES.slice(0, 3)
+              const crewProfiles  = hasReal ? realAttendees.slice(0, cap - 1) : (!isCommunity ? QUEUE_PROFILES.slice(0, 3) : [])
 
               // Smart status badge
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
-              const statusLabel = isConfirmed ? 'Confirmed ✅'
+              const statusLabel = isCommunity
+                ? (isConfirmed ? 'Confirmed ✅' : joinedEvents[ev.id] === 'pending' ? 'Pending ⏳' : 'Approved ✓')
+                : isConfirmed ? 'Confirmed ✅'
                 : hasReal ? `${realAttendees.length} found 🎯`
                 : 'Looking...'
-              const statusColor = isConfirmed ? '#16a34a' : hasReal ? '#16a34a' : '#d97706'
-              const statusBg    = isConfirmed ? 'rgba(34,197,94,0.12)' : hasReal ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.15)'
+              const statusColor = isCommunity
+                ? (isConfirmed ? '#16a34a' : joinedEvents[ev.id] === 'pending' ? '#d97706' : '#16a34a')
+                : isConfirmed ? '#16a34a' : hasReal ? '#16a34a' : '#d97706'
+              const statusBg    = isCommunity
+                ? (isConfirmed ? 'rgba(34,197,94,0.12)' : joinedEvents[ev.id] === 'pending' ? 'rgba(251,191,36,0.15)' : 'rgba(34,197,94,0.12)')
+                : isConfirmed ? 'rgba(34,197,94,0.12)' : hasReal ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.15)'
 
               return (
                 <TouchableOpacity key={ev.id} activeOpacity={0.85} onPress={() => onEventDetail?.(ev)} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: isActive ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.08)' }}>
@@ -2635,23 +2642,27 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 
                     {/* Crew avatars + counter + button */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ flexDirection: 'row' }}>
-                          {/* Me */}
-                          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#6366F1', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                            <Text style={{ fontSize: 12 }}>😊</Text>
-                          </View>
-                          {/* Found partners */}
-                          {crewProfiles.map((p, i) => (
-                            <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: p.color, borderWidth: 2, borderColor: '#fff', marginLeft: -8, alignItems: 'center', justifyContent: 'center', zIndex: 9 - i }}>
-                              <Text style={{ fontSize: 11 }}>{p.emoji}</Text>
-                            </View>
-                          ))}
-                        </View>
+                      {isCommunity ? (
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                          {found}/{cap} joined
+                          {isConfirmed ? '✅ You\'re in the group' : joinedEvents[ev.id] === 'pending' ? '⏳ Waiting for host approval' : '✓ Host approved you'}
                         </Text>
-                      </View>
+                      ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View style={{ flexDirection: 'row' }}>
+                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#6366F1', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                              <Text style={{ fontSize: 12 }}>😊</Text>
+                            </View>
+                            {crewProfiles.map((p, i) => (
+                              <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: p.color, borderWidth: 2, borderColor: '#fff', marginLeft: -8, alignItems: 'center', justifyContent: 'center', zIndex: 9 - i }}>
+                                <Text style={{ fontSize: 11 }}>{p.emoji}</Text>
+                              </View>
+                            ))}
+                          </View>
+                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
+                            {found}/{cap} joined
+                          </Text>
+                        </View>
+                      )}
 
                       <TouchableOpacity activeOpacity={0.8}
                         onPress={() => {
@@ -2663,7 +2674,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           }
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{"Who's going? →"}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{isCommunity ? 'View event →' : "Who's going? →"}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
