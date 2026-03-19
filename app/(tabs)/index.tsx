@@ -3235,8 +3235,10 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
 }
 
 function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent }: any) {
-  // Official/concert events + approved community events — shown as crew cards
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
+  // Official events only — shown as crew-vetting cards
+  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && e.type !== 'community')
+  // Community events approved by host — shown as simple "open chat" cards
+  const myApprovedCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'joined' && !e.isHosted && e.type === 'community')
   // Community events pending host approval — shown as waiting cards
   const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && !e.isHosted && e.type === 'community')
   // User-created socials the user requested to join — shown as "awaiting approval"
@@ -3327,7 +3329,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     </View>
   )
 
-  if (myEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0 && activeHosted.length === 0) {
+  if (myEvents.length === 0 && myApprovedCommunityEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0 && activeHosted.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
@@ -3368,7 +3370,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-            {hasHostActivity ? '👑 You have join requests' : myEvents.length > 0 ? `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew` : myCommunityEvents.length > 0 ? `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host approval` : `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`}
+            {hasHostActivity ? '👑 You have join requests'
+              : myEvents.length > 0 ? `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · tap avatars to vet your crew`
+              : myApprovedCommunityEvents.length > 0 ? `✅ You're in ${myApprovedCommunityEvents.length} group${myApprovedCommunityEvents.length > 1 ? 's' : ''} · open the chat`
+              : myCommunityEvents.length > 0 ? `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host approval`
+              : `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`}
           </Text>
         </View>
 
@@ -3750,7 +3756,35 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             )
           })}
 
-          {/* Community events — host-approval flow */}
+          {/* Community events — approved by host, open chat */}
+          {myApprovedCommunityEvents.map((ev: any) => (
+            <View key={`approved-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.4)' }}>
+              <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+              <View style={{ padding: 16, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                  <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.4)' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#43E97B' }}>APPROVED ✓</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</Text>
+                {ev.hostTransport === 'car' && (
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>🚗 Host can give a lift</Text>
+                )}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => onConfirm?.(ev, [], 'community')}
+                  style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', marginTop: 4 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Open Chat 💬</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.8} onPress={() => onLeave?.(ev)} style={{ paddingVertical: 8, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>Cancel request</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {/* Community events — pending host approval */}
           {myCommunityEvents.map((ev: any) => {
             const isPending = joinedEvents?.[ev.id] === 'pending'
             const total = ev.maxParticipants || ev.capacity || 20
