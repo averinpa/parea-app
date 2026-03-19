@@ -4804,7 +4804,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .from('join_requests')
         .select('id, event_id, requester_id, status, transport')
         .in('event_id', eventIds)
-        .in('status', ['pending', 'approved'])
+        .in('status', ['pending', 'approved', 'confirmed'])
       if (error) console.warn('join_requests poll error:', error.message)
       const reqData = (allReqData || []).filter((r: any) => r.status === 'pending')
       const approvedData = (allReqData || []).filter((r: any) => r.status === 'approved')
@@ -4844,9 +4844,67 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
       setPendingJoinRequests(newRequests)
 
+      // Confirmed joiners → создаём/обновляем чат у хоста
+      const confirmedByEvent: Record<number, any[]> = {}
+      data.filter((r: any) => r.status === 'confirmed').forEach((req: any) => {
+        const p = req.profiles || {}
+        const evId = req.event_id
+        if (!confirmedByEvent[evId]) confirmedByEvent[evId] = []
+        confirmedByEvent[evId].push({
+          id: p.id, requestId: req.id,
+          name: p.name || 'User', age: p.age || '',
+          color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#6366F1'],
+          photo: p.photos?.[0] || null, photos: p.photos || [],
+          bio: p.bio || '', langs: p.langs || [], _real: true,
+        })
+      })
+      Object.entries(confirmedByEvent).forEach(([evIdStr, confirmedJoiners]) => {
+        const evId = +evIdStr
+        const ev = userCreatedEvents.find(e => e.id === evId)
+        if (!ev) return
+        setChatList(prev => {
+          const existingIdx = prev.findIndex(c => c.hostEventId === evId)
+          if (existingIdx >= 0) {
+            const updated = [...prev]
+            const existingProfiles: any[] = updated[existingIdx].memberProfiles || []
+            const newProfiles = [...existingProfiles]
+            let added = false
+            confirmedJoiners.forEach(joiner => {
+              if (!newProfiles.find((p: any) => p.id === joiner.id)) {
+                newProfiles.push(joiner); added = true
+                addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${joiner.name} joined the group`, body: ev.title || '', chatId: updated[existingIdx].id })
+              }
+            })
+            if (!added) return prev
+            updated[existingIdx] = {
+              ...updated[existingIdx],
+              members: newProfiles.length + 1,
+              memberProfiles: newProfiles,
+              avatars: newProfiles.map((p: any) => p.photo).filter(Boolean),
+              colors: newProfiles.map((p: any) => p.color),
+              lastMsg: `✅ ${confirmedJoiners[confirmedJoiners.length - 1]?.name} joined`,
+              time: 'now', isNew: true,
+            }
+            return updated
+          } else {
+            addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${confirmedJoiners[0]?.name} joined the group`, body: ev.title || '', chatId: 0 })
+            return [{
+              id: Date.now(), type: 'group', hostEventId: evId,
+              event: ev.title || 'Your Social', eventEmoji: CATEGORY_EMOJI[ev.category || ''] || '🎉',
+              members: confirmedJoiners.length + 1,
+              memberProfiles: confirmedJoiners,
+              avatars: confirmedJoiners.map((p: any) => p.photo).filter(Boolean),
+              colors: confirmedJoiners.map((p: any) => p.color),
+              lastMsg: `✅ ${confirmedJoiners[0]?.name} joined the group`,
+              time: 'now', isNew: true, expiresIn: 24,
+            }, ...prev]
+          }
+        })
+      })
+
       // Sync approvedJoiners from DB (catches when joiner leaves)
       const newApproved: Record<number, any[]> = {}
-      data.filter((r: any) => r.status === 'approved').forEach((req: any) => {
+      data.filter((r: any) => r.status === 'approved' || r.status === 'confirmed').forEach((req: any) => {
         const p = req.profiles || {}
         const evId = req.event_id
         if (!newApproved[evId]) newApproved[evId] = []
@@ -4908,11 +4966,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }
             if (req.status === 'approved') {
               if (prev[req.event_id] === 'pending') {
-                // Transition pending → joined: fire notification
                 addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: '' })
               }
               if (!updated[req.event_id] || updated[req.event_id] === 'pending') {
-                // Always restore 'joined' if approved (handles app restart)
+                updated[req.event_id] = 'joined'
+                changed = true
+              }
+            }
+            if (req.status === 'confirmed') {
+              // Уже подтверждено — восстанавливаем как 'joined' чтобы карточка VibeCheck показалась
+              if (!updated[req.event_id] || updated[req.event_id] === 'pending') {
                 updated[req.event_id] = 'joined'
                 changed = true
               }
@@ -5366,6 +5429,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 return
               }
               // Community / non-official / no real attendees → create chat immediately
+              // Для community events: обновляем статус в DB → хост увидит через poll
+              if (ev.type === 'community' && !ev.isHosted && userData?.dbId) {
+                supabase.from('join_requests')
+                  .update({ status: 'confirmed' })
+                  .eq('event_id', ev.id)
+                  .eq('requester_id', userData.dbId)
+                  .then(({ error }) => { if (error) console.warn('confirm status error:', error.message) })
+              }
               // For community events: prepend host profile to members list
               const communityHostProfile = ev.type === 'community' && ev.hostProfile && !ev.isHosted ? ev.hostProfile : null
               const chatMembers = communityHostProfile ? [communityHostProfile, ...partners] : partners
@@ -5508,49 +5579,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   setActiveTab('messages')
                 }, 900)
               } else {
-                // Squad/Party → find or create one group chat for this event
+                // Squad/Party — обновляем approvedJoiners, чат создастся когда участник нажмёт Confirm
                 const newApproved = [...(approvedJoiners[eventId] || []), joiner]
                 setApprovedJoiners(prev => ({ ...prev, [eventId]: newApproved }))
-                // If now full — clear remaining pending requests
                 if (newApproved.length >= slotsTotal) {
                   setPendingJoinRequests(prev => ({ ...prev, [eventId]: [] }))
                 }
-
-                setChatList(prev => {
-                  const existingIdx = prev.findIndex(c => c.hostEventId === eventId)
-                  if (existingIdx >= 0) {
-                    const updated = [...prev]
-                    updated[existingIdx] = {
-                      ...updated[existingIdx],
-                      members: newApproved.length + 1,
-                      avatars: newApproved.map((p: any) => p.photo).filter(Boolean),
-                      colors: newApproved.map((p: any) => p.color),
-                      memberProfiles: newApproved,
-                      lastMsg: `✅ ${joiner.name} joined the group`,
-                      time: 'now', isNew: true,
-                    }
-                    return updated
-                  } else {
-                    return [{
-                      id: Date.now(), type: 'group', hostEventId: eventId,
-                      event: ev?.title || 'Your Social', eventEmoji: CATEGORY_EMOJI[ev?.category || ''] || '🎉',
-                      members: newApproved.length + 1,
-                      avatars: newApproved.map((p: any) => p.photo).filter(Boolean),
-                      colors: newApproved.map((p: any) => p.color),
-                      memberProfiles: newApproved,
-                      lastMsg: `✅ ${joiner.name} was approved to join!`,
-                      time: 'now', isNew: true, expiresIn: 24,
-                    }, ...prev]
-                  }
-                })
-              }
-              // member_joined notif for group chats — find the chat we just updated
-              if (!isDuo) {
-                setChatList(latest => {
-                  const chat = latest.find(c => c.hostEventId === eventId)
-                  if (chat) addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${joiner.name} joined the group`, body: ev?.title || '', chatId: chat.id })
-                  return latest
-                })
               }
               showToast(`${joiner.name} approved! ✅`)
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
