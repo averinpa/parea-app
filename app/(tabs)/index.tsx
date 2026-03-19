@@ -4997,14 +4997,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           return changed ? updated : prev
         })
 
-        // Fetch other approved members for events where I'm approved
-        const approvedEventIds = validRequests.filter((r: any) => r.status === 'approved').map((r: any) => r.event_id)
+        // Fetch other approved/confirmed members for events where I'm approved or confirmed
+        const approvedEventIds = validRequests.filter((r: any) => r.status === 'approved' || r.status === 'confirmed').map((r: any) => r.event_id)
         if (approvedEventIds.length > 0) {
           const { data: memberRows } = await supabase
             .from('join_requests')
             .select('event_id, requester_id')
             .in('event_id', approvedEventIds)
-            .eq('status', 'approved')
+            .in('status', ['approved', 'confirmed'])
             .neq('requester_id', userData.dbId)
           if (memberRows && memberRows.length > 0) {
             const profileIds = [...new Set(memberRows.map((r: any) => r.requester_id))]
