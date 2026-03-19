@@ -6454,11 +6454,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       'What do you want to do?',
                       [
                         { text: 'Leave chat', style: 'destructive', onPress: () => {
+                          const chatId = openChat.id
+                          const evId = openChat.communityEventId
+                          if (evId && !openChat.hostEventId && userData?.dbId) {
+                            // Удаляем join_request + пишем системное сообщение
+                            supabase.from('join_requests').delete().eq('event_id', evId).eq('requester_id', userData.dbId)
+                              .then(({ error }) => { if (error) console.warn('leave join_request error:', error.message) })
+                            supabase.from('messages').insert({ community_event_id: evId, sender_id: userData.dbId, text: `${userData.name || 'Someone'} left the group` })
+                              .then(({ error }) => { if (error) console.warn('leave msg error:', error.message) })
+                            setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
+                          }
                           setChatMessages(prev => ({
                             ...prev,
-                            [openChat.id]: [...(prev[openChat.id] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
+                            [chatId]: [...(prev[chatId] || []), { from: 'system', text: 'You changed your plans 📅', time: 'now' }],
                           }))
-                          setChatList(prev => prev.filter(c => c.id !== openChat.id))
+                          setChatList(prev => prev.filter(c => c.id !== chatId))
                           setOpenChat(null)
                           showToast("We let them know your plans changed 📅")
                         }},
