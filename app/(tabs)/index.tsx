@@ -3323,7 +3323,6 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const approvedCount = (approvedJoiners?.[ev.id] || []).length
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
             const slotsLeft = slotsTotal - approvedCount
-            if (allRequests.length === 0 && approvedCount === 0) return null
             // Hide when full and no pending requests — nothing to do here
             if (slotsLeft <= 0 && allRequests.length === 0) return null
             // Score + sort, show top 12
@@ -3345,7 +3344,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>
-                      {allRequests.length} request{allRequests.length > 1 ? 's' : ''} · {slotsLeft} spot{slotsLeft !== 1 ? 's' : ''} left · AI-ranked ✨
+                      {allRequests.length === 0
+                        ? `⏳ Waiting for requests · ${slotsLeft} spot${slotsLeft !== 1 ? 's' : ''} open`
+                        : `${allRequests.length} request${allRequests.length > 1 ? 's' : ''} · ${slotsLeft} spot${slotsLeft !== 1 ? 's' : ''} left · AI-ranked ✨`}
                     </Text>
                   </View>
                   {/* Auto-fill button */}
