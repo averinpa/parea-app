@@ -1688,7 +1688,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // Community: MOCK community + user-created extra events (including own hosted)
   const communityAll = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
-    if (e.city !== city) return false
+    if (e.city && e.city !== city) return false
     if (isEventPast(e.time)) return false
     if (e.type === 'official') return false
     return true
@@ -4351,6 +4351,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setDbCommunityEvents(data.map(e => ({
           id: e.id,
           type: 'community',
+          city: e.city || '',
           title: e.title,
           category: e.category || 'outdoors',
           location: e.location,
@@ -5658,6 +5659,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               title: actLabel,
                               category: TYPE_TO_CAT[createType || ''] || 'outdoors',
                               location: createLocation,
+                              city,
                               time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
                               max_participants: SIZE_MAX[createSize || 'squad'] || 5,
                               gradient: grad,
