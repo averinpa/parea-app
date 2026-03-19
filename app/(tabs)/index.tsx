@@ -6588,7 +6588,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ))}
               </ScrollView>
 
-              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+              <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === 'android' ? insets.top : 0}>
                 {replyTo && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.15)', gap: 10 }}>
                     <View style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', alignSelf: 'stretch' }} />
