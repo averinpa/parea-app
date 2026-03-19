@@ -2402,7 +2402,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   }
 
   const now = Date.now()
-  const myEvents = [...MOCK_EVENTS, ...allEvents.filter((e: any) => e._fromDb)].filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
+  const myEvents = [...MOCK_EVENTS, ...allEvents.filter((e: any) => e._fromDb || e.type === 'community')].filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
   const activeHostedEvents = hostedEvents.filter(ev => !ev.expiresAt || ev.expiresAt > now)
   const expiredHostedEvents = hostedEvents.filter(ev => ev.expiresAt && ev.expiresAt <= now)
 
@@ -5355,7 +5355,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => prev.filter(c => c.id !== id))
               showToast("Event cancelled and chat removed 🗑️")
             }}
-            allEvents={feedOfficialDbEvents}
+            allEvents={[...feedOfficialDbEvents, ...dbCommunityEvents]}
             onEventDetail={setEventDetail}
             joinedEvents={joinedEvents}
             userEventFormat={userEventFormat}
