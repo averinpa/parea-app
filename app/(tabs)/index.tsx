@@ -6419,10 +6419,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
       {/* Chat screen */}
       {openChat && (
-        <Modal visible animationType="slide" onRequestClose={() => setOpenChat(null)}>
-          <StatusBar style="dark" backgroundColor="#ffffff" />
+        <Modal visible animationType="slide" statusBarTranslucent onRequestClose={() => { setOpenChat(null); setReplyTo(null) }}>
+          <StatusBar style="dark" backgroundColor="#ffffff" translucent />
           <View style={{ flex: 1, backgroundColor: '#F0F2F5' }}>
-            {/* Header */}
+            {/* Header extends behind status bar */}
             <View style={{ backgroundColor: '#fff', paddingTop: insets.top, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 }}>
               <View style={s.chatHeader}>
                 <TouchableOpacity onPress={() => { setOpenChat(null); setReplyTo(null) }} style={{ padding: 4 }}>
@@ -6601,7 +6601,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                   </View>
                 )}
-                <View style={[s.chatInputRow, { paddingBottom: Math.max(insets.bottom + 6, 16) }]}>
+                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom + 8, 20) : Math.max(insets.bottom + 6, 16) }]}>
                   <TextInput
                     style={s.chatInput} value={chatInput} onChangeText={setChatInput}
                     placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
