@@ -5646,17 +5646,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                         // Save to Supabase, use DB id
                         let newId = tempId
-                        if (userData?.dbId) {
-                          const { data: dbEv } = await supabase.from('community_events').insert({
-                            host_id: userData.dbId,
-                            title: actLabel,
-                            category: TYPE_TO_CAT[createType || ''] || 'outdoors',
-                            location: createLocation,
-                            time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
-                            max_participants: SIZE_MAX[createSize || 'squad'] || 5,
-                            gradient: grad,
-                          }).select().single()
-                          if (dbEv?.id) newId = dbEv.id
+                        try {
+                          if (userData?.dbId) {
+                            const { data: dbEv, error: dbErr } = await supabase.from('community_events').insert({
+                              host_id: userData.dbId,
+                              title: actLabel,
+                              category: TYPE_TO_CAT[createType || ''] || 'outdoors',
+                              location: createLocation,
+                              time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
+                              max_participants: SIZE_MAX[createSize || 'squad'] || 5,
+                              gradient: grad,
+                            }).select().single()
+                            if (dbErr) console.warn('community_events insert error:', dbErr.message)
+                            if (dbEv?.id) newId = dbEv.id
+                          }
+                        } catch (e) {
+                          console.warn('community_events insert exception:', e)
                         }
 
                         const newEvent: any = {
