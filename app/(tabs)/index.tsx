@@ -4432,10 +4432,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (Platform.OS !== 'android') return
     const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      const windowHeight = Dimensions.get('window').height
-      const byScreenY = windowHeight - e.endCoordinates.screenY
-      const byHeight = e.endCoordinates.height
-      setKeyboardHeight(Math.max(0, Math.min(byScreenY, byHeight)))
+      setKeyboardHeight(e.endCoordinates.height)
     })
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
@@ -6535,7 +6532,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <View style={{ flex: 1, marginBottom: Platform.OS === 'android' ? keyboardHeight : 0 }}>
+              <View style={{ flex: 1, marginBottom: Platform.OS === 'android' ? Math.max(0, keyboardHeight - insets.bottom) : 0 }}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
