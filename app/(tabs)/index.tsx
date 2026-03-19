@@ -1761,7 +1761,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const closeJoinSheet = () => setJoinSheet(prev => ({ ...prev, visible: false }))
 
   const confirmJoin = async () => {
-    onJoin(joinSheet.ev)
+    onJoin(joinSheet.ev, joinSheet.transport)
     if (joinSheet.ev?.id) {
       if (joinSheet.format)    setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.format }))
       if (joinSheet.transport) setUserEventTransport?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.transport }))
@@ -3449,10 +3449,13 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                               <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>tap →</Text>
                             </View>
                             <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
-                            <View style={{ flexDirection: 'row', gap: 4, marginTop: 5 }}>
+                            <View style={{ flexDirection: 'row', gap: 4, marginTop: 5, alignItems: 'center' }}>
                               {(req.langs || []).map((l: string) => (
                                 <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
                               ))}
+                              {req.transport === 'car' && <Text style={{ fontSize: 12 }}>🚗</Text>}
+                              {req.transport === 'lift' && <Text style={{ fontSize: 12 }}>🙋</Text>}
+                              {req.transport === 'meet' && <Text style={{ fontSize: 12 }}>📍</Text>}
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -4740,7 +4743,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const fetchRequests = async () => {
       const { data: reqData, error } = await supabase
         .from('join_requests')
-        .select('id, event_id, requester_id, status')
+        .select('id, event_id, requester_id, status, transport')
         .in('event_id', eventIds)
         .eq('status', 'pending')
       if (error) console.warn('join_requests poll error:', error.message)
@@ -4772,6 +4775,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             interests: p.interests || [],
             drinksPref: p.drinks_pref || '',
             smokingPref: p.smoking_pref || '',
+            transport: req.transport || null,
             _real: true,
           })
         })
@@ -4955,7 +4959,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // checkMatch: always match when user vibes (demo — every vibe is mutual)
   const checkMatch = (_seeker: any, _eventId?: number) => true
 
-  const handleJoinEvent = (ev: any) => {
+  const handleJoinEvent = (ev: any, transport?: string) => {
     const isFull = ev.participantsCount >= ev.maxParticipants
     if (isFull) return
     const currentState = joinedEvents[ev.id]
@@ -4979,6 +4983,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           requester_id: userData.dbId,
           host_id: ev.hostId,
           status: 'pending',
+          transport: transport || null,
         }).then(({ error }) => {
           if (error) console.warn('join_request insert error:', error.message)
         })
