@@ -4433,7 +4433,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (Platform.OS !== 'android') return
     const show = Keyboard.addListener('keyboardDidShow', (e) => {
       const windowHeight = Dimensions.get('window').height
-      setKeyboardHeight(Math.max(0, windowHeight - e.endCoordinates.screenY))
+      const byScreenY = windowHeight - e.endCoordinates.screenY
+      const byHeight = e.endCoordinates.height
+      setKeyboardHeight(Math.max(0, Math.min(byScreenY, byHeight)))
     })
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
