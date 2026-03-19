@@ -6545,10 +6545,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                   <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
                                 </View>
                               )}
-                              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
-                                <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20, flex: 1 }}>{msg.text}</Text>
-                                <Text style={{ fontSize: 10, color: '#94A3B8', marginBottom: 1, flexShrink: 0 }}>{msg.time}</Text>
-                              </View>
+                              <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                              <Text style={{ fontSize: 10, color: '#94A3B8', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
                             </View>
                           </TouchableOpacity>
                         </View>
@@ -6564,10 +6562,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={2}>{msg.replyTo.text}</Text>
                               </View>
                             )}
-                            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
-                              <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20, flex: 1 }}>{msg.text}</Text>
-                              <Text style={{ fontSize: 10, color: '#94A3B8', marginBottom: 1, flexShrink: 0 }}>{msg.time}</Text>
-                            </View>
+                            <Text style={{ fontSize: 14, color: '#1E1B4B', lineHeight: 20 }}>{msg.text}</Text>
+                            <Text style={{ fontSize: 10, color: '#94A3B8', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
                           </View>
                         </TouchableOpacity>
                       </View>
@@ -6582,10 +6578,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }} numberOfLines={2}>{msg.replyTo.text}</Text>
                               </View>
                             )}
-                            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
-                              <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20, flex: 1 }}>{msg.text}</Text>
-                              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1, flexShrink: 0 }}>{msg.time}</Text>
-                            </View>
+                            <Text style={{ fontSize: 14, color: '#fff', lineHeight: 20 }}>{msg.text}</Text>
+                            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textAlign: 'right', marginTop: 2 }}>{msg.time}</Text>
                           </View>
                         </TouchableOpacity>
                       </View>
