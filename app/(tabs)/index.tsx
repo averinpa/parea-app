@@ -1686,10 +1686,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return da.getTime() - db.getTime()
   })
 
-  // Community: MOCK community + user-created extra events
+  // Community: MOCK community + user-created extra events (including own hosted)
   const communityAll = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
     if (e.city !== city) return false
-    if (e.isHosted) return false
     if (isEventPast(e.time)) return false
     if (e.type === 'official') return false
     return true
@@ -1778,9 +1777,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   }
 
   const JoinButton = ({ ev }: { ev: any }) => {
+    if (ev.isHosted) return (
+      <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,215,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309' }}>My Event 👑</Text>
+      </View>
+    )
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Requested…' : (ev.isHosted || ev.type === 'community') ? 'Request' : 'Join'
+    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Requested…' : ev.type === 'community' ? 'Request' : 'Join'
     let bg: string, textColor: string
     if (isFull)                   { bg = '#F1F5F9'; textColor = '#94A3B8' }
     else if (state === 'joined')  { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
@@ -1790,7 +1794,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       <TouchableOpacity
         onPress={() => {
           if (isFull) return
-          if (ev.type === 'community' && !ev.isHosted && state !== 'none') return // locked after request sent
+          if (ev.type === 'community' && state !== 'none') return
           if (state === 'none') openJoinSheet(ev)
           else if (state === 'joined') onJoin(ev)
         }}
