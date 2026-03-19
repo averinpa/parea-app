@@ -2183,15 +2183,21 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     </View>
                   </View>
                   {/* Date + location row */}
-                  <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <Feather name="calendar" size={12} color="#94A3B8" />
                       <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.time}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <Feather name="map-pin" size={12} color="#94A3B8" />
-                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.distance || ev.location || 'See details'}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.location || 'See details'}</Text>
                     </View>
+                    {ev.hostTransport === 'car' && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 }}>
+                        <Text style={{ fontSize: 11 }}>🚗</Text>
+                        <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '600' }}>Host can give a lift</Text>
+                      </View>
+                    )}
                   </View>
                   {/* Progress + join */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -3750,7 +3756,13 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</Text>
+                      {ev.hostTransport === 'car' && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 }}>
+                          <Text style={{ fontSize: 11 }}>🚗</Text>
+                          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '600' }}>Host can give a lift</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: isPending ? 'rgba(245,158,11,0.15)' : 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.4)' : 'rgba(67,233,123,0.4)' }}>
                       <Text style={{ fontSize: 10, fontWeight: '800', color: isPending ? '#FBBF24' : '#43E97B' }}>{isPending ? 'PENDING ⏳' : 'APPROVED ✓'}</Text>
@@ -4413,6 +4425,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           seekingCount: 0,
           isHosted: e.host_id === userData?.dbId,
           hostId: e.host_id,
+          hostTransport: e.host_transport || null,
           description: e.description || (e.location ? `📍 ${e.location}` : ''),
           _dbCommunity: true,
         })))
@@ -5814,6 +5827,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               time: createDay && createHour ? `${createDay}, ${createHour}` : 'TBD',
                               max_participants: SIZE_MAX[createSize || 'squad'] || 5,
                               gradient: grad,
+                              host_transport: createDriving ? 'car' : null,
                             }).select().single()
                             if (dbErr) console.warn('community_events insert error:', dbErr.message)
                             if (dbEv?.id) newId = dbEv.id
