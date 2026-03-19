@@ -4832,25 +4832,38 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => clearInterval(interval)
   }, [userData?.dbId])
 
-  // Clean up joinedEvents for community events that no longer exist in DB
+  // Clean up joinedEvents + chats for community events that no longer exist in DB
   useEffect(() => {
     const dbIds = new Set(dbCommunityEvents.map(e => e.id))
+    const deletedIds: number[] = []
     setJoinedEvents(prev => {
       const updated = { ...prev }
       let changed = false
       Object.keys(updated).forEach(id => {
         const numId = +id
-        if (updated[numId] === 'pending' && !dbIds.has(numId)) {
-          // Check it's not a mock/official event id
-          const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId)
-          if (!isMockOrOfficial) {
-            delete updated[numId]
-            changed = true
-          }
+        const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId)
+        if (!isMockOrOfficial && !dbIds.has(numId)) {
+          deletedIds.push(numId)
+          delete updated[numId]
+          changed = true
         }
       })
       return changed ? updated : prev
     })
+    if (deletedIds.length > 0) {
+      // Add system message to any chats linked to deleted events, then remove them
+      deletedIds.forEach(evId => {
+        setChatList(prev => {
+          const chat = prev.find(c => c.communityEventId === evId)
+          if (!chat) return prev
+          setChatMessages(msgs => ({
+            ...msgs,
+            [chat.id]: [...(msgs[chat.id] || []), { from: 'system', text: '🗑️ Host cancelled this event', time: 'now' }],
+          }))
+          return prev.filter(c => c.communityEventId !== evId)
+        })
+      })
+    }
   }, [dbCommunityEvents])
 
   // Auto-expire hosted events and their chats 24h after event ends
@@ -5131,6 +5144,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 memberProfiles: partners,
                 lastMsg: '🎉 Group chat created! Say hi',
                 time: 'now', isNew: true, expiresIn: 24,
+                communityEventId: ev.id,
               } : {
                 id: Date.now(), type: 'duo',
                 name: partners[0]?.name || 'Your match',
@@ -5141,6 +5155,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 time: 'now', isNew: true, expiresIn: 24,
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                 partnerProfile: partners[0] || null,
+                communityEventId: ev.id,
               }
               const createdChatId = newChat.id
               setChatList(prev => [newChat, ...prev])
