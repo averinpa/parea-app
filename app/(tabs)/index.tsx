@@ -4951,15 +4951,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setJoinedEvents(prev => {
           const updated = { ...prev }
           let changed = false
-          // Remove stale pending entries for deleted events
+          // Remove ALL stale community event entries that no longer have a join_request in DB
           Object.keys(updated).forEach(id => {
             const numId = +id
-            if (updated[numId] === 'pending' && !validEventIds.has(numId)) {
-              const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId)
-              if (!isMockOrOfficial) { delete updated[numId]; changed = true }
+            const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId) || numId > 100000
+            if (!isMockOrOfficial && !validEventIds.has(numId)) {
+              delete updated[numId]; changed = true
             }
           })
-          // Restore pending/approved from DB (in case AsyncStorage was cleared)
+          // Restore/sync from DB
           validRequests.forEach((req: any) => {
             if (req.status === 'pending' && !updated[req.event_id]) {
               updated[req.event_id] = 'pending'
@@ -4975,7 +4975,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               }
             }
             if (req.status === 'confirmed') {
-              // Уже подтверждено — восстанавливаем как 'joined' чтобы карточка VibeCheck показалась
               if (!updated[req.event_id] || updated[req.event_id] === 'pending') {
                 updated[req.event_id] = 'joined'
                 changed = true
