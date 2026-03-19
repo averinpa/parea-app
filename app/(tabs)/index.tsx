@@ -9,9 +9,10 @@ import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator, Alert, Animated, Dimensions, Image, Keyboard, Linking,
-  KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform,
+  LayoutAnimation, Modal, PanResponder, Platform,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -4417,7 +4418,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
 
@@ -4429,14 +4429,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const deletedCommunityEventIds = useRef<Set<number>>(new Set())
   const communityEventChatMap = useRef<Record<number, number>>({}) // eventId → chatId
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return
-    const show = Keyboard.addListener('keyboardDidShow', (e) => {
-      setKeyboardHeight(e.endCoordinates.height)
-    })
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0))
-    return () => { show.remove(); hide.remove() }
-  }, [])
 
   useEffect(() => {
     supabase.from('official_events').select('*').order('created_at', { ascending: false })
@@ -6532,7 +6524,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <View style={{ flex: 1, marginBottom: Platform.OS === 'android' ? Math.max(0, keyboardHeight - insets.bottom) : 0 }}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
@@ -6611,7 +6603,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                   </View>
                 )}
-                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'android' && keyboardHeight > 0 ? 8 : Math.max(insets.bottom + 6, 16) }]}>
+                <View style={[s.chatInputRow, { paddingBottom: Math.max(insets.bottom + 6, 16) }]}>
                   <TextInput
                     style={s.chatInput} value={chatInput} onChangeText={setChatInput}
                     placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
@@ -6621,7 +6613,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <Ionicons name="arrow-up" size={20} color={chatInput.trim() ? '#fff' : '#94A3B8'} />
                   </TouchableOpacity>
                 </View>
-              </View>
+              </KeyboardAvoidingView>
           </View>
         </Modal>
       )}
