@@ -334,7 +334,7 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
         else if (dx > 50) goTo(slide - 1)
         touchX.current = null
       }}>
-      <StatusBar style="dark" />
+      <StatusBar hidden />
       <SafeAreaView style={s.fill}>
         <View style={s.logoRow}>
           <Image source={require('../../assets/images/logo.png')} style={s.logo} resizeMode="contain" />
@@ -454,7 +454,7 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
 
   return (
     <LinearGradient colors={['#EDE9FE', '#E0E7FF', '#DBEAFE']} style={s.fill}>
-      <StatusBar style="dark" />
+      <StatusBar hidden />
       <SafeAreaView style={s.fill}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
@@ -635,7 +635,7 @@ function OTPScreen({ onBack, onVerify, method, credential }: { onBack: () => voi
 
   return (
     <LinearGradient colors={['#EDE9FE', '#E0E7FF', '#DBEAFE']} style={s.fill}>
-      <StatusBar style="dark" />
+      <StatusBar hidden />
       <SafeAreaView style={s.fill}>
         <View style={s.authTopBar}>
           <TouchableOpacity onPress={onBack} style={s.authBackBtn}>
@@ -995,7 +995,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
 
   return (
     <LinearGradient colors={step5BgColors()} style={s.fill}>
-      <StatusBar style="dark" />
+      <StatusBar hidden />
       {/* Vibe flash overlay */}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', opacity: vibeFlashAnim, zIndex: 99 }} />
       {/* Confetti */}
@@ -4902,13 +4902,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   return (
     <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
-      <StatusBar style="dark" />
+      <StatusBar hidden />
       <SafeAreaView style={s.fill}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
             <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={userCreatedEvents} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} />
           </View>
           <View style={{ flex: 1, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
+            <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, height: insets.top, backgroundColor: '#0A0812', zIndex: 1 }} />
           <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents]}
@@ -5652,7 +5653,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {eventDetail && (
           <Modal visible animationType="slide" onRequestClose={() => setEventDetail(null)}>
             <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
-              <StatusBar style="dark" />
+              <StatusBar hidden />
               <SafeAreaView style={s.fill}>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {/* Header */}
@@ -5894,7 +5895,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {openChat && (
         <Modal visible animationType="slide" onRequestClose={() => setOpenChat(null)}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
-            <StatusBar style="dark" />
+            <StatusBar hidden />
             <SafeAreaView style={s.fill}>
               <View style={s.chatHeader}>
                 <TouchableOpacity onPress={() => setOpenChat(null)} style={{ padding: 4 }}>
