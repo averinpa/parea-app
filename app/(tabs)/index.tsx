@@ -4841,10 +4841,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               updated[req.event_id] = 'pending'
               changed = true
             }
-            if (req.status === 'approved' && prev[req.event_id] === 'pending') {
-              updated[req.event_id] = 'joined'
-              changed = true
-              addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: '' })
+            if (req.status === 'approved') {
+              if (prev[req.event_id] === 'pending') {
+                // Transition pending → joined: fire notification
+                addNotif({ type: 'crew_ready', emoji: '✅', color: '#43E97B', title: 'Host approved your request! 🎉', body: '' })
+              }
+              if (!updated[req.event_id] || updated[req.event_id] === 'pending') {
+                // Always restore 'joined' if approved (handles app restart)
+                updated[req.event_id] = 'joined'
+                changed = true
+              }
             }
           })
           return changed ? updated : prev
