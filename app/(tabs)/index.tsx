@@ -4787,24 +4787,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (!userData?.dbId) return
     const pollStatus = async () => {
-      const { data } = await supabase
-        .from('join_requests')
-        .select('event_id, status')
-        .eq('requester_id', userData.dbId)
-      if (data) {
-        const activeEventIds = new Set(data.map((r: any) => r.event_id))
+      const [{ data: reqData }, { data: evData }] = await Promise.all([
+        supabase.from('join_requests').select('event_id, status').eq('requester_id', userData.dbId),
+        supabase.from('community_events').select('id'),
+      ])
+      if (reqData) {
+        // Only treat requests as valid if the community event still exists in DB
+        const existingEventIds = new Set((evData || []).map((e: any) => e.id))
+        const validRequests = reqData.filter((r: any) => existingEventIds.has(r.event_id))
+        const validEventIds = new Set(validRequests.map((r: any) => r.event_id))
         setJoinedEvents(prev => {
           const updated = { ...prev }
           let changed = false
           // Remove stale pending entries for deleted events
           Object.keys(updated).forEach(id => {
-            if (updated[+id] === 'pending' && !activeEventIds.has(+id)) {
-              delete updated[+id]
-              changed = true
+            const numId = +id
+            if (updated[numId] === 'pending' && !validEventIds.has(numId)) {
+              const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId)
+              if (!isMockOrOfficial) { delete updated[numId]; changed = true }
             }
           })
           // Restore pending/approved from DB (in case AsyncStorage was cleared)
-          data.forEach((req: any) => {
+          validRequests.forEach((req: any) => {
             if (req.status === 'pending' && !updated[req.event_id]) {
               updated[req.event_id] = 'pending'
               changed = true
@@ -4823,6 +4827,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const interval = setInterval(pollStatus, 15000)
     return () => clearInterval(interval)
   }, [userData?.dbId])
+
+  // Clean up joinedEvents for community events that no longer exist in DB
+  useEffect(() => {
+    const dbIds = new Set(dbCommunityEvents.map(e => e.id))
+    setJoinedEvents(prev => {
+      const updated = { ...prev }
+      let changed = false
+      Object.keys(updated).forEach(id => {
+        const numId = +id
+        if (updated[numId] === 'pending' && !dbIds.has(numId)) {
+          // Check it's not a mock/official event id
+          const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId)
+          if (!isMockOrOfficial) {
+            delete updated[numId]
+            changed = true
+          }
+        }
+      })
+      return changed ? updated : prev
+    })
+  }, [dbCommunityEvents])
 
   // Auto-expire hosted events and their chats 24h after event ends
   useEffect(() => {
@@ -5183,8 +5208,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
-              supabase.from('community_events').delete().eq('id', ev.id).then(({ error }) => { if (error) console.warn('community_events delete error:', error.message) })
-              supabase.from('join_requests').delete().eq('event_id', ev.id)
+              supabase.from('community_events').delete().eq('id', ev.id).then(({ error, data, status, statusText }) => { console.log('community_events delete:', { eventId: ev.id, error: error?.message, status, statusText }) })
+              supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error, count }) => { console.log('join_requests delete:', { eventId: ev.id, error: error?.message, count }) })
               showToast("Event cancelled 🗑️")
             }}
             onApproveJoiner={(eventId: number, joiner: any) => {
@@ -5339,8 +5364,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
-              supabase.from('community_events').delete().eq('id', ev.id).then(({ error }) => { if (error) console.warn('community_events delete error:', error.message) })
-              supabase.from('join_requests').delete().eq('event_id', ev.id)
+              supabase.from('community_events').delete().eq('id', ev.id).then(({ error, status, statusText }) => { console.log('community_events delete:', { eventId: ev.id, error: error?.message, status, statusText }) })
+              supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error, count }) => { console.log('join_requests delete:', { eventId: ev.id, error: error?.message, count }) })
               addNotif({ type: 'event_cancelled', emoji: '🗑️', color: '#EF4444', title: 'Event cancelled', body: `"${ev.title}" has been removed` })
               showToast("Event cancelled 🗑️")
             }}
@@ -5597,7 +5622,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 const isSelected = createDay === selStr
                                 const isWeekend = col >= 5
                                 return (
-                                  <TouchableOpacity key={col} disabled={isPast} onPress={() => setCreateDay(selStr)} activeOpacity={0.7}
+                                  <TouchableOpacity key={col} disabled={isPast} onPress={() => { setCreateDay(selStr); const isSelectedToday = selStr === new Date().toISOString().split('T')[0]; if (isSelectedToday && createHour) { const [hh] = createHour.split(':').map(Number); if (hh <= new Date().getHours()) setCreateHour(''); } }} activeOpacity={0.7}
                                     style={{ width: cellW, height: 32, alignItems: 'center', justifyContent: 'center' }}>
                                     <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
                                       backgroundColor: isSelected ? '#6366F1' : isToday ? '#fff' : 'transparent',
@@ -5618,13 +5643,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         {/* Time chips */}
                         <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Time</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
-                          {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => (
-                            <TouchableOpacity key={h} onPress={() => setCreateHour(h)} activeOpacity={0.8}
-                              style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
-                                backgroundColor: createHour === h ? '#6366F1' : '#F1F5F9' }}>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: createHour === h ? '#fff' : '#64748B' }}>{h}</Text>
-                            </TouchableOpacity>
-                          ))}
+                          {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => {
+                            const isToday = createDay === new Date().toISOString().split('T')[0]
+                            const [hh] = h.split(':').map(Number)
+                            const isPast = isToday && hh <= new Date().getHours()
+                            return (
+                              <TouchableOpacity key={h} onPress={() => !isPast && setCreateHour(h)} activeOpacity={isPast ? 1 : 0.8}
+                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
+                                  backgroundColor: createHour === h ? '#6366F1' : '#F1F5F9',
+                                  opacity: isPast ? 0.3 : 1 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: createHour === h ? '#fff' : '#64748B' }}>{h}</Text>
+                              </TouchableOpacity>
+                            )
+                          })}
                         </View>
 
                         {/* Location */}
