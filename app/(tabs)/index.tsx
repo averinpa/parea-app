@@ -3702,7 +3702,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         const match = aiMatches.find((m: any) => m.id === p.id)
                         const isReal = !!p._real
                         return (
-                          <TouchableOpacity key={i} onPress={() => { setPreviewProfile({ ...p, flag: FLAG_MAP[p.langs?.[0]] || '🌍', langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: match?.score ?? 50, aiReason: match?.reason ?? 'Ready to connect' }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }} activeOpacity={0.75}>
+                          <TouchableOpacity key={i} onPress={() => {
+                            const aiScore = isReal ? (p.score ?? null) : (match?.score ?? 50)
+                            const aiReason = isReal ? (p.vibe || 'Real attendee') : (match?.reason ?? 'Ready to connect')
+                            setPreviewProfile({ ...p, flag: FLAG_MAP[p.langs?.[0]] || '🌍', langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore, aiReason })
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                          }} activeOpacity={0.75}>
                             <View style={{ alignItems: 'center' }}>
                               {isReal && p.photo ? (
                                 <Image source={{ uri: p.photo }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }} />
@@ -3712,8 +3717,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                 </LinearGradient>
                               )}
                               {isReal ? (
-                                <View style={{ marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.2)' }}>
-                                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#43E97B' }}>REAL</Text>
+                                <View style={{ marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99,
+                                  backgroundColor: p.score != null && p.score >= 75 ? 'rgba(67,233,123,0.2)' : p.score != null && p.score >= 50 ? 'rgba(129,140,248,0.2)' : 'rgba(67,233,123,0.2)' }}>
+                                  <Text style={{ fontSize: 9, fontWeight: '800',
+                                    color: p.score != null && p.score >= 75 ? '#43E97B' : p.score != null && p.score >= 50 ? '#818CF8' : '#43E97B' }}>
+                                    {p.score != null ? `${p.score}%` : 'REAL'}
+                                  </Text>
                                 </View>
                               ) : match ? (
                                 <View style={{ marginTop: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: match.score >= 75 ? 'rgba(67,233,123,0.2)' : 'rgba(129,140,248,0.2)' }}>
@@ -4599,18 +4608,37 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           .lte('group_size_min', userMax)
           .gte('group_size_max', userMin)
           .limit(20)
-        if (data) {
-          map[evId] = data.map((row: any) => {
+        if (data && data.length > 0) {
+          const candidates = data.map((row: any) => {
             const p = row.profiles || {}
             return {
               id: p.id, name: p.name || 'User', age: p.age || '',
               color: p.color || '#818CF8', colors: [p.color || '#818CF8', p.color ? p.color + 'AA' : '#6366F1'],
               emoji: '🎵', photo: p.photos?.[0] || null, photos: p.photos || [],
               bio: p.bio || '', langs: p.langs || [],
+              interests: p.interests || [], drinksPref: p.drinksPref || '', smokingPref: p.smokingPref || '',
               transport: row.transport, groupMin: row.group_size_min, groupMax: row.group_size_max,
-              _real: true,
+              _real: true, score: null as number | null, vibe: '',
             }
           })
+          try {
+            const { data: scored } = await supabase.functions.invoke('match-crew', {
+              body: {
+                user_profile: {
+                  name: userData.name, age: userData.age,
+                  langs: userData.langs || [], interests: userData.interests || [],
+                  drinksPref: userData.drinksPref || '', smokingPref: userData.smokingPref || '',
+                  bio: userData.bio || '', transport: userEventTransport[evId] || '',
+                },
+                candidates,
+              },
+            })
+            map[evId] = Array.isArray(scored) ? scored : candidates
+          } catch {
+            map[evId] = candidates
+          }
+        } else if (data) {
+          map[evId] = []
         }
       }))
       setEventAttendeesMap(map)
