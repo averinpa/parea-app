@@ -2800,7 +2800,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       </View>
                     )}
                   </View>
-                  <Text style={{ fontSize: 13, color: chat.isNew ? '#475569' : '#94A3B8', fontWeight: chat.isNew ? '500' : '400' }} numberOfLines={1}>{chat.lastMsg}</Text>
+                  <Text style={{ fontSize: 13, color: chat.isNew ? '#334155' : '#94A3B8', fontWeight: chat.isNew ? '600' : '400' }} numberOfLines={1}>{chat.lastMsg}</Text>
                 </View>
 
                 {/* Unread dot */}
@@ -4418,6 +4418,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
+  const inboxChannelRef = useRef<any>(null)
+  const chatListRef = useRef<any[]>([])
+  const openChatRef = useRef<any>(null)
+  chatListRef.current = chatList
+  openChatRef.current = openChat
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [vibes, setVibes] = useState<number[]>([])
@@ -5335,7 +5340,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }
         })
         setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
-        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 80)
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
       })
 
     // Подписка на новые сообщения
@@ -5359,7 +5364,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (!cur || cur.id !== chatId) return cur
               const alreadyIn = (cur.memberProfiles || []).find((p: any) => p.id === sender.id)
               if (alreadyIn) return cur
-              return { ...cur, memberProfiles: [...(cur.memberProfiles || []), sender] }
+              const newProfiles = [...(cur.memberProfiles || []), sender]
+              // Sync chatList too so the new member persists after chat is closed
+              setChatList(prev => prev.map(c =>
+                c.id === chatId
+                  ? { ...c, memberProfiles: newProfiles, members: (c.members || 1) + 1, avatars: newProfiles.map((p: any) => p.photo).filter(Boolean), colors: newProfiles.map((p: any) => p.color) }
+                  : c
+              ))
+              return { ...cur, memberProfiles: newProfiles, members: (cur.members || 1) + 1 }
             })
           }
         }
@@ -5414,6 +5426,49 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
   }, [])
+
+  // ── Background inbox subscription (updates lastMsg + isNew for ALL chats) ───
+  useEffect(() => {
+    if (!userData?.dbId) return
+    if (inboxChannelRef.current) {
+      supabase.removeChannel(inboxChannelRef.current)
+    }
+    const channel = supabase.channel('inbox_background')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
+        const m = payload.new
+        if (m.sender_id === userData.dbId) return // своё сообщение
+        if (m.text?.includes('left the group')) return // системные скипаем
+        // Найти чат по community_event_id
+        const chat = chatListRef.current.find(c =>
+          c.communityEventId === m.community_event_id || c.hostEventId === m.community_event_id
+        )
+        if (!chat) return
+        // Если чат сейчас открыт — его обновляет chat-specific подписка
+        if (openChatRef.current?.id === chat.id) return
+        // Найти имя отправителя из memberProfiles чата
+        const sender = (chat.memberProfiles || []).find((p: any) => p.id === m.sender_id)
+        const senderName = sender?.name || 'Someone'
+        const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        setChatList(prev => prev.map(c =>
+          c.id === chat.id
+            ? { ...c, lastMsg: `${senderName}: ${m.text}`, time, isNew: true }
+            : c
+        ))
+      })
+      .subscribe()
+    inboxChannelRef.current = channel
+    return () => {
+      supabase.removeChannel(channel)
+      inboxChannelRef.current = null
+    }
+  }, [userData?.dbId])
+
+  // Scroll to bottom when chat opens (after modal animation ~300ms)
+  useEffect(() => {
+    if (!openChat?.id) return
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 350)
+    return () => clearTimeout(t)
+  }, [openChat?.id])
 
   return (
     <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
