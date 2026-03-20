@@ -4824,10 +4824,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
   }, [eventAttendeesMap])
 
-  // ── Poll for incoming crew invites (invitee side) ─────────────────────────
+  // ── Incoming crew invites (invitee side) — realtime ───────────────────────
   useEffect(() => {
     if (!userData?.dbId) return
-    const fetch = async () => {
+    const fetchIncoming = async () => {
       const { data } = await supabase
         .from('crew_invites')
         .select('*, inviter:profiles!crew_invites_inviter_id_fkey(*)')
@@ -4835,9 +4835,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .eq('status', 'pending')
       if (data) setIncomingCrewInvites(data)
     }
-    fetch()
-    const interval = setInterval(fetch, 30000)
-    return () => clearInterval(interval)
+    fetchIncoming()
+    const channel = supabase.channel('crew_invites_incoming')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crew_invites', filter: `invitee_id=eq.${userData.dbId}` }, () => {
+        fetchIncoming()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [userData?.dbId])
 
   // ── Poll for accepted invites (inviter side) — sync chat to local state ───
@@ -5646,10 +5650,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               // For official events with real attendees → send invites, don't create chat yet
               const realPartners = partners.filter((p: any) => p._real)
               if (ev.type === 'official' && realPartners.length > 0) {
-                const newSent: Record<string, string> = {}
                 for (const partner of realPartners) {
                   const key = `${ev.id}_${partner.id}`
                   if (sentCrewInvites[key]) continue
+                  // Send our invite
                   await supabase.from('crew_invites').upsert({
                     event_ref_id: ev.id,
                     event_title: ev.title,
@@ -5657,13 +5661,53 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     invitee_id: partner.id,
                     status: 'pending',
                   }, { onConflict: 'event_ref_id,inviter_id,invitee_id' })
-                  newSent[key] = 'pending'
+                  setSentCrewInvites(prev => ({ ...prev, [key]: 'pending' }))
+                  // Check for mutual invite (partner already invited me)
+                  const { data: mutualInvite } = await supabase
+                    .from('crew_invites')
+                    .select('*')
+                    .eq('event_ref_id', ev.id)
+                    .eq('inviter_id', partner.id)
+                    .eq('invitee_id', userData?.dbId)
+                    .eq('status', 'pending')
+                    .maybeSingle()
+                  if (mutualInvite) {
+                    // Mutual match → create chat immediately
+                    const { data: chatData } = await supabase
+                      .from('chats')
+                      .insert({ type: 'duo', last_msg: '🎉 Crew confirmed!' })
+                      .select().single()
+                    if (!chatData) continue
+                    await supabase.from('chat_members').insert([
+                      { chat_id: chatData.id, profile_id: userData?.dbId },
+                      { chat_id: chatData.id, profile_id: partner.id },
+                    ])
+                    await supabase.from('crew_invites')
+                      .update({ status: 'accepted', chat_id: chatData.id })
+                      .in('id', [mutualInvite.id])
+                    const newChat = {
+                      id: chatData.id, type: 'duo',
+                      name: partner.name || 'Your crew',
+                      age: partner.age || '',
+                      color: partner.color || '#818CF8',
+                      photo: partner.photo || '',
+                      lastMsg: '🎉 Mutual match! Say hi 👋',
+                      time: 'now', isNew: true, expiresIn: 24,
+                      event: ev.title, eventEmoji: '🎉',
+                      partnerProfile: partner,
+                    }
+                    setChatList(prev => [newChat, ...prev])
+                    setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                    setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+                    showToast('Mutual match! 🎉')
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                    setMessagesInitialSubTab('messages')
+                    setActiveTab('messages')
+                    return
+                  }
                 }
-                if (Object.keys(newSent).length > 0) {
-                  setSentCrewInvites(prev => ({ ...prev, ...newSent }))
-                  showToast('Invite sent! 🎯')
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                }
+                showToast('Invite sent! 🎯')
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
                 return
               }
               // Community / non-official / no real attendees → create chat immediately
