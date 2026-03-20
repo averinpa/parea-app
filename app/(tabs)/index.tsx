@@ -2446,11 +2446,6 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               </Text>
             </View>
           </View>
-          {hasNew && subTab === 'messages' && (
-            <View style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99, backgroundColor: '#6366F1' }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff' }}>✨ New match!</Text>
-            </View>
-          )}
         </View>
 
         {/* Pill switcher */}
@@ -5350,11 +5345,24 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         schema: 'public',
         table: 'messages',
         filter: `community_event_id=eq.${evId}`,
-      }, (payload: any) => {
+      }, async (payload: any) => {
         const m = payload.new
         if (m.sender_id === userData.dbId) return // своё уже добавили оптимистично
         const profilesInChat: any[] = openChat.memberProfiles || []
-        const sender = profilesInChat.find((p: any) => p.id === m.sender_id)
+        let sender = profilesInChat.find((p: any) => p.id === m.sender_id)
+        // Если профиль отправителя не найден (новый участник), подгружаем из БД
+        if (!sender && m.sender_id) {
+          const { data: freshProfile } = await supabase.from('profiles').select('id, name, photos, color').eq('id', m.sender_id).single()
+          if (freshProfile) {
+            sender = { id: freshProfile.id, name: freshProfile.name, photo: freshProfile.photos?.[0] || '', color: freshProfile.color || '#818CF8' }
+            setOpenChat((cur: any) => {
+              if (!cur || cur.id !== chatId) return cur
+              const alreadyIn = (cur.memberProfiles || []).find((p: any) => p.id === sender.id)
+              if (alreadyIn) return cur
+              return { ...cur, memberProfiles: [...(cur.memberProfiles || []), sender] }
+            })
+          }
+        }
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         // Системные сообщения (e.g. "X left the group") — показываем по центру
         const isSystemMsg = m.text?.includes('left the group')
@@ -5395,13 +5403,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (Platform.OS !== 'android') return
     const show = Keyboard.addListener('keyboardDidShow', e => {
-      const api = Platform.Version as number
-      // Android <= 14 (API 34): endCoordinates.height includes nav bar height → subtract it
-      // Android >= 15 (API 35): endCoordinates.height is keyboard only → use as-is
-      const spacer = api <= 34
-        ? Math.max(0, e.endCoordinates.height - insetsBottomRef.current)
-        : e.endCoordinates.height
-      setChatKeyboardHeight(spacer)
+      const currentWindowHeight = Dimensions.get('window').height
+      const originalHeight = fullWindowHeightRef.current
+      // If window shrank when keyboard appeared, resize mode is working on this device
+      // → no spacer needed (window already scrolled up)
+      // If window didn't shrink, resize mode is NOT working → use full keyboard height
+      const didResize = (originalHeight - currentWindowHeight) > 100
+      setChatKeyboardHeight(didResize ? 0 : e.endCoordinates.height)
     })
     const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
@@ -5668,7 +5676,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .then(({ error }) => { if (error) console.warn('leave join_request delete error:', error.message) })
                 // Пишем системное сообщение в DB → Даша увидит через realtime
                 supabase.from('messages').insert({
-                  chat_id: leavingChat.id,
+                  community_event_id: evId,
                   sender_id: userData.dbId,
                   text: `${userData.name || 'Someone'} left the group`,
                 }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
@@ -5676,8 +5684,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
               }
 
-              // Если хост уходит из своего чата → удаляем ивент
+              // Если хост уходит из своего чата → удаляем ивент (cascade удалит chat у участников)
               if (leavingChat?.hostEventId) {
+                supabase.from('events').delete().eq('id', leavingChat.hostEventId)
+                  .then(({ error }) => { if (error) console.warn('host event delete error:', error.message) })
                 setUserCreatedEvents(prev => prev.filter(e => e.id !== leavingChat.hostEventId))
                 setPendingJoinRequests(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
                 setApprovedJoiners(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
@@ -5773,11 +5783,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
         }}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
-            <SafeAreaView style={s.fill}>
+            <View style={[s.fill, { paddingBottom: insets.bottom }]}>
               <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
                 {/* Header row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 4 }}>
                   <TouchableOpacity
                     onPress={() => {
                       if (createStep > 1) {
@@ -6175,7 +6185,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 </View>
 
               </KeyboardAvoidingView>
-            </SafeAreaView>
+            </View>
           </LinearGradient>
         </Modal>
       </SafeAreaView>
@@ -6520,7 +6530,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             // Удаляем join_request + пишем системное сообщение
                             supabase.from('join_requests').delete().eq('event_id', evId).eq('requester_id', userData.dbId)
                               .then(({ error }) => { if (error) console.warn('leave join_request error:', error.message) })
-                            supabase.from('messages').insert({ chat_id: chatId, sender_id: userData.dbId, text: `${userData.name || 'Someone'} left the group` })
+                            supabase.from('messages').insert({ community_event_id: evId, sender_id: userData.dbId, text: `${userData.name || 'Someone'} left the group` })
                               .then(({ error }) => { if (error) console.warn('leave msg error:', error.message) })
                             setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
                           }
@@ -6555,7 +6565,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                       {msg.from === 'them' && openChat.type === 'group' && (
                         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-                          <Image source={{ uri: msg.senderPhoto }} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: msg.senderColor }} />
+                          <Image source={msg.senderPhoto ? { uri: msg.senderPhoto } : undefined} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: msg.senderColor || '#818CF8' }} />
                           <View style={{ maxWidth: W * 0.72 }}>
                             {msg.senderName && <Text style={{ fontSize: 11, color: msg.senderColor || '#818CF8', fontWeight: '600', marginBottom: 3, marginLeft: 4 }}>{msg.senderName}</Text>}
                             <TouchableOpacity activeOpacity={0.8} onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setReplyTo({ text: msg.text, senderName: msg.senderName || 'them' }) }}>
