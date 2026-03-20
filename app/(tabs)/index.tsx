@@ -4737,6 +4737,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
   }, [])
 
+  // On load: remove stale event_attendees rows for official events user is no longer in
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const cleanup = async () => {
+      const { data } = await supabase
+        .from('event_attendees')
+        .select('event_ref_id')
+        .eq('profile_id', userData.dbId)
+      if (!data || data.length === 0) return
+      const joinedOfficialIds = new Set(
+        Object.keys(joinedEvents).map(Number).filter(id => joinedEvents[id] && id > 100000)
+      )
+      const stale = data.filter((r: any) => !joinedOfficialIds.has(r.event_ref_id))
+      if (stale.length > 0) {
+        const staleIds = stale.map((r: any) => r.event_ref_id)
+        await supabase.from('event_attendees').delete().eq('profile_id', userData.dbId).in('event_ref_id', staleIds)
+      }
+    }
+    cleanup()
+  }, [userData?.dbId])
+
   useEffect(() => {
     if (!persistLoaded.current) return
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
