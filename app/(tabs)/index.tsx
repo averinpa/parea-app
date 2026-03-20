@@ -2159,7 +2159,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {communityEvents.length > 0 ? (
           <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 8 }}>
             {communityEvents.map((ev: any) => {
-              const filled = ev.participantsCount || 0
+              const filled = ev.isHosted ? (approvedJoiners[ev.id] || []).length + 1 : ev.participantsCount || 0
               const total = ev.maxParticipants || 10
               const pct = Math.min(1, filled / total)
               const free = Math.max(0, total - filled)
