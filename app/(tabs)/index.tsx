@@ -4388,6 +4388,8 @@ const CREATE_EVENT_TYPES = [
 function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
   const insets = useSafeAreaInsets()
   const fullWindowHeightRef = useRef(Dimensions.get('window').height)
+  const insetsBottomRef = useRef(insets.bottom)
+  insetsBottomRef.current = insets.bottom
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
@@ -5393,10 +5395,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (Platform.OS !== 'android') return
     const show = Keyboard.addListener('keyboardDidShow', e => {
-      // Android <= 12 (API 32): adjustResize still works with edge-to-edge → no spacer needed
-      // Android >= 13 (API 33): adjustResize broken with edge-to-edge → use spacer
-      if ((Platform.Version as number) <= 32) return
-      setChatKeyboardHeight(e.endCoordinates.height)
+      const api = Platform.Version as number
+      // Android <= 14 (API 34): endCoordinates.height includes nav bar height → subtract it
+      // Android >= 15 (API 35): endCoordinates.height is keyboard only → use as-is
+      const spacer = api <= 34
+        ? Math.max(0, e.endCoordinates.height - insetsBottomRef.current)
+        : e.endCoordinates.height
+      setChatKeyboardHeight(spacer)
     })
     const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
