@@ -5649,7 +5649,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .then(({ error }) => { if (error) console.warn('leave join_request delete error:', error.message) })
                 // Пишем системное сообщение в DB → Даша увидит через realtime
                 supabase.from('messages').insert({
-                  community_event_id: evId,
+                  chat_id: leavingChat.id,
                   sender_id: userData.dbId,
                   text: `${userData.name || 'Someone'} left the group`,
                 }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
@@ -6501,7 +6501,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             // Удаляем join_request + пишем системное сообщение
                             supabase.from('join_requests').delete().eq('event_id', evId).eq('requester_id', userData.dbId)
                               .then(({ error }) => { if (error) console.warn('leave join_request error:', error.message) })
-                            supabase.from('messages').insert({ community_event_id: evId, sender_id: userData.dbId, text: `${userData.name || 'Someone'} left the group` })
+                            supabase.from('messages').insert({ chat_id: chatId, sender_id: userData.dbId, text: `${userData.name || 'Someone'} left the group` })
                               .then(({ error }) => { if (error) console.warn('leave msg error:', error.message) })
                             setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
                           }
@@ -6523,7 +6523,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
