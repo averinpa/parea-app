@@ -1607,11 +1607,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const now = Date.now()
 
   useEffect(() => {
-    supabase.from('official_events').select('*').order('created_at', { ascending: false })
+    const fetchOfficial = () => supabase.from('official_events').select('*').order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data && data.length > 0) setOfficialDbEvents(data)
         setOfficialDbLoading(false)
       })
+    fetchOfficial()
+    const interval = setInterval(fetchOfficial, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Parse event time string → Date (for calendar matching)
@@ -1732,6 +1735,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // Apply search + date filter to official
   const officialEvents = officialAll.filter(ev => {
+    if (ev.city && ev.city !== city) return false
+    if (categoryFilter && ev.category !== categoryFilter) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       if (!(ev.title || '').toLowerCase().includes(q) && !(ev.category || '').toLowerCase().includes(q)) return false
