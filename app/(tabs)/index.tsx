@@ -4495,7 +4495,40 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     }
     fetch()
     const interval = setInterval(fetch, 15000)
-    return () => clearInterval(interval)
+
+    // Realtime: update participantsCount instantly when someone joins or leaves
+    const jrChannel = supabase.channel('join_requests_counts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'join_requests' }, (payload: any) => {
+        const r = payload.new
+        if (r.status === 'approved' || r.status === 'confirmed') {
+          setDbCommunityEvents(prev => prev.map(e =>
+            e.id === r.event_id ? { ...e, participantsCount: (e.participantsCount || 1) + 1 } : e
+          ))
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'join_requests' }, (payload: any) => {
+        const r = payload.old
+        // Update feed participantsCount
+        setDbCommunityEvents(prev => prev.map(e =>
+          e.id === r.event_id ? { ...e, participantsCount: Math.max(1, (e.participantsCount || 1) - 1) } : e
+        ))
+        // Update host's approvedJoiners
+        if (r.requester_id) {
+          setApprovedJoiners(prev => {
+            const current = prev[r.event_id] || []
+            const updated = current.filter((p: any) => p.id !== r.requester_id)
+            if (updated.length === current.length) return prev
+            return { ...prev, [r.event_id]: updated }
+          })
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'join_requests' }, () => {
+        // On any status change just re-fetch counts
+        fetch()
+      })
+      .subscribe()
+
+    return () => { clearInterval(interval); supabase.removeChannel(jrChannel) }
   }, [userData?.dbId])
   const persistLoaded = useRef(false)
 
