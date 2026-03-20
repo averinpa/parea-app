@@ -5623,8 +5623,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
-              supabase.from('community_events').delete().eq('id', ev.id).then(({ error, data, status, statusText }) => { console.log('community_events delete:', { eventId: ev.id, error: error?.message, status, statusText }) })
-              supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error, count }) => { console.log('join_requests delete:', { eventId: ev.id, error: error?.message, count }) })
+              supabase.from('community_events').delete().eq('id', ev.id).then(({ error }) => { if (error) console.warn('event delete error:', error.message) })
+              supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error }) => { if (error) console.warn('join_requests delete error:', error.message) })
               showToast("Event cancelled 🗑️")
             }}
             onApproveJoiner={(eventId: number, joiner: any) => {
@@ -5741,7 +5741,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
               // Если хост уходит из своего чата → удаляем ивент (cascade удалит chat у участников)
               if (leavingChat?.hostEventId) {
-                supabase.from('events').delete().eq('id', leavingChat.hostEventId)
+                supabase.from('community_events').delete().eq('id', leavingChat.hostEventId)
                   .then(({ error }) => { if (error) console.warn('host event delete error:', error.message) })
                 setUserCreatedEvents(prev => prev.filter(e => e.id !== leavingChat.hostEventId))
                 setPendingJoinRequests(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
