@@ -4387,8 +4387,7 @@ const CREATE_EVENT_TYPES = [
 
 function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
   const insets = useSafeAreaInsets()
-  const insetsBottomRef = useRef(insets.bottom)
-  useEffect(() => { insetsBottomRef.current = insets.bottom }, [insets.bottom])
+  const fullWindowHeightRef = useRef(Dimensions.get('window').height)
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
@@ -5393,7 +5392,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   useEffect(() => {
     if (Platform.OS !== 'android') return
-    const show = Keyboard.addListener('keyboardDidShow', e => setChatKeyboardHeight(Math.max(0, e.endCoordinates.height - insetsBottomRef.current)))
+    const show = Keyboard.addListener('keyboardDidShow', e => {
+      const resized = fullWindowHeightRef.current - Dimensions.get('window').height
+      setChatKeyboardHeight(Math.max(0, e.endCoordinates.height - resized))
+    })
     const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
   }, [])
