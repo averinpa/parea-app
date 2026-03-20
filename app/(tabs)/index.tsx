@@ -6055,7 +6055,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 </ScrollView>
 
                 {/* Bottom button — pinned to bottom */}
-                <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 16 : insets.bottom > 0 ? insets.bottom + 12 : 20, backgroundColor: 'transparent' }}>
+                <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 40) + 12 : insets.bottom > 0 ? insets.bottom + 12 : 20, backgroundColor: 'transparent' }}>
                   {createStep < 4 ? (
                     <TouchableOpacity
                       style={[s.btnPrimary,
