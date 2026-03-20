@@ -24,11 +24,11 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
 | 9 | Official events load from DB (no mock flicker) | ✅ | Skeleton shown while loading |
-| 10 | Community events shown | ⬜ | |
-| 11 | Tonight's Vibe picker | ⬜ | |
-| 12 | City filter | ⬜ | |
-| 13 | Category filter | ⬜ | |
-| 14 | Event detail sheet opens | ⬜ | |
+| 10 | Community events shown | ✅ | |
+| 11 | Tonight's Vibe picker | ✅ | |
+| 12 | City filter | ✅ | fixed: official events filtered by city; section hides when empty |
+| 13 | Category filter | ✅ | added to officialEvents filter |
+| 14 | Event detail sheet opens | ✅ | |
 
 ---
 
@@ -72,11 +72,11 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 37 | Pending request card shown after joining | ⬜ | |
-| 38 | Host sees join request in VibeCheck | ⬜ | |
-| 39 | Host approves → chat created | ⬜ | |
+| 37 | Pending request card shown after joining | ✅ | fixed: was stuck after confirm |
+| 38 | Host sees join request in VibeCheck | ✅ | |
+| 39 | Host approves → chat created for host | ✅ | |
 | 40 | Host rejects → request removed | ⬜ | |
-| 41 | "Confirm & Open Chat" button (no invite flow for community) | ⬜ | |
+| 41 | "Confirm & Open Chat" → chat created, navigates to Messages | ✅ | fixed poll overwriting confirmed→joined |
 
 ---
 
@@ -86,8 +86,8 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 |---|---------|--------|-------|
 | 42 | Going tab shows joined events | ⬜ | |
 | 43 | Crew card shows real found count ("X found 🎯") | ⬜ | |
-| 44 | Chat opens and sends messages | ⬜ | |
-| 45 | Leave chat → removed from list | ⬜ | |
+| 44 | Chat opens and sends messages | ✅ | realtime works, auto-scroll fixed |
+| 45 | Leave chat → removed from list | ✅ | leave msg FK fixed (community_event_id) |
 | 46 | Chat expires after 24h | ⬜ | |
 
 ---
@@ -110,6 +110,32 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 | 51 | Bell shake animation on new notif | ⬜ | |
 | 52 | Notification panel opens / closes | ⬜ | |
 | 53 | Tapping notif navigates to correct tab | ⬜ | |
+
+---
+
+## Community Events — Participant Count
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 59 | Spots count correct in feed (not hardcoded 1) | ✅ | fetches from join_requests |
+| 60 | Host sees correct spots count (approvedJoiners + 1) | ✅ | |
+| 61 | Count updates instantly when someone joins | ✅ | realtime join_requests subscription |
+| 62 | Count updates instantly when someone leaves | ✅ | realtime DELETE handler |
+| 63 | Feed button shows "Joined ✓" for confirmed participants | ✅ | was showing "Request" |
+
+---
+
+## Chat — Group / Community
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 64 | Messages from 3rd member visible without reopening | ✅ | fetch profile on unknown sender_id |
+| 65 | lastMsg updates for all members when chat is closed | ✅ | background inbox subscription |
+| 66 | Unread dot shown on chat with new messages | ✅ | |
+| 67 | Unread dot clears when chat opened | ✅ | |
+| 68 | lastMsg bold when unread | ✅ | |
+| 69 | Host cancels event → chat removed for all participants | ✅ | deletes from community_events, cascade |
+| 70 | New member added to memberProfiles persists after chat close | ✅ | synced to chatList |
 
 ---
 

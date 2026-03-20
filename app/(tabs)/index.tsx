@@ -5092,7 +5092,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       let changed = false
       Object.keys(updated).forEach(id => {
         const numId = +id
-        const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId)
+        const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId) || numId > 100000
         if (!isMockOrOfficial && !dbIds.has(numId)) {
           deletedIds.push(numId)
           delete updated[numId]
