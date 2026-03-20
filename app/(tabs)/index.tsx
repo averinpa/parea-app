@@ -4683,7 +4683,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     fetchAttendees()
     // Poll every 60 seconds for new attendees
     const interval = setInterval(fetchAttendees, 60000)
-    return () => clearInterval(interval)
+    // Realtime: remove attendee instantly when they leave
+    const rtChannel = supabase.channel('event_attendees_rt')
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'event_attendees' }, (payload: any) => {
+        const { profile_id, event_ref_id } = payload.old
+        if (!profile_id || !event_ref_id) return
+        setEventAttendeesMap(prev => {
+          const current = prev[event_ref_id]
+          if (!current) return prev
+          const updated = current.filter((p: any) => p.id !== profile_id)
+          return { ...prev, [event_ref_id]: updated }
+        })
+      })
+      .subscribe()
+    return () => { clearInterval(interval); supabase.removeChannel(rtChannel) }
   }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
