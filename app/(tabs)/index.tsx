@@ -5393,8 +5393,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (Platform.OS !== 'android') return
     const show = Keyboard.addListener('keyboardDidShow', e => {
-      const resized = fullWindowHeightRef.current - Dimensions.get('window').height
-      setChatKeyboardHeight(Math.max(0, e.endCoordinates.height - resized))
+      // Android <= 12 (API 32): adjustResize still works with edge-to-edge → no spacer needed
+      // Android >= 13 (API 33): adjustResize broken with edge-to-edge → use spacer
+      if ((Platform.Version as number) <= 32) return
+      setChatKeyboardHeight(e.endCoordinates.height)
     })
     const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
