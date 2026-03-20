@@ -1801,12 +1801,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     )
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const label = isFull ? 'Full' : state === 'joined' ? 'Joined ✓' : state === 'pending' ? 'Requested…' : ev.type === 'community' ? 'Request' : 'Join'
+    const label = isFull ? 'Full' : (state === 'joined' || state === 'confirmed') ? 'Joined ✓' : state === 'pending' ? 'Requested…' : ev.type === 'community' ? 'Request' : 'Join'
     let bg: string, textColor: string
-    if (isFull)                   { bg = '#F1F5F9'; textColor = '#94A3B8' }
-    else if (state === 'joined')  { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
-    else if (state === 'pending') { bg = 'rgba(251,191,36,0.15)'; textColor = '#d97706' }
-    else                          { bg = '#6366F1'; textColor = '#fff' }
+    if (isFull)                                          { bg = '#F1F5F9'; textColor = '#94A3B8' }
+    else if (state === 'joined' || state === 'confirmed') { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
+    else if (state === 'pending')                        { bg = 'rgba(251,191,36,0.15)'; textColor = '#d97706' }
+    else                                                 { bg = '#6366F1'; textColor = '#fff' }
     return (
       <TouchableOpacity
         onPress={() => {
@@ -4441,11 +4441,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // Load community events from DB (other users' events) — poll every 15s
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from('community_events')
-        .select('*, host:profiles!host_id(id, name, photos, color, bio, age, langs)')
-        .order('created_at', { ascending: false })
-        .limit(30)
+      const [{ data }, { data: countData }] = await Promise.all([
+        supabase
+          .from('community_events')
+          .select('*, host:profiles!host_id(id, name, photos, color, bio, age, langs)')
+          .order('created_at', { ascending: false })
+          .limit(30),
+        supabase
+          .from('join_requests')
+          .select('event_id')
+          .in('status', ['approved', 'confirmed']),
+      ])
+      // Count approved+confirmed per event
+      const participantCounts: Record<number, number> = {}
+      countData?.forEach((r: any) => {
+        participantCounts[r.event_id] = (participantCounts[r.event_id] || 0) + 1
+      })
       if (data) {
         setDbCommunityEvents(data.filter(e => !deletedCommunityEventIds.current.has(e.id)).map(e => ({
           id: e.id,
@@ -4458,7 +4469,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           distance: '',
           gradient: e.gradient || ['#667eea', '#764ba2'],
           maxParticipants: e.max_participants || 5,
-          participantsCount: 1,
+          participantsCount: 1 + (participantCounts[e.id] || 0), // host + confirmed members
           seekerColors: ['#818CF8'],
           seekingCount: 0,
           isHosted: e.host_id === userData?.dbId,
@@ -4980,8 +4991,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               }
             }
             if (req.status === 'confirmed') {
-              if (!updated[req.event_id] || updated[req.event_id] === 'pending') {
-                updated[req.event_id] = 'joined'
+              if (!updated[req.event_id] || updated[req.event_id] === 'pending' || updated[req.event_id] === 'joined') {
+                updated[req.event_id] = 'confirmed'
                 changed = true
               }
             }
