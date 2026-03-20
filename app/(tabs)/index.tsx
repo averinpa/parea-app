@@ -4413,7 +4413,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [openChat, setOpenChat] = useState<any>(null)
   const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
   const [chatInput, setChatInput] = useState('')
-  const [chatKeyboardHeight, setChatKeyboardHeight] = useState(0)
   const [replyTo, setReplyTo] = useState<{ text: string; senderName: string } | null>(null)
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
@@ -5388,14 +5387,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       realtimeChatRef.current = null
     }
   }, [openChat?.id, openChat?.communityEventId, openChat?.hostEventId, userData?.dbId])
-
-  // ── Keyboard height tracking for chat on Android ──────────────────────────
-  useEffect(() => {
-    if (Platform.OS !== 'android') return
-    const show = Keyboard.addListener('keyboardDidShow', e => setChatKeyboardHeight(e.endCoordinates.height))
-    const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
-    return () => { show.remove(); hide.remove() }
-  }, [])
 
   return (
     <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
@@ -6431,7 +6422,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {openChat && (
         <Modal visible animationType="slide" statusBarTranslucent onRequestClose={() => { setOpenChat(null); setReplyTo(null) }}>
           <StatusBar style="dark" backgroundColor="#ffffff" translucent />
-          <View style={{ flex: 1, backgroundColor: '#F0F2F5', paddingBottom: Platform.OS === 'android' ? chatKeyboardHeight : 0 }}>
+          <View style={{ flex: 1, backgroundColor: '#F0F2F5' }}>
             {/* Header extends behind status bar */}
             <View style={{ backgroundColor: '#fff', paddingTop: insets.top, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 }}>
               <View style={s.chatHeader}>
@@ -6532,7 +6523,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={Platform.OS === 'android' ? -insets.bottom : 0}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
@@ -6611,7 +6602,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                   </View>
                 )}
-                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'android' && chatKeyboardHeight > 0 ? 12 : Math.max(insets.bottom + 6, 16) }]}>
+                <View style={[s.chatInputRow, { paddingBottom: Math.max(insets.bottom + 6, 16) }]}>
                   <TextInput
                     style={s.chatInput} value={chatInput} onChangeText={setChatInput}
                     placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
