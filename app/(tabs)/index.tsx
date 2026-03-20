@@ -224,6 +224,46 @@ const MOCK_MESSAGES: Record<number, Array<{ from: string; text: string; time: st
 
 type MatchResult = { id: number; score: number; reason: string }
 
+async function aiScoreRealAttendees(
+  user: { name?: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string },
+  candidates: { id: string; name: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string }[]
+): Promise<{ id: string; score: number; vibe: string }[]> {
+  if (candidates.length === 0) return []
+  if (!ANTHROPIC_KEY) return candidates.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' }))
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: `You are a social compatibility matcher for Parea. Score each candidate's compatibility with the user (0-100).
+
+User: ${user.name}, age ${user.age}, langs=[${(user.langs||[]).join(',')}], interests=[${(user.interests||[]).join(',')}], drinks=${user.drinksPref||'?'}, smoking=${user.smokingPref||'?'}, transport=${user.transport||'?'}, bio="${user.bio||''}"
+
+Candidates:
+${candidates.map((c,i) => `${i+1}. id="${c.id}" ${c.name} age=${c.age} langs=[${(c.langs||[]).join(',')}] interests=[${(c.interests||[]).join(',')}] drinks=${c.drinksPref||'?'} smoking=${c.smokingPref||'?'} transport=${c.transport||'?'} bio="${c.bio||''}"`).join('\n')}
+
+Scoring: shared interests 40%, language overlap 25%, lifestyle (drinks+smoking) 20%, bio vibe 10%, transport complement 5%.
+Return ONLY valid JSON array: [{"id":"exact-id-string","score":85,"vibe":"Short 2-3 word tag"}]`,
+        }],
+      }),
+    })
+    const data = await res.json()
+    const text = data?.content?.[0]?.text?.trim() || '[]'
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    const parsed: { id: string; score: number; vibe: string }[] = jsonMatch ? JSON.parse(jsonMatch[0]) : []
+    return candidates.map(c => {
+      const m = parsed.find(p => p.id === c.id)
+      return { id: c.id, score: m?.score ?? 75, vibe: m?.vibe ?? 'Real attendee' }
+    })
+  } catch {
+    return candidates.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' }))
+  }
+}
+
 async function aiMatchCompanions(
   user: {
     interests: string[]; bio: string; age: string | number; langs: string[]
@@ -4621,22 +4661,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               _real: true, score: null as number | null, vibe: '',
             }
           })
-          try {
-            const { data: scored } = await supabase.functions.invoke('match-crew', {
-              body: {
-                user_profile: {
-                  name: userData.name, age: userData.age,
-                  langs: userData.langs || [], interests: userData.interests || [],
-                  drinksPref: userData.drinksPref || '', smokingPref: userData.smokingPref || '',
-                  bio: userData.bio || '', transport: userEventTransport[evId] || '',
-                },
-                candidates,
-              },
-            })
-            map[evId] = Array.isArray(scored) ? scored : candidates
-          } catch {
-            map[evId] = candidates
-          }
+          const scores = await aiScoreRealAttendees(
+            {
+              name: userData.name, age: userData.age,
+              langs: userData.langs || [], interests: userData.interests || [],
+              drinksPref: userData.drinksPref || '', smokingPref: userData.smokingPref || '',
+              bio: userData.bio || '', transport: userEventTransport[evId] || '',
+            },
+            candidates
+          )
+          map[evId] = candidates.map(c => {
+            const s = scores.find(r => r.id === c.id)
+            return s ? { ...c, score: s.score, vibe: s.vibe } : c
+          })
         } else if (data) {
           map[evId] = []
         }
