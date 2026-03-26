@@ -5738,10 +5738,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   for (const partner of realPartners) {
                     const key = `${ev.id}_${partner.id}`
                     if (sentCrewInvites[key]) continue
-                    await supabase.from('crew_invites').upsert({
+                    const { error: inviteErr } = await supabase.from('crew_invites').upsert({
                       event_ref_id: ev.id, event_title: ev.title,
                       inviter_id: userData?.dbId, invitee_id: partner.id, status: 'pending',
                     }, { onConflict: 'event_ref_id,inviter_id,invitee_id' })
+                    if (inviteErr) { console.warn('crew_invite upsert error:', inviteErr.message, inviteErr.code); continue }
                     setSentCrewInvites(prev => ({ ...prev, [key]: 'pending' }))
                     const { data: mutualInvite } = await supabase
                       .from('crew_invites').select('*')
