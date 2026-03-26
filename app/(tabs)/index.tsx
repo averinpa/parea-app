@@ -5956,9 +5956,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onLeave={(ev: any) => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               if (ev.type === 'official' && userData?.dbId) {
+                console.log('onLeave official:', { evId: ev.id, evType: ev.type, dbId: userData.dbId })
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).eq('status', 'pending')
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending').then(r => console.log('cancel inviter:', r.error?.message, r.count))
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).eq('status', 'pending').then(r => console.log('cancel invitee:', r.error?.message, r.count))
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
