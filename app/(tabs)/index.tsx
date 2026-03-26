@@ -3660,7 +3660,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const statusBg    = (isActive || hasReal) ? 'rgba(67,233,123,0.15)' : 'rgba(251,191,36,0.13)'
             const statusBorder= (isActive || hasReal) ? 'rgba(67,233,123,0.35)' : 'rgba(251,191,36,0.28)'
             // Invite state: have we sent invites to all real attendees?
-            const realPartners = partners.filter((p: any) => p._real)
+            const passedIds = new Set(passedRequests[ev.id] || [])
+            const realPartners = partners.filter((p: any) => p._real && !passedIds.has(p.id))
             const inviteSentToAll = realPartners.length > 0 && realPartners.every((p: any) => !!sentCrewInvites[`${ev.id}_${p.id}`])
             // Hide "Let's go!" if we have an incoming invite from any of these partners for this event
             const hasIncomingInviteForEvent = incomingCrewInvites.some((inv: any) => inv.event_ref_id === ev.id)
@@ -3742,11 +3743,17 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <Text style={{ fontSize: 10, color: '#818CF8', textAlign: 'center', marginTop: 4, fontWeight: '700' }}>You</Text>
                       </View>
                       {/* Partners */}
-                      {partners.map((p: any, i: number) => {
+                      {partners.filter((p: any) => !new Set(passedRequests[ev.id] || []).has(p.id)).map((p: any, i: number) => {
                         const match = aiMatches.find((m: any) => m.id === p.id)
                         const isReal = !!p._real
                         return (
-                          <TouchableOpacity key={i} onPress={() => {
+                          <View key={i} style={{ position: 'relative' }}>
+                          {isReal && (
+                            <TouchableOpacity onPress={() => onPassJoiner?.(ev.id, p)} style={{ position: 'absolute', top: -4, right: -4, zIndex: 10, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(239,68,68,0.9)', alignItems: 'center', justifyContent: 'center' }}>
+                              <Text style={{ fontSize: 10, color: '#fff', fontWeight: '900' }}>×</Text>
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity onPress={() => {
                             const aiScore = isReal ? (p.score ?? null) : (match?.score ?? 50)
                             const aiReason = isReal ? (p.vibe || 'Real attendee') : (match?.reason ?? 'Ready to connect')
                             setPreviewProfile({ ...p, flag: FLAG_MAP[p.langs?.[0]] || '🌍', langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore, aiReason })
@@ -3776,6 +3783,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                               <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2, fontWeight: '600' }}>{p.name}</Text>
                             </View>
                           </TouchableOpacity>
+                          </View>
                         )
                       })}
                       {/* Empty slots = cap - found (me already counted in found) */}
@@ -6047,13 +6055,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }}
             passedRequests={passedRequests}
             onPassJoiner={(eventId: number, joiner: any) => {
+              const passId = joiner.requestId || joiner.id
               setPendingJoinRequests(prev => ({
                 ...prev,
                 [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
               }))
               setPassedRequests(prev => ({
                 ...prev,
-                [eventId]: [...(prev[eventId] || []), joiner.requestId],
+                [eventId]: [...(prev[eventId] || []), passId],
               }))
             }}
             onGoToMessages={() => {
