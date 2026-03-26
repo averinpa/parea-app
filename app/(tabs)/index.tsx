@@ -5262,6 +5262,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // Clean up joinedEvents + chats for community events that no longer exist in DB
   useEffect(() => {
     const dbIds = new Set(dbCommunityEvents.map(e => e.id))
+    // Also remove userCreatedEvents that no longer exist in DB
+    setUserCreatedEvents(prev => {
+      const filtered = prev.filter(ev => dbIds.has(ev.id))
+      return filtered.length !== prev.length ? filtered : prev
+    })
     const deletedIds: number[] = []
     setJoinedEvents(prev => {
       const updated = { ...prev }
