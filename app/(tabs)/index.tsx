@@ -4720,8 +4720,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       setEventAttendeesMap(map)
     }
     fetchAttendees()
-    // Poll every 60 seconds for new attendees
-    const interval = setInterval(fetchAttendees, 60000)
+    // Poll every 15 seconds for new attendees
+    const interval = setInterval(fetchAttendees, 15000)
     // Realtime: remove attendee instantly when they leave
     const rtChannel = supabase.channel('event_attendees_rt')
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'event_attendees' }, (payload: any) => {
