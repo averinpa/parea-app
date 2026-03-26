@@ -3649,23 +3649,21 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const isParty    = !isCommunity && format === 'party'
             // For official events: use real attendees from DB; for community: use other approved members
             const realAttendees = isCommunity ? (communityEventMembers[ev.id] || []) : (ev.type === 'official' ? (eventAttendeesMap[ev.id] || []) : [])
-            const hasRealAttendees = realAttendees.length > 0
-            // found = me (1) + real partners; if no real data yet show 1/cap
-            const found      = isCommunity ? (hasRealAttendees ? realAttendees.length + 1 : 1) : (hasRealAttendees ? realAttendees.length + 1 : 1)
+            const passedIds = new Set(passedRequests[ev.id] || [])
+            const partners   = isCommunity ? realAttendees : realAttendees
+            const realPartners = partners.filter((p: any) => p._real && !passedIds.has(p.id))
+            const hasRealAttendees = realPartners.length > 0
+            // found = me (1) + non-skipped real partners
+            const found      = hasRealAttendees ? realPartners.length + 1 : 1
             const isActive   = hasRealAttendees || isCommunity
-            const partners   = isCommunity ? realAttendees : (hasRealAttendees ? realAttendees : [])
-
-            // Status label
+            // Status label (excludes skipped people from count)
             const statusLabel = isCommunity
               ? (hasRealAttendees ? `${realAttendees.length + 1} in group 🎯` : 'HOST APPROVED ✓')
-              : partners.some((p: any) => p._real) ? `${partners.filter((p: any) => p._real).length} found 🎯` : (isParty ? 'GROUP ACTIVE 🔥' : 'Looking...')
-            const hasReal = partners.some((p: any) => p._real)
+              : realPartners.length > 0 ? `${realPartners.length} found 🎯` : (isParty ? 'GROUP ACTIVE 🔥' : 'Looking...')
+            const hasReal = realPartners.length > 0
             const statusColor = (isActive || hasReal) ? '#43E97B' : '#FBBF24'
             const statusBg    = (isActive || hasReal) ? 'rgba(67,233,123,0.15)' : 'rgba(251,191,36,0.13)'
             const statusBorder= (isActive || hasReal) ? 'rgba(67,233,123,0.35)' : 'rgba(251,191,36,0.28)'
-            // Invite state: have we sent invites to all real attendees?
-            const passedIds = new Set(passedRequests[ev.id] || [])
-            const realPartners = partners.filter((p: any) => p._real && !passedIds.has(p.id))
             const inviteSentToAll = realPartners.length > 0 && realPartners.every((p: any) => !!sentCrewInvites[`${ev.id}_${p.id}`])
             // Hide "Let's go!" if we have an incoming invite from any of these partners for this event
             const hasIncomingInviteForEvent = incomingCrewInvites.some((inv: any) => inv.event_ref_id === ev.id)
@@ -4806,6 +4804,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [incomingCrewInvites, setIncomingCrewInvites] = useState<any[]>([])
   const [sentCrewInvites, setSentCrewInvites] = useState<Record<string, string>>({}) // `${eventId}_${profileId}` -> 'pending'|'accepted'
   const [officialEventChatMap, setOfficialEventChatMap] = useState<Record<number, number>>({}) // eventId -> chatId
+  const officialEventChatMapRef = useRef<Record<number, number>>({})
+  officialEventChatMapRef.current = officialEventChatMap
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
@@ -4919,33 +4919,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (saved.chatList) setChatList(saved.chatList)
         if (saved.chatMessages) setChatMessages(saved.chatMessages)
-        if (saved.sentCrewInvites) setSentCrewInvites(saved.sentCrewInvites)
+        if (saved.sentCrewInvites) {
+          setSentCrewInvites(saved.sentCrewInvites)
+          // Pre-populate ref so poll doesn't re-add already-processed invites after restart
+          Object.entries(saved.sentCrewInvites).forEach(([key, val]) => {
+            if (val === 'accepted') acceptedInviteKeysRef.current.add(key)
+          })
+        }
       } catch {}
       persistLoaded.current = true
       setPersistLoadedState(true)
     })
   }, [])
 
-  // On load: remove stale event_attendees rows for official events user is no longer in
-  useEffect(() => {
-    if (!userData?.dbId || !persistLoadedState) return
-    const cleanup = async () => {
-      const { data } = await supabase
-        .from('event_attendees')
-        .select('event_ref_id')
-        .eq('profile_id', userData.dbId)
-      if (!data || data.length === 0) return
-      const joinedOfficialIds = new Set(
-        Object.keys(joinedEvents).map(Number).filter(id => joinedEvents[id] && id > 100000)
-      )
-      const stale = data.filter((r: any) => !joinedOfficialIds.has(r.event_ref_id))
-      if (stale.length > 0) {
-        const staleIds = stale.map((r: any) => r.event_ref_id)
-        await supabase.from('event_attendees').delete().eq('profile_id', userData.dbId).in('event_ref_id', staleIds)
-      }
-    }
-    cleanup()
-  }, [userData?.dbId, persistLoadedState])
 
   useEffect(() => {
     if (!persistLoaded.current) return
@@ -5014,6 +5000,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }, [eventAttendeesMap])
 
   // ── Incoming crew invites (invitee side) — realtime ───────────────────────
+  const joinedEventsRef = useRef<Record<number, string>>({})
+  useEffect(() => { joinedEventsRef.current = joinedEvents }, [joinedEvents])
   useEffect(() => {
     if (!userData?.dbId) return
     const fetchIncoming = async () => {
@@ -5032,6 +5020,44 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
       .subscribe()
     return () => { clearInterval(interval); supabase.removeChannel(channel) }
+  }, [userData?.dbId])
+
+  // ── Invitee side: detect when crew partner leaves (accepted invite disappears) ─
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const checkPartnerLeft = async () => {
+      // Find official events where we are 'confirmed' (have a crew chat)
+      const confirmedEventIds = Object.keys(joinedEventsRef.current)
+        .map(Number)
+        .filter(id => joinedEventsRef.current[id] === 'confirmed' && id > 100000)
+      if (confirmedEventIds.length === 0) return
+      // Check if accepted invite still exists for each confirmed event
+      const { data } = await supabase
+        .from('crew_invites')
+        .select('event_ref_id, event_title')
+        .eq('invitee_id', userData.dbId)
+        .eq('status', 'accepted')
+        .in('event_ref_id', confirmedEventIds)
+      if (!data) return
+      const activeEventIds = new Set(data.map((r: any) => r.event_ref_id))
+      // Events that are confirmed but have no accepted invite → partner left
+      for (const evId of confirmedEventIds) {
+        if (activeEventIds.has(evId)) continue
+        console.log('Partner left event', evId, '— resetting to looking')
+        // Remove duo chat for this event
+        const chatIdToRemove = officialEventChatMapRef.current[evId]
+        if (chatIdToRemove) setChatList(prev => prev.filter((c: any) => c.id !== chatIdToRemove))
+        // Reset event status back to 'going'
+        setJoinedEvents(prev => ({ ...prev, [evId]: 'joined' }))
+        // Reset event_attendees status back to 'looking' in DB
+        supabase.from('event_attendees').update({ status: 'looking' })
+          .eq('event_ref_id', evId).eq('profile_id', userData.dbId)
+        showToast('Your crew partner left — searching again 🔍')
+      }
+    }
+    checkPartnerLeft()
+    const interval = setInterval(checkPartnerLeft, 15000)
+    return () => clearInterval(interval)
   }, [userData?.dbId])
 
   // ── Realtime: detect when added to a crew group chat ─────────────────────
@@ -6113,8 +6139,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (ev.type === 'official' && userData?.dbId) {
                 console.log('onLeave official:', { evId: ev.id, evType: ev.type, dbId: userData.dbId })
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending').then(r => console.log('cancel inviter:', r.error?.message, r.count))
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).eq('status', 'pending').then(r => console.log('cancel invitee:', r.error?.message, r.count))
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted']).then(r => console.log('cancel inviter:', r.error?.message, r.count))
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted']).then(r => console.log('cancel invitee:', r.error?.message, r.count))
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
@@ -6287,8 +6313,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => prev.filter(c => c.event !== ev.title))
               if (ev.type === 'official' && userData?.dbId) {
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).eq('status', 'pending')
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
@@ -7582,6 +7608,7 @@ export default function App() {
   }
 
   const handleLogOut = async () => {
+    if (userData?.authId) await AsyncStorage.removeItem(`parea_feed_${userData.authId}`)
     await supabase.auth.signOut()
     setUserData({})
     setAuthUserId(null)
