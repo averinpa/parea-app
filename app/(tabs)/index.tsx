@@ -4927,9 +4927,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .from('crew_invites')
         .select('*, invitee:profiles!crew_invites_invitee_id_fkey(*)')
         .eq('inviter_id', userData.dbId)
-        .eq('status', 'accepted')
+        .in('status', ['accepted', 'cancelled'])
+      // Clear sentCrewInvites for cancelled invites
+      const cancelled = (data || []).filter((inv: any) => inv.status === 'cancelled')
+      if (cancelled.length > 0) {
+        setSentCrewInvites(prev => {
+          const next = { ...prev }
+          cancelled.forEach((inv: any) => { delete next[`${inv.event_ref_id}_${inv.invitee_id}`] })
+          return next
+        })
+      }
+      const acceptedData = (data || []).filter((inv: any) => inv.status === 'accepted')
       if (!data) return
-      for (const inv of data) {
+      for (const inv of acceptedData) {
         const key = `${inv.event_ref_id}_${inv.invitee_id}`
         if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
         acceptedInviteKeysRef.current.add(key)
@@ -5948,6 +5958,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (ev.type === 'official' && userData?.dbId) {
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).eq('status', 'pending')
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
@@ -6120,6 +6131,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (ev.type === 'official' && userData?.dbId) {
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).eq('status', 'pending')
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
