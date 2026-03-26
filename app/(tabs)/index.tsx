@@ -5776,6 +5776,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       }, ...prev])
                       setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                       setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+                      setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== mutualInvite.id))
                       showToast('Mutual match! 🎉')
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
                       setMessagesInitialSubTab('messages'); setActiveTab('messages')
