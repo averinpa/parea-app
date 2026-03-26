@@ -3662,6 +3662,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             // Invite state: have we sent invites to all real attendees?
             const realPartners = partners.filter((p: any) => p._real)
             const inviteSentToAll = realPartners.length > 0 && realPartners.every((p: any) => !!sentCrewInvites[`${ev.id}_${p.id}`])
+            // Hide "Let's go!" if we have an incoming invite from any of these partners for this event
+            const hasIncomingInviteForEvent = incomingCrewInvites.some((inv: any) => inv.event_ref_id === ev.id)
 
             return (
               <View key={ev.id} style={{
@@ -3831,6 +3833,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             </View>
                           )
                         }
+                        if (hasIncomingInviteForEvent && !isCommunity && format === '1+1') return null
                         return (
                           <TouchableOpacity
                             activeOpacity={isWaiting || inviteSentToAll ? 1 : 0.85}
