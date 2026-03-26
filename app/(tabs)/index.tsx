@@ -4877,12 +4877,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       if (data) setIncomingCrewInvites(data)
     }
     fetchIncoming()
+    const interval = setInterval(fetchIncoming, 15000)
     const channel = supabase.channel('crew_invites_incoming')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crew_invites', filter: `invitee_id=eq.${userData.dbId}` }, () => {
         fetchIncoming()
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { clearInterval(interval); supabase.removeChannel(channel) }
   }, [userData?.dbId])
 
   // ── Realtime: detect when added to a crew group chat ─────────────────────
