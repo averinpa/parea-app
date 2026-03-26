@@ -4932,9 +4932,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .from('crew_invites')
         .select('*, invitee:profiles!crew_invites_invitee_id_fkey(*)')
         .eq('inviter_id', userData.dbId)
-        .in('status', ['accepted', 'cancelled'])
-      // Clear sentCrewInvites for cancelled invites
-      const cancelled = (data || []).filter((inv: any) => inv.status === 'cancelled')
+        .in('status', ['accepted', 'cancelled', 'declined'])
+      // Clear sentCrewInvites for cancelled/declined invites
+      const cancelled = (data || []).filter((inv: any) => inv.status === 'cancelled' || inv.status === 'declined')
       if (cancelled.length > 0) {
         setSentCrewInvites(prev => {
           const next = { ...prev }
