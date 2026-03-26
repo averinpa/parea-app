@@ -4725,6 +4725,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     // Realtime: remove attendee instantly when they leave
     const rtChannel = supabase.channel('event_attendees_rt')
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'event_attendees' }, (payload: any) => {
+        console.log('event_attendees DELETE payload:', JSON.stringify(payload.old))
         const { profile_id, event_ref_id } = payload.old
         if (!profile_id || !event_ref_id) return
         setEventAttendeesMap(prev => {
