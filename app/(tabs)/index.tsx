@@ -2721,6 +2721,20 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{isCommunity ? 'View event →' : "Who's going? →"}</Text>
                       </TouchableOpacity>
                     </View>
+
+                    {/* Can't make it — prominent */}
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                        Alert.alert("Can't make it?", `Your spot will be freed and${ev.type === 'community' ? ' the group will be notified' : ' your details will be removed'}.`, [
+                          { text: "Yes, leave", style: 'destructive', onPress: () => onLeaveEvent?.(ev) },
+                          { text: 'Keep my plans', style: 'cancel' },
+                        ])
+                      }}
+                      style={{ marginTop: 10, paddingVertical: 10, borderRadius: 12, alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.06)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.15)' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#ef4444' }}>😔 Can't make it</Text>
+                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               )
@@ -3278,7 +3292,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {} }: any) {
   // Official + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
@@ -3592,8 +3606,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
               </View>
             )
           })}
-          {/* ── Incoming crew invites ── */}
-          {incomingCrewInvites.map((invite: any) => {
+          {/* ── Incoming crew invites for events not in user's list (edge case) ── */}
+          {incomingCrewInvites.filter((invite: any) => !myEvents.some((ev: any) => ev.id === invite.event_ref_id)).map((invite: any) => {
             const inviter = invite.inviter || {}
             return (
               <View key={invite.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.45)' }}>
@@ -3611,22 +3625,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'} wants to crew up!</Text>
                       <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{invite.event_title}</Text>
                     </View>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.2)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#818CF8' }}>INVITE 🎯</Text>
-                    </View>
                   </View>
-                  {inviter.bio ? <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 14, lineHeight: 17 }} numberOfLines={2}>{inviter.bio}</Text> : null}
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={() => onAcceptInvite?.(invite)}
-                      style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
+                    <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(invite)} style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
                       <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => onDeclineInvite?.(invite)}
-                      style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(invite)} style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
                       <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
                     </TouchableOpacity>
                   </View>
@@ -3727,7 +3731,143 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     )}
                   </View>
 
-                  {/* Clickable avatars */}
+                  {/* ── DUO (1+1) official event — one person at a time ── */}
+                  {!isCommunity && format === '1+1' ? (() => {
+                    const existingChatId = officialEventChatMap[ev.id]
+                    // If chat already created → show Open Chat
+                    if (existingChatId) {
+                      return (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          onPress={() => onGoToMessages?.()}
+                          style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                          <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat 💬</Text>
+                        </TouchableOpacity>
+                      )
+                    }
+                    // Current person to show (first non-passed real attendee)
+                    const currentPerson = realPartners[0]
+                    // Incoming invite from this specific person
+                    const incomingFromCurrent = currentPerson
+                      ? incomingCrewInvites.find((inv: any) => inv.event_ref_id === ev.id && inv.inviter_id === currentPerson.id)
+                      : null
+                    // Any other incoming invite for this event (from someone not currently shown)
+                    const anyIncoming = incomingCrewInvites.find((inv: any) => inv.event_ref_id === ev.id)
+
+                    if (!currentPerson && !anyIncoming) {
+                      // No matches yet
+                      return (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' }}>
+                          <Text style={{ fontSize: 18 }}>🔍</Text>
+                          <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>Looking for people going to this event. You'll be notified when someone matches!</Text>
+                        </View>
+                      )
+                    }
+
+                    // Show incoming invite card inline (from someone not in current queue)
+                    if (!currentPerson && anyIncoming) {
+                      const inviter = anyIncoming.inviter || {}
+                      return (
+                        <View style={{ gap: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            {inviter.photos?.[0] ? (
+                              <Image source={{ uri: inviter.photos[0] }} style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(99,102,241,0.4)' }} />
+                            ) : (
+                              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff' }}>{(inviter.name || '?')[0]}</Text>
+                              </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'}</Text>
+                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>wants to go together 🎯</Text>
+                            </View>
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )
+                    }
+
+                    // Show current person with action buttons
+                    const inviteSent = !!sentCrewInvites[`${ev.id}_${currentPerson!.id}`]
+                    const scoreVal = currentPerson!.score
+                    const scoreColor = scoreVal != null && scoreVal >= 75 ? '#43E97B' : '#818CF8'
+                    return (
+                      <View style={{ gap: 14 }}>
+                        {/* Profile card */}
+                        <TouchableOpacity activeOpacity={0.85} onPress={() => {
+                          setPreviewProfile({ ...currentPerson, flag: FLAG_MAP[currentPerson.langs?.[0]] || '🌍', langs: (currentPerson.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: scoreVal, aiReason: currentPerson.vibe || 'Real attendee' })
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                        }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                            {currentPerson!.photo ? (
+                              <Image source={{ uri: currentPerson!.photo }} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: scoreColor + '60' }} />
+                            ) : (
+                              <LinearGradient colors={currentPerson!.colors || ['#6366F1','#818CF8']} style={{ width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                                <Text style={{ fontSize: 28 }}>{currentPerson!.emoji || '🎵'}</Text>
+                              </LinearGradient>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{currentPerson!.name}</Text>
+                              {currentPerson!.bio ? <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3, lineHeight: 17 }} numberOfLines={2}>{currentPerson!.bio}</Text> : null}
+                            </View>
+                            {scoreVal != null && (
+                              <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: scoreColor + '22', borderWidth: 1, borderColor: scoreColor + '55' }}>
+                                <Text style={{ fontSize: 13, fontWeight: '900', color: scoreColor }}>{scoreVal}%</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* Action buttons */}
+                        {incomingFromCurrent ? (
+                          // B sees A pressed Let's go → show Accept / Decline
+                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : inviteSent ? (
+                          // Invite already sent — show sent state + Skip
+                          <View style={{ gap: 10 }}>
+                            <View style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#43E97B' }}>Invite sent ✓</Text>
+                            </View>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => { onPassJoiner?.(ev.id, currentPerson); Haptics.selectionAsync() }} style={{ borderRadius: 99, paddingVertical: 11, alignItems: 'center' }}>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.3)' }}>Skip and see next</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          // Default: Let's go + Skip
+                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity
+                              activeOpacity={0.85}
+                              onPress={() => { onConfirm?.(ev, [currentPerson], format); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
+                              style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Let's go! 🚀</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => { onPassJoiner?.(ev.id, currentPerson); Haptics.selectionAsync() }}
+                              style={{ paddingHorizontal: 22, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.45)' }}>Skip</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    )
+                  })() : (
+                  <>
+                  {/* ── Non-duo: avatar row + CTA (squad / party / community) ── */}
                   <View style={{ marginBottom: isActive ? 20 : 0 }}>
                     {(partners.length > 0) && (
                       <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, marginBottom: 12 }}>
@@ -3747,12 +3887,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         const match = aiMatches.find((m: any) => m.id === p.id)
                         const isReal = !!p._real
                         return (
-                          <View key={i} style={{ position: 'relative' }}>
-                          {isReal && (
-                            <TouchableOpacity onPress={() => onPassJoiner?.(ev.id, p)} style={{ position: 'absolute', top: -4, right: -4, zIndex: 10, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(239,68,68,0.9)', alignItems: 'center', justifyContent: 'center' }}>
-                              <Text style={{ fontSize: 10, color: '#fff', fontWeight: '900' }}>×</Text>
-                            </TouchableOpacity>
-                          )}
+                          <View key={i} style={{ alignItems: 'center' }}>
                           <TouchableOpacity onPress={() => {
                             const aiScore = isReal ? (p.score ?? null) : (match?.score ?? 50)
                             const aiReason = isReal ? (p.vibe || 'Real attendee') : (match?.reason ?? 'Ready to connect')
@@ -3841,7 +3976,6 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             </View>
                           )
                         }
-                        if (hasIncomingInviteForEvent && !isCommunity && format === '1+1') return null
                         return (
                           <TouchableOpacity
                             activeOpacity={isWaiting || inviteSentToAll ? 1 : 0.85}
@@ -3861,6 +3995,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Plans changed</Text>
                       </TouchableOpacity>
                     </View>
+                  )}
+                  </>
                   )}
                 </View>
               </View>
@@ -4669,6 +4805,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [eventAttendeesMap, setEventAttendeesMap] = useState<Record<number, any[]>>({})
   const [incomingCrewInvites, setIncomingCrewInvites] = useState<any[]>([])
   const [sentCrewInvites, setSentCrewInvites] = useState<Record<string, string>>({}) // `${eventId}_${profileId}` -> 'pending'|'accepted'
+  const [officialEventChatMap, setOfficialEventChatMap] = useState<Record<number, number>>({}) // eventId -> chatId
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
@@ -4957,6 +5094,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
         acceptedInviteKeysRef.current.add(key)
         setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+        setOfficialEventChatMap(prev => ({ ...prev, [inv.event_ref_id]: inv.chat_id }))
         setChatList(prev => {
           if (prev.some(c => c.id === inv.chat_id)) return prev
           const partner = inv.invitee
@@ -5750,6 +5888,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             sentCrewInvites={sentCrewInvites}
             readyCountMap={readyCountMap}
             crewPreviewMap={crewPreviewMap}
+            officialEventChatMap={officialEventChatMap}
             onGoHome={() => setActiveTab('home')}
             onConfirm={async (ev: any, partners: any[], format: string) => {
               const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
@@ -5788,6 +5927,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       }, ...prev])
                       setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                       setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+                      setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatData.id }))
                       setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== mutualInvite.id))
                       showToast('Mutual match! 🎉')
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -5957,6 +6097,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [invite.event_ref_id]: 'confirmed' }))
               setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
+              setOfficialEventChatMap(prev => ({ ...prev, [invite.event_ref_id]: chatData.id }))
               showToast('Crew confirmed! 🎉')
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
