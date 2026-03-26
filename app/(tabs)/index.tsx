@@ -2436,11 +2436,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {} }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {} }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>; allEvents?: any[]; onEventDetail?: (ev: any) => void;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
-  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>;
+  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>; passedRequests?: Record<number, string[]>;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
@@ -2602,17 +2602,19 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const threshold     = VIBE_FORMAT_THRESHOLD[format] || cap
               const isCommunity   = ev.type === 'community'
               const realAttendees = ev.type === 'official' ? (eventAttendeesMap[ev.id] || []) : []
-              const hasReal       = realAttendees.length > 0
-              const found         = hasReal ? realAttendees.length + 1 : 1
+              const passedIdsPlans = new Set<string>(passedRequests[ev.id] || [])
+              const nonPassedAttendees = realAttendees.filter((p: any) => !passedIdsPlans.has(p.id))
+              const hasReal       = nonPassedAttendees.length > 0
+              const found         = hasReal ? nonPassedAttendees.length + 1 : 1
               const isActive      = hasReal && found >= threshold
-              const crewProfiles  = hasReal ? realAttendees.slice(0, cap - 1) : []
+              const crewProfiles  = hasReal ? nonPassedAttendees.slice(0, cap - 1) : []
 
               // Smart status badge
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
               const statusLabel = isCommunity
                 ? (isConfirmed ? 'Confirmed ✅' : joinedEvents[ev.id] === 'pending' ? 'Pending ⏳' : 'Approved ✓')
                 : isConfirmed ? 'Confirmed ✅'
-                : hasReal ? `${realAttendees.length} found 🎯`
+                : hasReal ? `${nonPassedAttendees.length} found 🎯`
                 : 'Looking...'
               const statusColor = isCommunity
                 ? (isConfirmed ? '#16a34a' : joinedEvents[ev.id] === 'pending' ? '#d97706' : '#16a34a')
@@ -4807,6 +4809,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const officialEventChatMapRef = useRef<Record<number, number>>({})
   officialEventChatMapRef.current = officialEventChatMap
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
+  const acceptingInviteRef = useRef<Set<number>>(new Set())
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
 
@@ -4941,6 +4944,23 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     }))
   }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites])
 
+  // ── Cleanup stale event_attendees rows once after persist loaded ─────────
+  useEffect(() => {
+    if (!userData?.dbId || !persistLoadedState) return
+    const joinedOfficialIds = new Set(
+      Object.keys(joinedEventsRef.current).map(Number).filter(id => joinedEventsRef.current[id] && id > 100000)
+    )
+    supabase.from('event_attendees').select('event_ref_id').eq('profile_id', userData.dbId)
+      .then(({ data }) => {
+        if (!data || data.length === 0) return
+        const staleIds = data.map((r: any) => r.event_ref_id).filter((id: number) => !joinedOfficialIds.has(id))
+        if (staleIds.length > 0) {
+          console.log('Cleaning stale event_attendees:', staleIds)
+          supabase.from('event_attendees').delete().eq('profile_id', userData.dbId).in('event_ref_id', staleIds)
+        }
+      })
+  }, [userData?.dbId, persistLoadedState])
+
   // ── Tonight's Vibe ────────────────────────────────────────────────────────
   const [tonightVibe, setTonightVibe] = useState({
     energy: userData?.socialEnergy || 'balanced',
@@ -5031,15 +5051,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .map(Number)
         .filter(id => joinedEventsRef.current[id] === 'confirmed' && id > 100000)
       if (confirmedEventIds.length === 0) return
-      // Check if accepted invite still exists for each confirmed event
-      const { data } = await supabase
-        .from('crew_invites')
-        .select('event_ref_id, event_title')
-        .eq('invitee_id', userData.dbId)
-        .eq('status', 'accepted')
-        .in('event_ref_id', confirmedEventIds)
-      if (!data) return
-      const activeEventIds = new Set(data.map((r: any) => r.event_ref_id))
+      // Check if accepted invite still exists (user could be inviter OR invitee)
+      const [{ data: asInvitee }, { data: asInviter }] = await Promise.all([
+        supabase.from('crew_invites').select('event_ref_id').eq('invitee_id', userData.dbId).eq('status', 'accepted').in('event_ref_id', confirmedEventIds),
+        supabase.from('crew_invites').select('event_ref_id').eq('inviter_id', userData.dbId).eq('status', 'accepted').in('event_ref_id', confirmedEventIds),
+      ])
+      if (!asInvitee && !asInviter) return
+      const activeEventIds = new Set([...(asInvitee || []), ...(asInviter || [])].map((r: any) => r.event_ref_id))
       // Events that are confirmed but have no accepted invite → partner left
       for (const evId of confirmedEventIds) {
         if (activeEventIds.has(evId)) continue
@@ -5583,6 +5601,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const TRANSPORT_EMOJI: Record<string, string> = { car: '🚗', lift: '🙋', meet: '📍' }
     const parts = [FORMAT_EMOJI[format] || '👥', TRANSPORT_EMOJI[transport] || '📍'].filter(Boolean)
     showToast(`${parts.join(' · ')}`)
+    // Clear stale invite/pass state from previous sessions for this event
+    setSentCrewInvites(prev => {
+      const next = { ...prev }
+      Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
+      return next
+    })
+    setPassedRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
   }
 
   // Match animation refs
@@ -5687,7 +5712,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       return
     }
 
-    // Mock auto-reply (только для не-community чатов)
+    // Для дуо чатов (crew invite) — пишем в Supabase через chat_id
+    if (openChat.type === 'duo' && openChat.id && userData?.dbId) {
+      supabase.from('messages').insert({
+        chat_id: openChat.id,
+        sender_id: userData.dbId,
+        text,
+        reply_to_text: replyTo?.text || null,
+        reply_to_sender: replyTo?.senderName || null,
+      }).then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
+      return
+    }
+
+    // Mock auto-reply (только для не-community чатов без real backend)
     const chatId = openChat.id
     const delay = 1500 + Math.random() * 1500
     if (openChat.type === 'duo') {
@@ -5723,6 +5760,49 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
     }
   }
+
+  // Realtime чат для дуо чатов (crew invite)
+  useEffect(() => {
+    if (!openChat?.id || openChat?.type !== 'duo' || !userData?.dbId) return
+    const chatId = openChat.id
+    // Load history
+    supabase.from('messages')
+      .select('id, sender_id, text, created_at, reply_to_text, reply_to_sender')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: true })
+      .limit(100)
+      .then(({ data }) => {
+        if (!data) return
+        const msgs = data.map((m: any) => {
+          const isMe = m.sender_id === userData.dbId
+          const t = new Date(m.created_at)
+          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          return {
+            from: isMe ? 'me' : 'them',
+            text: m.text, time,
+            replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
+            _dbId: m.id,
+          }
+        })
+        setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
+      })
+    // Realtime subscription
+    const channel = supabase.channel(`duo_chat_${chatId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
+        async (payload: any) => {
+          const m = payload.new
+          if (m.sender_id === userData.dbId) return // already added locally
+          const t = new Date(m.created_at)
+          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          const newMsg = { from: 'them', text: m.text, time, replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined, _dbId: m.id }
+          setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: m.text, time, isNew: true } : c))
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [openChat?.id, openChat?.type, userData?.dbId])
 
   // Realtime чат для community events (и для хоста через hostEventId)
   useEffect(() => {
@@ -6095,12 +6175,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setMessagesInitialSubTab('messages'); setActiveTab('messages')
             }}
             onAcceptInvite={async (invite: any) => {
+              if (acceptingInviteRef.current.has(invite.id)) return
+              acceptingInviteRef.current.add(invite.id)
               const { data: chatData } = await supabase
                 .from('chats')
                 .insert({ type: 'duo', last_msg: '🎉 Crew confirmed!' })
                 .select()
                 .single()
-              if (!chatData) { showToast('Something went wrong, try again'); return }
+              if (!chatData) { acceptingInviteRef.current.delete(invite.id); showToast('Something went wrong, try again'); return }
               await supabase.from('chat_members').insert([
                 { chat_id: chatData.id, profile_id: userData?.dbId },
                 { chat_id: chatData.id, profile_id: invite.inviter_id },
@@ -6242,6 +6324,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <MessagesTab
             initialSubTab={messagesInitialSubTab}
             chatList={chatList}
+            passedRequests={passedRequests}
             onOpenChat={(chat) => {
               setOpenChat(chat)
               setChatList(prev => prev.map(c => c.id === chat.id ? { ...c, isNew: false } : c))

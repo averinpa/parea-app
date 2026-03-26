@@ -53,11 +53,11 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 | 22 | Real attendees appear (% AI score, photo, name) | ✅ | Claude Haiku scores by interests/langs/lifestyle |
 | 23 | Group size filter: duo user doesn't see party user | ✅ | e.g. [2,2] vs [6,20] no overlap |
 | 24 | Status shows "X found 🎯" when real attendees present | ✅ | |
-| 25 | "Let's go!" → sends crew_invite, no chat created yet | ⬜ | |
-| 26 | "Let's go!" button changes to "Invite sent ✓" after press | ⬜ | |
-| 27 | Invite sent ✓ persists after app restart | ⬜ | |
-| 28 | Incoming invite card visible (inviter name, photo, event) | ⬜ | |
-| 29 | Accept invite → chat created, navigate to Messages | ⬜ | |
+| 25 | "Let's go!" → sends crew_invite, no chat created yet | ✅ | |
+| 26 | "Let's go!" button changes to "Invite sent ✓" after press | ✅ | |
+| 27 | Invite sent ✓ persists after app restart | ✅ | |
+| 28 | Incoming invite card visible (inviter name, photo, event) | ✅ | |
+| 29 | Accept invite → chat created, navigate to Messages | ✅ | |
 | 30 | Decline invite → card removed | ⬜ | |
 | 31 | Inviter gets "accepted" notification + chat appears in Messages | ⬜ | Polls every 15s |
 | 32 | crew_match notification → tapping → VibeCheck | ⬜ | |
