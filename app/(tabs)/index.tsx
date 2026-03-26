@@ -4623,6 +4623,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => { clearInterval(interval); supabase.removeChannel(jrChannel) }
   }, [userData?.dbId])
   const persistLoaded = useRef(false)
+  const [persistLoadedState, setPersistLoadedState] = useState(false)
 
   // Load profiles from DB, fall back to MOCK_SEEKERS if empty
   useEffect(() => {
@@ -4747,7 +4748,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   useEffect(() => {
     AsyncStorage.getItem(PERSIST_KEY).then(raw => {
-      if (!raw) { persistLoaded.current = true; return }
+      if (!raw) { persistLoaded.current = true; setPersistLoadedState(true); return }
       try {
         const saved = JSON.parse(raw)
         if (saved.joinedEvents) setJoinedEvents(saved.joinedEvents)
@@ -4772,12 +4773,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (saved.sentCrewInvites) setSentCrewInvites(saved.sentCrewInvites)
       } catch {}
       persistLoaded.current = true
+      setPersistLoadedState(true)
     })
   }, [])
 
   // On load: remove stale event_attendees rows for official events user is no longer in
   useEffect(() => {
-    if (!userData?.dbId) return
+    if (!userData?.dbId || !persistLoadedState) return
     const cleanup = async () => {
       const { data } = await supabase
         .from('event_attendees')
@@ -4794,7 +4796,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
     }
     cleanup()
-  }, [userData?.dbId])
+  }, [userData?.dbId, persistLoadedState])
 
   useEffect(() => {
     if (!persistLoaded.current) return
