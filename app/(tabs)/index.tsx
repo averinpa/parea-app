@@ -7264,10 +7264,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       } else if (n.type === 'match' || n.type === 'group_chat' || n.type === 'new_message' || n.type === 'member_joined') {
                         setMessagesInitialSubTab('messages')
                         setActiveTab('messages')
-                      } else if (n.type === 'confirmed' || n.type === 'host_full' || n.type === 'reminder_24h' || n.type === 'reminder_2h' || n.type === 'event_cancelled') {
-                        setMessagesInitialSubTab('going')
+                      } else if (n.type === 'confirmed' || n.type === 'crew_ready') {
+                        setMessagesInitialSubTab('messages')
                         setActiveTab('messages')
-                      } else if (n.type === 'crew_ready') {
+                      } else if (n.type === 'host_full' || n.type === 'reminder_24h' || n.type === 'reminder_2h' || n.type === 'event_cancelled') {
                         setMessagesInitialSubTab('going')
                         setActiveTab('messages')
                       } else if (n.type === 'crew_match' || n.type === 'crew_invite') {
