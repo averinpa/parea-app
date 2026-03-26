@@ -36,12 +36,12 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 15 | "I'm going" → format sheet (duo / squad / party) | ⬜ | Step 1 of 2 |
-| 16 | Transport step (step 2 of 2) | ⬜ | |
-| 17 | Back button on transport → returns to format | ⬜ | |
-| 18 | Confirm → record in event_attendees (correct group_size_min/max) | ⬜ | |
-| 19 | Leaving event → row deleted from event_attendees | ⬜ | |
-| 20 | Leaving event → pending invites cancelled in crew_invites | ⬜ | |
+| 15 | "I'm going" → format sheet (duo / squad / party) | ✅ | Event stays in VibeCheck after join; fixed cleanup effect |
+| 16 | Transport step (step 2 of 2) | ✅ | |
+| 17 | Back button on transport → returns to format | ✅ | |
+| 18 | Confirm → record in event_attendees (correct group_size_min/max) | ✅ | |
+| 19 | Leaving event → row deleted from event_attendees | ✅ | |
+| 20 | Leaving event → pending invites cancelled in crew_invites | ✅ | |
 
 ---
 
@@ -49,10 +49,10 @@ Legend: ✅ tested & works · ❌ tested & broken · ⬜ not tested yet · 🔄 
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 21 | While alone: "Looking..." status, 1/cap, search message | ⬜ | |
-| 22 | Real attendees appear (REAL badge, photo, name) | ⬜ | |
-| 23 | Group size filter: duo user doesn't see party user | ⬜ | e.g. [2,2] vs [6,20] no overlap |
-| 24 | Status shows "X found 🎯" when real attendees present | ⬜ | |
+| 21 | While alone: "Looking..." status, 1/cap, search message | ✅ | |
+| 22 | Real attendees appear (% AI score, photo, name) | ✅ | Claude Haiku scores by interests/langs/lifestyle |
+| 23 | Group size filter: duo user doesn't see party user | ✅ | e.g. [2,2] vs [6,20] no overlap |
+| 24 | Status shows "X found 🎯" when real attendees present | ✅ | |
 | 25 | "Let's go!" → sends crew_invite, no chat created yet | ⬜ | |
 | 26 | "Let's go!" button changes to "Invite sent ✓" after press | ⬜ | |
 | 27 | Invite sent ✓ persists after app restart | ⬜ | |

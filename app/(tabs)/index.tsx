@@ -3276,7 +3276,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew }: any) {
   // Official + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
@@ -3798,15 +3798,49 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   )}
                   {isActive && (
                     <View style={{ gap: 10 }}>
-                      <TouchableOpacity
-                        activeOpacity={inviteSentToAll ? 1 : 0.85}
-                        disabled={inviteSentToAll}
-                        onPress={() => onConfirm?.(ev, partners, format)}
-                        style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: inviteSentToAll ? 'rgba(67,233,123,0.25)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: inviteSentToAll ? 0 : 0.4, shadowRadius: 12, elevation: inviteSentToAll ? 0 : 6 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '900', color: inviteSentToAll ? '#43E97B' : '#052e16' }}>
-                          {isCommunity ? 'Confirm & Open Chat 🚀' : isParty ? 'Join the chat 🚀' : inviteSentToAll ? 'Invite sent ✓' : "Let's go! 🚀"}
-                        </Text>
-                      </TouchableOpacity>
+                      {(() => {
+                        const crewPreview = !isCommunity && (format === 'squad' || format === 'party') ? crewPreviewMap[ev.id] : null
+                        const readyCount = readyCountMap[ev.id]
+                        const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 1 && !crewPreview
+                        if (crewPreview) {
+                          return (
+                            <View style={{ gap: 10 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
+                                <Text style={{ fontSize: 15 }}>🎯</Text>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>Crew found!</Text>
+                                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
+                                    {crewPreview.members.map((m: any) => m.name).join(', ')}
+                                  </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: -8 }}>
+                                  {crewPreview.members.slice(0, 3).map((m: any, i: number) => (
+                                    m.photo ? <Image key={i} source={{ uri: m.photo }} style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#0A0812', marginLeft: i > 0 ? -8 : 0 }} /> :
+                                    <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#0A0812', marginLeft: i > 0 ? -8 : 0 }}><Text style={{ fontSize: 10 }}>👤</Text></View>
+                                  ))}
+                                </View>
+                              </View>
+                              <TouchableOpacity
+                                activeOpacity={0.85}
+                                onPress={() => onJoinCrew?.(ev)}
+                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Join crew 🚀</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )
+                        }
+                        return (
+                          <TouchableOpacity
+                            activeOpacity={isWaiting || inviteSentToAll ? 1 : 0.85}
+                            disabled={isWaiting || inviteSentToAll}
+                            onPress={() => onConfirm?.(ev, partners, format)}
+                            style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: isWaiting ? 'rgba(251,191,36,0.2)' : inviteSentToAll ? 'rgba(67,233,123,0.25)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: isWaiting || inviteSentToAll ? 0 : 0.4, shadowRadius: 12, elevation: isWaiting || inviteSentToAll ? 0 : 6 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: isWaiting ? '#FBBF24' : inviteSentToAll ? '#43E97B' : '#052e16' }}>
+                              {isCommunity ? 'Confirm & Open Chat 🚀' : isWaiting ? '1 ready — waiting... ⏳' : inviteSentToAll ? 'Invite sent ✓' : "Let's go! 🚀"}
+                            </Text>
+                          </TouchableOpacity>
+                        )
+                      })()}
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => onLeave?.(ev)}
@@ -4622,6 +4656,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [incomingCrewInvites, setIncomingCrewInvites] = useState<any[]>([])
   const [sentCrewInvites, setSentCrewInvites] = useState<Record<string, string>>({}) // `${eventId}_${profileId}` -> 'pending'|'accepted'
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
+  const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
+  const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
 
   useEffect(() => {
     const officialJoined = Object.keys(joinedEvents)
@@ -4839,6 +4875,41 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const channel = supabase.channel('crew_invites_incoming')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crew_invites', filter: `invitee_id=eq.${userData.dbId}` }, () => {
         fetchIncoming()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userData?.dbId])
+
+  // ── Realtime: detect when added to a crew group chat ─────────────────────
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const channel = supabase.channel('my_crew_chats')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_members', filter: `profile_id=eq.${userData.dbId}` }, async (payload: any) => {
+        const chatId = payload.new.chat_id
+        if (chatListRef.current.some((c: any) => c.id === chatId)) return
+        // Fetch members of this new chat
+        const { data: members } = await supabase
+          .from('chat_members')
+          .select('profile_id, profiles:profile_id(id, name, photos, color)')
+          .eq('chat_id', chatId)
+        if (!members || members.length < 2) return
+        const otherMembers = members.filter((m: any) => m.profile_id !== userData.dbId).map((m: any) => {
+          const p = (m as any).profiles || {}
+          return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+        })
+        const newChat = {
+          id: chatId, type: 'group',
+          event: 'Crew Chat', eventEmoji: '🎉',
+          members: members.length,
+          avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
+          colors: otherMembers.map((p: any) => p.color),
+          memberProfiles: otherMembers,
+          lastMsg: '🎉 You\'re in the crew! Say hi 👋',
+          time: 'now', isNew: true, expiresIn: 24,
+        }
+        setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
+        showToast('You\'re in the crew! 🎉')
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -5645,69 +5716,89 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             communityEventMembers={communityEventMembers}
             incomingCrewInvites={incomingCrewInvites}
             sentCrewInvites={sentCrewInvites}
+            readyCountMap={readyCountMap}
+            crewPreviewMap={crewPreviewMap}
             onGoHome={() => setActiveTab('home')}
             onConfirm={async (ev: any, partners: any[], format: string) => {
-              // For official events with real attendees → send invites, don't create chat yet
+              const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
+              const FORMAT_THRESHOLD: Record<string, number> = { '1+1': 2, squad: 3, party: 6 }
               const realPartners = partners.filter((p: any) => p._real)
               if (ev.type === 'official' && realPartners.length > 0) {
-                for (const partner of realPartners) {
-                  const key = `${ev.id}_${partner.id}`
-                  if (sentCrewInvites[key]) continue
-                  // Send our invite
-                  await supabase.from('crew_invites').upsert({
-                    event_ref_id: ev.id,
-                    event_title: ev.title,
-                    inviter_id: userData?.dbId,
-                    invitee_id: partner.id,
-                    status: 'pending',
-                  }, { onConflict: 'event_ref_id,inviter_id,invitee_id' })
-                  setSentCrewInvites(prev => ({ ...prev, [key]: 'pending' }))
-                  // Check for mutual invite (partner already invited me)
-                  const { data: mutualInvite } = await supabase
-                    .from('crew_invites')
-                    .select('*')
-                    .eq('event_ref_id', ev.id)
-                    .eq('inviter_id', partner.id)
-                    .eq('invitee_id', userData?.dbId)
-                    .eq('status', 'pending')
-                    .maybeSingle()
-                  if (mutualInvite) {
-                    // Mutual match → create chat immediately
-                    const { data: chatData } = await supabase
-                      .from('chats')
-                      .insert({ type: 'duo', last_msg: '🎉 Crew confirmed!' })
-                      .select().single()
-                    if (!chatData) continue
-                    await supabase.from('chat_members').insert([
-                      { chat_id: chatData.id, profile_id: userData?.dbId },
-                      { chat_id: chatData.id, profile_id: partner.id },
-                    ])
-                    await supabase.from('crew_invites')
-                      .update({ status: 'accepted', chat_id: chatData.id })
-                      .in('id', [mutualInvite.id])
-                    const newChat = {
-                      id: chatData.id, type: 'duo',
-                      name: partner.name || 'Your crew',
-                      age: partner.age || '',
-                      color: partner.color || '#818CF8',
-                      photo: partner.photo || '',
-                      lastMsg: '🎉 Mutual match! Say hi 👋',
-                      time: 'now', isNew: true, expiresIn: 24,
-                      event: ev.title, eventEmoji: '🎉',
-                      partnerProfile: partner,
+                // ── 1+1: mutual invite flow ──────────────────────────────────
+                if (format === '1+1') {
+                  for (const partner of realPartners) {
+                    const key = `${ev.id}_${partner.id}`
+                    if (sentCrewInvites[key]) continue
+                    await supabase.from('crew_invites').upsert({
+                      event_ref_id: ev.id, event_title: ev.title,
+                      inviter_id: userData?.dbId, invitee_id: partner.id, status: 'pending',
+                    }, { onConflict: 'event_ref_id,inviter_id,invitee_id' })
+                    setSentCrewInvites(prev => ({ ...prev, [key]: 'pending' }))
+                    const { data: mutualInvite } = await supabase
+                      .from('crew_invites').select('*')
+                      .eq('event_ref_id', ev.id).eq('inviter_id', partner.id)
+                      .eq('invitee_id', userData?.dbId).eq('status', 'pending').maybeSingle()
+                    if (mutualInvite) {
+                      const { data: chatData } = await supabase.from('chats')
+                        .insert({ type: 'duo', last_msg: `🎉 ${ev.title}` }).select().single()
+                      if (!chatData) continue
+                      await supabase.from('chat_members').insert([
+                        { chat_id: chatData.id, profile_id: userData?.dbId },
+                        { chat_id: chatData.id, profile_id: partner.id },
+                      ])
+                      await supabase.from('crew_invites').update({ status: 'accepted', chat_id: chatData.id }).in('id', [mutualInvite.id])
+                      setChatList(prev => prev.some(c => c.id === chatData.id) ? prev : [{
+                        id: chatData.id, type: 'duo', name: partner.name || 'Your crew',
+                        age: partner.age || '', color: partner.color || '#818CF8', photo: partner.photo || '',
+                        lastMsg: '🎉 Mutual match! Say hi 👋', time: 'now', isNew: true, expiresIn: 24,
+                        event: ev.title, eventEmoji: '🎉', partnerProfile: partner,
+                      }, ...prev])
+                      setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                      setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+                      showToast('Mutual match! 🎉')
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                      setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                      return
                     }
-                    setChatList(prev => [newChat, ...prev])
-                    setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
-                    setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
-                    showToast('Mutual match! 🎉')
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                    setMessagesInitialSubTab('messages')
-                    setActiveTab('messages')
-                    return
+                  }
+                  showToast('Invite sent! 🎯')
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                  return
+                }
+                // ── Squad / Party: threshold flow with crew preview ──────────
+                const [userMin, userMax] = FORMAT_SIZES[format] || [3, 5]
+                await supabase.from('event_attendees').update({ status: 'ready' })
+                  .eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
+                const { data: readyData } = await supabase
+                  .from('event_attendees').select('*, profiles(*)')
+                  .eq('event_ref_id', ev.id).eq('status', 'ready')
+                  .lte('group_size_min', userMax).gte('group_size_max', userMin)
+                const count = readyData?.length || 1
+                setReadyCountMap(prev => ({ ...prev, [ev.id]: count }))
+                if (count < 2) {
+                  showToast('1 ready — waiting for someone! ⏳')
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  return
+                }
+                // Check if a crew chat already exists
+                const otherReadyIds = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => r.profile_id)
+                let existingChatId: number | null = null
+                if (otherReadyIds.length > 0) {
+                  const { data: otherMemberships } = await supabase
+                    .from('chat_members').select('chat_id').in('profile_id', otherReadyIds)
+                  if (otherMemberships && otherMemberships.length > 0) {
+                    const chatIdCounts: Record<number, number> = {}
+                    otherMemberships.forEach((m: any) => { chatIdCounts[m.chat_id] = (chatIdCounts[m.chat_id] || 0) + 1 })
+                    const sharedChatId = Object.entries(chatIdCounts).find(([, c]) => c >= 1)?.[0]
+                    if (sharedChatId) existingChatId = Number(sharedChatId)
                   }
                 }
-                showToast('Invite sent! 🎯')
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
+                  const p = r.profiles || {}
+                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                })
+                setCrewPreviewMap(prev => ({ ...prev, [ev.id]: { members: memberProfiles, chatId: existingChatId } }))
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                 return
               }
               // Community / non-official / no real attendees → create chat immediately
@@ -5754,6 +5845,54 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
+            }}
+            onJoinCrew={async (ev: any) => {
+              const preview = crewPreviewMap[ev.id]
+              if (!preview) return
+              if (preview.chatId) {
+                // Join existing chat
+                await supabase.from('chat_members').insert({ chat_id: preview.chatId, profile_id: userData?.dbId })
+                const memberProfiles = preview.members
+                setChatList(prev => prev.some(c => c.id === preview.chatId) ? prev : [{
+                  id: preview.chatId!, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                  members: preview.members.length + 1,
+                  avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
+                  colors: memberProfiles.map((p: any) => p.color), memberProfiles,
+                  lastMsg: '🎉 You joined the crew!', time: 'now', isNew: true, expiresIn: 24, communityEventId: ev.id,
+                }, ...prev])
+                setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
+                showToast('Joined the crew! 🎉')
+              } else {
+                // Create new chat with all ready members
+                const [userMin, userMax] = ({ '1+1': [2,2], squad: [3,5], party: [6,20] } as any)[userEventFormat[ev.id] || 'squad'] || [3,5]
+                const { data: readyData } = await supabase
+                  .from('event_attendees').select('*, profiles(*)')
+                  .eq('event_ref_id', ev.id).eq('status', 'ready')
+                  .lte('group_size_min', userMax).gte('group_size_max', userMin)
+                const { data: chatData } = await supabase.from('chats')
+                  .insert({ type: 'group', last_msg: `🎉 ${ev.title}` }).select().single()
+                if (!chatData) { showToast('Something went wrong'); return }
+                const memberIds = (readyData || []).map((r: any) => r.profile_id)
+                if (!memberIds.includes(userData?.dbId)) memberIds.push(userData?.dbId)
+                await supabase.from('chat_members').insert(memberIds.map((id: string) => ({ chat_id: chatData.id, profile_id: id })))
+                const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
+                  const p = r.profiles || {}
+                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                })
+                setChatList(prev => prev.some(c => c.id === chatData.id) ? prev : [{
+                  id: chatData.id, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                  members: memberIds.length,
+                  avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
+                  colors: memberProfiles.map((p: any) => p.color), memberProfiles,
+                  lastMsg: '🎉 Crew assembled! Say hi 👋', time: 'now', isNew: true, expiresIn: 24, communityEventId: ev.id,
+                }, ...prev])
+                setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
+                showToast('Crew assembled! 🎉')
+              }
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+              setMessagesInitialSubTab('messages'); setActiveTab('messages')
             }}
             onAcceptInvite={async (invite: any) => {
               const { data: chatData } = await supabase
