@@ -1700,6 +1700,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     const match = timeStr.match(/(\d{1,2}):(\d{2})/)
     if (match) {
       date.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0)
+    } else {
+      date.setHours(23, 59, 59, 0)
     }
     return date
   }
@@ -7360,6 +7362,8 @@ export default function App() {
         } else {
           setScreen('landing')
         }
+      } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
+        setScreen('landing')
       }
     })
     return () => subscription.unsubscribe()
