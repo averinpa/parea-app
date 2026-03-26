@@ -2605,7 +2605,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               const hasReal       = realAttendees.length > 0
               const found         = hasReal ? realAttendees.length + 1 : 1
               const isActive      = hasReal && found >= threshold
-              const crewProfiles  = hasReal ? realAttendees.slice(0, cap - 1) : (!isCommunity ? QUEUE_PROFILES.slice(0, 3) : [])
+              const crewProfiles  = hasReal ? realAttendees.slice(0, cap - 1) : []
 
               // Smart status badge
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
@@ -3649,7 +3649,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             // found = me (1) + real partners; if no real data yet show 1/cap
             const found      = isCommunity ? (hasRealAttendees ? realAttendees.length + 1 : 1) : (hasRealAttendees ? realAttendees.length + 1 : 1)
             const isActive   = hasRealAttendees || isCommunity
-            const partners   = isCommunity ? realAttendees : (hasRealAttendees ? realAttendees : aiRankedProfiles.slice(0, cap - 1))
+            const partners   = isCommunity ? realAttendees : (hasRealAttendees ? realAttendees : [])
 
             // Status label
             const statusLabel = isCommunity
