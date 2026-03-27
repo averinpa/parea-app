@@ -7372,7 +7372,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                   </View>
                 )}
-                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 6, 16) : Math.max(insets.bottom, 8) }]}>
+                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 6, 16) : chatKeyboardHeight > 0 ? 0 : Math.max(insets.bottom, 8) }]}>
                   <TextInput
                     style={s.chatInput} value={chatInput} onChangeText={setChatInput}
                     placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
