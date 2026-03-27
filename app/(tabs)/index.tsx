@@ -4671,6 +4671,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   openChatRef.current = openChat
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
+  const [cancelledEventIds, setCancelledEventIds] = useState<number[]>([])
+  const cancelledEventIdsRef = useRef<Set<number>>(new Set())
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
@@ -4929,6 +4931,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (saved.chatList) setChatList(saved.chatList)
         if (saved.chatMessages) setChatMessages(saved.chatMessages)
+        if (saved.cancelledEventIds) {
+          setCancelledEventIds(saved.cancelledEventIds)
+          cancelledEventIdsRef.current = new Set(saved.cancelledEventIds)
+        }
         if (saved.sentCrewInvites) {
           setSentCrewInvites(saved.sentCrewInvites)
           // Pre-populate ref so poll doesn't re-add already-processed invites after restart
@@ -4947,9 +4953,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!persistLoaded.current) return
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userCreatedEvents, pendingJoinRequests,
-      approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites,
+      approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds,
     }))
-  }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites])
+  }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   useEffect(() => {
@@ -5158,6 +5164,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       for (const inv of acceptedData) {
         const key = `${inv.event_ref_id}_${inv.invitee_id}`
         if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
+        // Skip if user explicitly cancelled this event
+        if (cancelledEventIdsRef.current.has(inv.event_ref_id)) continue
         // Skip if user already left this event (not in event_attendees)
         if (!stillAttending.has(inv.event_ref_id)) continue
         acceptedInviteKeysRef.current.add(key)
@@ -6419,8 +6427,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onPlansOpen={markNotifsReadForPlans}
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
-              setChatList(prev => prev.filter(c => c.event !== ev.title))
+              setChatList(prev => prev.filter(c => c.event !== ev.title && c.hostEventId !== ev.id))
               if (ev.type === 'official' && userData?.dbId) {
+                // Mark as cancelled locally so poll never re-adds it
+                cancelledEventIdsRef.current.add(ev.id)
+                setCancelledEventIds(prev => [...new Set([...prev, ev.id])])
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
