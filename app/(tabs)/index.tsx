@@ -4658,6 +4658,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
   const inboxChannelRef = useRef<any>(null)
+  const duoBroadcastRef = useRef<any>(null)
+  const communityBroadcastRef = useRef<any>(null)
+  const duoBroadcastQueueRef = useRef<any[]>([])
+  const communityBroadcastQueueRef = useRef<any[]>([])
   const chatListRef = useRef<any[]>([])
   const openChatRef = useRef<any>(null)
   chatListRef.current = chatList
@@ -5085,17 +5089,29 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_members', filter: `profile_id=eq.${userData.dbId}` }, async (payload: any) => {
         const chatId = payload.new.chat_id
         if (chatListRef.current.some((c: any) => c.id === chatId)) return
-        // Fetch members of this new chat
-        const { data: members } = await supabase
-          .from('chat_members')
-          .select('profile_id, profiles:profile_id(id, name, photos, color)')
-          .eq('chat_id', chatId)
+        // Fetch chat type and members
+        const [{ data: chatData }, { data: members }] = await Promise.all([
+          supabase.from('chats').select('type, event_id').eq('id', chatId).single(),
+          supabase.from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', chatId),
+        ])
         if (!members || members.length < 2) return
         const otherMembers = members.filter((m: any) => m.profile_id !== userData.dbId).map((m: any) => {
           const p = (m as any).profiles || {}
-          return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+          return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
         })
-        const newChat = {
+        const isDuo = chatData?.type === 'duo' || members.length === 2
+        const partner = otherMembers[0]
+        const newChat = isDuo ? {
+          id: chatId, type: 'duo',
+          name: partner?.name || 'Your crew',
+          age: partner?.age || '',
+          color: partner?.color || '#818CF8',
+          photo: partner?.photo || '',
+          lastMsg: '🎉 Crew confirmed! Say hi',
+          time: 'now', isNew: true, expiresIn: 24,
+          event: 'Crew Chat', eventEmoji: '🎉',
+          partnerProfile: partner,
+        } : {
           id: chatId, type: 'group',
           event: 'Crew Chat', eventEmoji: '🎉',
           members: members.length,
@@ -5133,9 +5149,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
       const acceptedData = (data || []).filter((inv: any) => inv.status === 'accepted')
       if (!data) return
+      // Check which events the user is still attending (not cancelled)
+      const { data: attendeeRows } = await supabase
+        .from('event_attendees').select('event_ref_id').eq('profile_id', userData.dbId)
+      const stillAttending = new Set((attendeeRows || []).map((r: any) => r.event_ref_id))
       for (const inv of acceptedData) {
         const key = `${inv.event_ref_id}_${inv.invitee_id}`
         if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
+        // Skip if user already left this event (not in event_attendees)
+        if (!stillAttending.has(inv.event_ref_id)) continue
         acceptedInviteKeysRef.current.add(key)
         setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
         setOfficialEventChatMap(prev => ({ ...prev, [inv.event_ref_id]: inv.chat_id }))
@@ -5699,28 +5721,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setReplyTo(null)
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
 
-    // Для community-чатов — пишем в Supabase, не делаем мок-ответ
+    // Для community-чатов — пишем в Supabase + broadcast
     const chatEvId = openChat.communityEventId || openChat.hostEventId
     if (chatEvId && userData?.dbId) {
-      supabase.from('messages').insert({
-        community_event_id: chatEvId,
-        sender_id: userData.dbId,
-        text,
-        reply_to_text: replyTo?.text || null,
-        reply_to_sender: replyTo?.senderName || null,
-      }).then(({ error }) => { if (error) console.warn('message insert error:', error.message) })
+      const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null }
+      supabase.from('messages').insert({ community_event_id: chatEvId, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
+        .then(({ error }) => { if (error) console.warn('message insert error:', error.message) })
+      const bcast = { type: 'broadcast', event: 'message', payload }
+      if (communityBroadcastRef.current) communityBroadcastRef.current.send(bcast)
+      else communityBroadcastQueueRef.current.push(bcast)
       return
     }
 
-    // Для дуо чатов (crew invite) — пишем в Supabase через chat_id
-    if (openChat.type === 'duo' && openChat.id && userData?.dbId) {
-      supabase.from('messages').insert({
-        chat_id: openChat.id,
-        sender_id: userData.dbId,
-        text,
-        reply_to_text: replyTo?.text || null,
-        reply_to_sender: replyTo?.senderName || null,
-      }).then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
+    // Для дуо чатов (crew invite) — пишем в Supabase через chat_id + broadcast
+    const isChatDuoSend = openChat.type === 'duo' || (openChat.type === 'group' && !openChat.communityEventId && !openChat.hostEventId)
+    if (isChatDuoSend && openChat.id && userData?.dbId) {
+      const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null }
+      supabase.from('messages').insert({ chat_id: openChat.id, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
+        .then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
+      const bcast = { type: 'broadcast', event: 'message', payload }
+      if (duoBroadcastRef.current) duoBroadcastRef.current.send(bcast)
+      else duoBroadcastQueueRef.current.push(bcast)
       return
     }
 
@@ -5763,7 +5784,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   // Realtime чат для дуо чатов (crew invite)
   useEffect(() => {
-    if (!openChat?.id || openChat?.type !== 'duo' || !userData?.dbId) return
+    // Treat as duo if explicitly duo, OR if group-type but no communityEventId (legacy saved chats)
+    const isChatDuo = openChat?.type === 'duo' || (openChat?.type === 'group' && !openChat?.communityEventId && !openChat?.hostEventId)
+    if (!openChat?.id || !isChatDuo || !userData?.dbId) return
     const chatId = openChat.id
     // Load history
     supabase.from('messages')
@@ -5771,8 +5794,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true })
       .limit(100)
-      .then(({ data }) => {
-        if (!data) return
+      .then(({ data, error }) => {
+        if (error) { console.warn('history load error:', error.message); return }
+        if (!data || data.length === 0) return // не затираем кэш если БД пустая
         const msgs = data.map((m: any) => {
           const isMe = m.sender_id === userData.dbId
           const t = new Date(m.created_at)
@@ -5787,21 +5811,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
       })
-    // Realtime subscription
+    // Broadcast subscription для real-time доставки
+    if (duoBroadcastRef.current) {
+      supabase.removeChannel(duoBroadcastRef.current)
+      duoBroadcastRef.current = null
+    }
     const channel = supabase.channel(`duo_chat_${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
-        async (payload: any) => {
-          const m = payload.new
-          if (m.sender_id === userData.dbId) return // already added locally
-          const t = new Date(m.created_at)
-          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          const newMsg = { from: 'them', text: m.text, time, replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined, _dbId: m.id }
+      .on('broadcast', { event: 'message' }, ({ payload }: any) => {
+          if (payload.sender_id === userData.dbId) return // своё уже добавили
+          const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          const newMsg = { from: 'them', text: payload.text, time, replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
           setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
-          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: m.text, time, isNew: true } : c))
+          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
         })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          duoBroadcastRef.current = channel
+          duoBroadcastQueueRef.current.forEach(p => channel.send(p))
+          duoBroadcastQueueRef.current = []
+        }
+      })
+    return () => { supabase.removeChannel(channel); duoBroadcastRef.current = null; duoBroadcastQueueRef.current = [] }
   }, [openChat?.id, openChat?.type, userData?.dbId])
 
   // Realtime чат для community events (и для хоста через hostEventId)
@@ -5844,15 +5875,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
       })
 
-    // Подписка на новые сообщения
+    // Broadcast подписка для real-time доставки
+    if (communityBroadcastRef.current) {
+      supabase.removeChannel(communityBroadcastRef.current)
+      communityBroadcastRef.current = null
+    }
     const channel = supabase.channel(`community_chat_${evId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `community_event_id=eq.${evId}`,
-      }, async (payload: any) => {
-        const m = payload.new
+      .on('broadcast', { event: 'message' }, async ({ payload: bcast }: any) => {
+        const m = bcast
         if (m.sender_id === userData.dbId) return // своё уже добавили оптимистично
         const profilesInChat: any[] = openChat.memberProfiles || []
         let sender = profilesInChat.find((p: any) => p.id === m.sender_id)
@@ -5889,7 +5919,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           senderPhoto: sender?.photo || '',
           senderColor: sender?.color || '#818CF8',
           replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
-          _dbId: m.id,
         }
         setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
         const lastMsgText = isSystemMsg ? m.text : `${sender?.name || 'Someone'}: ${m.text}`
@@ -5904,29 +5933,23 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
       })
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          communityBroadcastRef.current = channel
+          communityBroadcastQueueRef.current.forEach(p => channel.send(p))
+          communityBroadcastQueueRef.current = []
+        }
+      })
 
     realtimeChatRef.current = channel
     return () => {
       supabase.removeChannel(channel)
       realtimeChatRef.current = null
+      communityBroadcastRef.current = null
     }
   }, [openChat?.id, openChat?.communityEventId, openChat?.hostEventId, userData?.dbId])
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return
-    const show = Keyboard.addListener('keyboardDidShow', e => {
-      const currentWindowHeight = Dimensions.get('window').height
-      const originalHeight = fullWindowHeightRef.current
-      // If window shrank when keyboard appeared, resize mode is working on this device
-      // → no spacer needed (window already scrolled up)
-      // If window didn't shrink, resize mode is NOT working → use full keyboard height
-      const didResize = (originalHeight - currentWindowHeight) > 100
-      setChatKeyboardHeight(didResize ? 0 : e.endCoordinates.height)
-    })
-    const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
-    return () => { show.remove(); hide.remove() }
-  }, [])
+  // Keyboard spacer removed — KeyboardAvoidingView handles it now
 
   // ── Background inbox subscription (updates lastMsg + isNew for ALL chats) ───
   useEffect(() => {
@@ -5939,20 +5962,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const m = payload.new
         if (m.sender_id === userData.dbId) return // своё сообщение
         if (m.text?.includes('left the group')) return // системные скипаем
-        // Найти чат по community_event_id
+        // Найти чат по community_event_id или по chat_id (для дуо чатов)
         const chat = chatListRef.current.find(c =>
           c.communityEventId === m.community_event_id || c.hostEventId === m.community_event_id
+          || (m.chat_id && c.id === m.chat_id && c.type === 'duo')
         )
         if (!chat) return
         // Если чат сейчас открыт — его обновляет chat-specific подписка
         if (openChatRef.current?.id === chat.id) return
         // Найти имя отправителя из memberProfiles чата
         const sender = (chat.memberProfiles || []).find((p: any) => p.id === m.sender_id)
-        const senderName = sender?.name || 'Someone'
+        const senderName = sender?.name || chat.name || 'Someone'
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         setChatList(prev => prev.map(c =>
           c.id === chat.id
-            ? { ...c, lastMsg: `${senderName}: ${m.text}`, time, isNew: true }
+            ? { ...c, lastMsg: chat.type === 'duo' ? m.text : `${senderName}: ${m.text}`, time, isNew: true }
             : c
         ))
       })
@@ -7228,7 +7252,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" enabled={Platform.OS === 'ios'}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
@@ -7317,7 +7341,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <Ionicons name="arrow-up" size={20} color={chatInput.trim() ? '#fff' : '#94A3B8'} />
                   </TouchableOpacity>
                 </View>
-                {Platform.OS === 'android' && <View style={{ height: chatKeyboardHeight }} />}
               </KeyboardAvoidingView>
           </View>
         </Modal>
