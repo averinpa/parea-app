@@ -4962,7 +4962,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (!data || data.length === 0) return
         const staleIds = data.map((r: any) => r.event_ref_id).filter((id: number) => !joinedOfficialIds.has(id))
         if (staleIds.length > 0) {
-          console.log('Cleaning stale event_attendees:', staleIds)
           supabase.from('event_attendees').delete().eq('profile_id', userData.dbId).in('event_ref_id', staleIds)
         }
       })
