@@ -5142,6 +5142,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           time: 'now', isNew: true, expiresIn: 24,
         }
         setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
+        if (chatData?.event_id) {
+          setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
+        }
         showToast('You\'re in the crew! 🎉')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       })
@@ -5165,6 +5168,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           const next = { ...prev }
           cancelled.forEach((inv: any) => { delete next[`${inv.event_ref_id}_${inv.invitee_id}`] })
           return next
+        })
+        cancelled.forEach((inv: any) => {
+          setChatList(prev => prev.filter(c => c.id !== inv.chat_id))
+          setJoinedEvents(prev => { const n = { ...prev }; delete n[inv.event_ref_id]; return n })
         })
       }
       const acceptedData = (data || []).filter((inv: any) => inv.status === 'accepted')
