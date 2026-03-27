@@ -4960,8 +4960,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   useEffect(() => {
     if (!userData?.dbId || !persistLoadedState) return
+    // Use joinedEvents state directly (not ref) to avoid race with ref update order
     const joinedOfficialIds = new Set(
-      Object.keys(joinedEventsRef.current).map(Number).filter(id => joinedEventsRef.current[id] && id > 100000)
+      Object.keys(joinedEvents).map(Number).filter(id => joinedEvents[id] && id > 100000)
     )
     supabase.from('event_attendees').select('event_ref_id').eq('profile_id', userData.dbId)
       .then(({ data }) => {
@@ -4969,6 +4970,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const staleIds = data.map((r: any) => r.event_ref_id).filter((id: number) => !joinedOfficialIds.has(id))
         if (staleIds.length > 0) {
           supabase.from('event_attendees').delete().eq('profile_id', userData.dbId).in('event_ref_id', staleIds)
+            .then(({ error }) => { if (error) console.warn('stale event_attendees cleanup error:', error.message) })
         }
       })
   }, [userData?.dbId, persistLoadedState])
@@ -6261,11 +6263,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }}
             onLeave={(ev: any) => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+              setChatList(prev => prev.filter(c => c.event !== ev.title && c.hostEventId !== ev.id))
               if (ev.type === 'official' && userData?.dbId) {
-                console.log('onLeave official:', { evId: ev.id, evType: ev.type, dbId: userData.dbId })
+                cancelledEventIdsRef.current.add(ev.id)
+                setCancelledEventIds(prev => [...new Set([...prev, ev.id])])
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted']).then(r => console.log('cancel inviter:', r.error?.message, r.count))
-                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted']).then(r => console.log('cancel invitee:', r.error?.message, r.count))
+                  .then(({ error }) => { if (error) console.warn('event_attendees delete error:', error.message) })
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
+                supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
