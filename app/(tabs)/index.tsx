@@ -5098,9 +5098,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const chatId = payload.new.chat_id
         if (chatListRef.current.some((c: any) => c.id === chatId)) return
         // Fetch chat type and members
-        const [{ data: chatData }, { data: members }] = await Promise.all([
+        const [{ data: chatData }, { data: members }, { data: inviteData }] = await Promise.all([
           supabase.from('chats').select('type, event_id').eq('id', chatId).single(),
           supabase.from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', chatId),
+          supabase.from('crew_invites').select('event_title').eq('chat_id', chatId).limit(1).single(),
         ])
         if (!members || members.length < 2) return
         const otherMembers = members.filter((m: any) => m.profile_id !== userData.dbId).map((m: any) => {
@@ -5109,6 +5110,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         const isDuo = chatData?.type === 'duo' || members.length === 2
         const partner = otherMembers[0]
+        const eventTitle = inviteData?.event_title || 'Crew Chat'
         const newChat = isDuo ? {
           id: chatId, type: 'duo',
           name: partner?.name || 'Your crew',
@@ -5117,11 +5119,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           photo: partner?.photo || '',
           lastMsg: '🎉 Crew confirmed! Say hi',
           time: 'now', isNew: true, expiresIn: 24,
-          event: 'Crew Chat', eventEmoji: '🎉',
+          event: eventTitle, eventEmoji: '🎉',
           partnerProfile: partner,
         } : {
           id: chatId, type: 'group',
-          event: 'Crew Chat', eventEmoji: '🎉',
+          event: eventTitle, eventEmoji: '🎉',
           members: members.length,
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
           colors: otherMembers.map((p: any) => p.color),
