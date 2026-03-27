@@ -4203,17 +4203,20 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         setSlot(targetIdx, null)
       }
 
-      // Upload to Supabase Storage — save public URL to DB but keep local URI in UI
+      // Upload to Supabase Storage — save public URL to DB
       const userId = userData?.authId || userData?.dbId
       if (userId && base64) {
         const publicUrl = await uploadPhotoToStorage(base64, userId, targetIdx)
+        const uploadedPhotos = [...newPhotos]
         if (publicUrl) {
-          const uploadedPhotos = [...newPhotos]
           uploadedPhotos[targetIdx] = publicUrl
-          // Only update DB, not local state (local URI stays visible instantly)
-          if (userData?.dbId) {
-            supabase.from('profiles').update({ photos: uploadedPhotos }).eq('id', userData.dbId)
-          }
+          // Update local state with public URL so it persists correctly
+          onUpdateUserData?.({ photos: uploadedPhotos })
+        }
+        // Always save to DB (public URL if upload succeeded, local URI as fallback)
+        if (userData?.dbId) {
+          supabase.from('profiles').update({ photos: uploadedPhotos }).eq('id', userData.dbId)
+            .then(({ error }) => { if (error) console.warn('Photo DB update error:', error.message) })
         }
       }
     } catch { /* picker cancelled or error */ }
@@ -7768,10 +7771,8 @@ export default function App() {
       const dbPatch: any = {}
       // Only save photos to DB if all are public HTTPS URLs (not local file:// URIs)
       // Local URIs are saved to DB separately after Storage upload in pickProfilePhoto
-      if (patch.photos !== undefined) {
-        const hasLocalUri = patch.photos.some((p: any) => p && !p.startsWith('http'))
-        if (!hasLocalUri) dbPatch.photos = patch.photos
-      }
+      // Photos are saved to DB directly from pickProfilePhoto after Storage upload
+      // Skip here to avoid overwriting public URLs with local file:// URIs
       if (patch.langs       !== undefined) dbPatch.langs         = patch.langs
       if (patch.interests   !== undefined) dbPatch.interests     = patch.interests
       if (patch.musicGenres !== undefined) dbPatch.music_genres  = patch.musicGenres
