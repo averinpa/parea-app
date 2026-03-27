@@ -4654,10 +4654,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
   const [chatInput, setChatInput] = useState('')
   const [chatKeyboardHeight, setChatKeyboardHeight] = useState(0)
+  const chatKbAnim = useRef(new Animated.Value(0)).current
   useEffect(() => {
     if (Platform.OS !== 'android') return
-    const show = Keyboard.addListener('keyboardDidShow', e => setChatKeyboardHeight(e.endCoordinates.height))
-    const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
+    const show = Keyboard.addListener('keyboardDidShow', e => {
+      setChatKeyboardHeight(e.endCoordinates.height)
+      Animated.timing(chatKbAnim, { toValue: e.endCoordinates.height, duration: 220, useNativeDriver: false }).start()
+    })
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setChatKeyboardHeight(0)
+      Animated.timing(chatKbAnim, { toValue: 0, duration: 220, useNativeDriver: false }).start()
+    })
     return () => { show.remove(); hide.remove() }
   }, [])
   const [replyTo, setReplyTo] = useState<{ text: string; senderName: string } | null>(null)
@@ -7285,7 +7292,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <Animated.View style={{ flex: 1, marginBottom: Platform.OS === 'android' ? chatKbAnim : 0 }}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
@@ -7374,6 +7382,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <Ionicons name="arrow-up" size={20} color={chatInput.trim() ? '#fff' : '#94A3B8'} />
                   </TouchableOpacity>
                 </View>
+              </Animated.View>
               </KeyboardAvoidingView>
           </View>
         </Modal>
