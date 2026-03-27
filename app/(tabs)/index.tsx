@@ -5798,29 +5798,36 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const isChatDuo = openChat?.type === 'duo' || (openChat?.type === 'group' && !openChat?.communityEventId && !openChat?.hostEventId)
     if (!openChat?.id || !isChatDuo || !userData?.dbId) return
     const chatId = openChat.id
-    // Load history
-    supabase.from('messages')
-      .select('id, sender_id, text, created_at, reply_to_text, reply_to_sender')
-      .eq('chat_id', chatId)
-      .order('created_at', { ascending: true })
-      .limit(100)
-      .then(({ data, error }) => {
-        if (error) { console.warn('history load error:', error.message); return }
-        if (!data || data.length === 0) return // не затираем кэш если БД пустая
-        const msgs = data.map((m: any) => {
-          const isMe = m.sender_id === userData.dbId
-          const t = new Date(m.created_at)
-          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          return {
-            from: isMe ? 'me' : 'them',
-            text: m.text, time,
-            replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
-            _dbId: m.id,
+    // Load history — retry once after 2s if empty (race: sender insert may not have propagated)
+    const loadHistory = (retry = false) => {
+      supabase.from('messages')
+        .select('id, sender_id, text, created_at, reply_to_text, reply_to_sender')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true })
+        .limit(100)
+        .then(({ data, error }) => {
+          if (error) { console.warn('history load error:', error.message); return }
+          if (!data || data.length === 0) {
+            // If chat was empty and this is the first try, retry after 2s
+            if (!retry) setTimeout(() => loadHistory(true), 2000)
+            return
           }
+          const msgs = data.map((m: any) => {
+            const isMe = m.sender_id === userData.dbId
+            const t = new Date(m.created_at)
+            const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            return {
+              from: isMe ? 'me' : 'them',
+              text: m.text, time,
+              replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
+              _dbId: m.id,
+            }
+          })
+          setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
         })
-        setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
-        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
-      })
+    }
+    loadHistory()
     // Broadcast subscription для real-time доставки
     if (duoBroadcastRef.current) {
       supabase.removeChannel(duoBroadcastRef.current)
