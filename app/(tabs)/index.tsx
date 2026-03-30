@@ -3389,7 +3389,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     </View>
   )
 
-  if (myEvents.length === 0 && myApprovedCommunityEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0 && activeHosted.length === 0) {
+  const allHostedFull = activeHosted.length > 0 && activeHosted.every((ev: any) => {
+    const slotsTotal = (ev.maxParticipants || 5) - 1
+    return (approvedJoiners?.[ev.id] || []).length >= slotsTotal && (pendingJoinRequests[ev.id] || []).length === 0
+  })
+  if (myEvents.length === 0 && myApprovedCommunityEvents.length === 0 && myCommunityEvents.length === 0 && !hasHostActivity && pendingHostedEvents.length === 0 && (activeHosted.length === 0 || allHostedFull)) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
@@ -3449,24 +3453,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const approvedCount = (approvedJoiners?.[ev.id] || []).length
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
             const slotsLeft = slotsTotal - approvedCount
-            // Full and no pending requests — show stub
-            if (slotsLeft <= 0 && allRequests.length === 0) return (
-              <View key={`host-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
-                <LinearGradient colors={ev.gradient as any} style={{ height: 5 }} />
-                <View style={{ padding: 16, gap: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST 👑</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event.', [{ text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) }, { text: 'Keep', style: 'cancel' }]) }} activeOpacity={0.7} style={{ padding: 6 }}>
-                      <Text style={{ fontSize: 16 }}>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#43E97B' }}>✅ Event is full · waiting for everyone to confirm</Text>
-                </View>
-              </View>
-            )
+            // Full and no pending requests — show same empty stub as others
+            if (slotsLeft <= 0 && allRequests.length === 0) return null
             // Score + sort, show top 12
             const scored = allRequests
               .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
@@ -5354,6 +5342,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
       })
       setPendingJoinRequests(newRequests)
+
+      // Sync approvedJoiners from DB — handles cases where someone cancelled/left
+      const newApproved: Record<number, any[]> = {}
+      data.filter((r: any) => r.status === 'approved').forEach((req: any) => {
+        const p = req.profiles || {}
+        const evId = req.event_id
+        if (!newApproved[evId]) newApproved[evId] = []
+        newApproved[evId].push({ id: p.id, requestId: req.id, name: p.name || 'User', age: p.age || '', color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#6366F1'], photo: p.photos?.[0] || null, photos: p.photos || [], bio: p.bio || '', langs: p.langs || [], _real: true })
+      })
+      setApprovedJoiners(prev => {
+        const next = { ...prev }
+        eventIds.forEach(id => { next[id] = newApproved[id] || [] })
+        return next
+      })
 
       // Confirmed joiners → создаём/обновляем чат у хоста
       const confirmedByEvent: Record<number, any[]> = {}
