@@ -3449,8 +3449,24 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const approvedCount = (approvedJoiners?.[ev.id] || []).length
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
             const slotsLeft = slotsTotal - approvedCount
-            // Hide when full and no pending requests — nothing to do here
-            if (slotsLeft <= 0 && allRequests.length === 0) return null
+            // Full and no pending requests — show stub
+            if (slotsLeft <= 0 && allRequests.length === 0) return (
+              <View key={`host-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 5 }} />
+                <View style={{ padding: 16, gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST 👑</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event.', [{ text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) }, { text: 'Keep', style: 'cancel' }]) }} activeOpacity={0.7} style={{ padding: 6 }}>
+                      <Text style={{ fontSize: 16 }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#43E97B' }}>✅ Event is full · waiting for everyone to confirm</Text>
+                </View>
+              </View>
+            )
             // Score + sort, show top 12
             const scored = allRequests
               .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
@@ -6529,7 +6545,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <TouchableOpacity style={s.navItem} onPress={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}>
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
-              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0) || userCreatedEvents.length > 0) && (
+              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0) || userCreatedEvents.some((ev: any) => (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)) && (
                 <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: Object.values(pendingJoinRequests).some(r => r.length > 0) ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
