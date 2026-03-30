@@ -5416,29 +5416,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
 
       // Sync approvedJoiners from DB (catches when joiner leaves)
-      const newApproved: Record<number, any[]> = {}
+      const syncedApproved: Record<number, any[]> = {}
       data.filter((r: any) => r.status === 'approved' || r.status === 'confirmed').forEach((req: any) => {
         const p = req.profiles || {}
         const evId = req.event_id
-        if (!newApproved[evId]) newApproved[evId] = []
-        newApproved[evId].push({
-          id: p.id,
-          requestId: req.id,
-          name: p.name || 'User',
-          age: p.age || '',
-          color: p.color || '#818CF8',
-          colors: [p.color || '#818CF8', '#6366F1'],
-          photo: p.photos?.[0] || null,
-          photos: p.photos || [],
-          bio: p.bio || '',
-          langs: p.langs || [],
-          _real: true,
-        })
+        if (!syncedApproved[evId]) syncedApproved[evId] = []
+        syncedApproved[evId].push({ id: p.id, requestId: req.id, name: p.name || 'User', age: p.age || '', color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#6366F1'], photo: p.photos?.[0] || null, photos: p.photos || [], bio: p.bio || '', langs: p.langs || [], _real: true })
       })
       setApprovedJoiners(prev => {
-        // Merge: keep events not in current poll (they may not be in eventIds), update ones we polled
         const merged = { ...prev }
-        eventIds.forEach((id: number) => { merged[id] = newApproved[id] || [] })
+        eventIds.forEach((id: number) => { merged[id] = syncedApproved[id] || [] })
         return merged
       })
     }
