@@ -4690,8 +4690,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
 
   useEffect(() => {
-    supabase.from('official_events').select('*').order('created_at', { ascending: false })
+    const fetchFeedOfficial = () => supabase.from('official_events').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
+    fetchFeedOfficial()
+    const interval = setInterval(fetchFeedOfficial, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Load community events from DB (other users' events) — poll every 15s
