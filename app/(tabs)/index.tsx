@@ -6382,27 +6382,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               const isDuo = maxParticipants <= 2
 
               if (isDuo) {
-                // 1-on-1 event → direct chat + auto-navigate
-                const newChat = {
-                  id: Date.now(), type: 'duo',
-                  hostEventId: eventId,
-                  name: joiner.name, age: joiner.age,
-                  transport: joiner.transport, color: joiner.color,
-                  photo: joiner.photo, lastMsg: `✅ You approved ${joiner.name}!`,
-                  time: 'now', isNew: true, expiresIn: 24,
-                  event: ev?.title || 'Your Social', eventEmoji: '🎉',
-                  partnerProfile: joiner, memberProfiles: [joiner],
-                }
-                setChatList(prev => {
-                  // Don't create duplicate if chat for this event already exists
-                  if (prev.some(c => c.hostEventId === eventId)) return prev
-                  return [newChat, ...prev]
-                })
-                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} is joining you!`, body: ev?.title || 'Check your chats', chatId: Date.now() })
-                setTimeout(() => {
-                  setMessagesInitialSubTab('messages')
-                  setActiveTab('messages')
-                }, 900)
+                // 1-on-1 event → chat will be created when joiner confirms (status='confirmed')
+                addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} approved! Waiting for their confirmation`, body: ev?.title || '' })
               } else {
                 // Squad/Party — обновляем approvedJoiners, чат создастся когда участник нажмёт Confirm
                 const newApproved = [...(approvedJoiners[eventId] || []), joiner]
@@ -6548,7 +6529,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <TouchableOpacity style={s.navItem} onPress={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}>
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
-              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0)) && (
+              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0) || userCreatedEvents.length > 0) && (
                 <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: Object.values(pendingJoinRequests).some(r => r.length > 0) ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
