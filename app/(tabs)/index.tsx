@@ -5415,6 +5415,26 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
       })
 
+      // Sync chatList members — remove joiners who left (no longer confirmed)
+      setChatList(prev => {
+        let changed = false
+        const updated = prev.map(chat => {
+          if (!chat.hostEventId) return chat
+          const evId = chat.hostEventId
+          const stillConfirmed = new Set((confirmedByEvent[evId] || []).map((p: any) => p.id))
+          const existingProfiles: any[] = chat.memberProfiles || []
+          const newProfiles = existingProfiles.filter((p: any) => stillConfirmed.has(p.id))
+          if (newProfiles.length === existingProfiles.length) return chat
+          changed = true
+          return { ...chat, memberProfiles: newProfiles, members: newProfiles.length + 1, avatars: newProfiles.map((p: any) => p.photo).filter(Boolean), colors: newProfiles.map((p: any) => p.color) }
+        }).filter(chat => {
+          // Remove chat entirely if no confirmed members left
+          if (chat.hostEventId && (chat.memberProfiles || []).length === 0) { changed = true; return false }
+          return true
+        })
+        return changed ? updated : prev
+      })
+
       // Sync approvedJoiners from DB (catches when joiner leaves)
       const syncedApproved: Record<number, any[]> = {}
       data.filter((r: any) => r.status === 'approved' || r.status === 'confirmed').forEach((req: any) => {
