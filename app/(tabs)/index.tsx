@@ -4772,18 +4772,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'join_requests' }, (payload: any) => {
         const r = payload.old
-        // Update feed participantsCount
-        setDbCommunityEvents(prev => prev.map(e =>
-          e.id === r.event_id ? { ...e, participantsCount: Math.max(1, (e.participantsCount || 1) - 1) } : e
-        ))
-        // Update host's approvedJoiners
-        if (r.requester_id) {
-          setApprovedJoiners(prev => {
-            const current = prev[r.event_id] || []
-            const updated = current.filter((p: any) => p.id !== r.requester_id)
-            if (updated.length === current.length) return prev
-            return { ...prev, [r.event_id]: updated }
-          })
+        // r.event_id / r.requester_id may be undefined without REPLICA IDENTITY FULL —
+        // so we trigger an immediate re-fetch of host join requests instead of relying on them
+        fetchRequestsRef.current?.()
+        // Also re-fetch community events to update participantsCount
+        if (r.event_id) {
+          setDbCommunityEvents(prev => prev.map(e =>
+            e.id === r.event_id ? { ...e, participantsCount: Math.max(1, (e.participantsCount || 1) - 1) } : e
+          ))
+        } else {
+          // event_id unknown — trigger full community events re-fetch
+          fetch()
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'join_requests' }, () => {
@@ -5105,7 +5104,26 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     }
     checkPartnerLeft()
     const interval = setInterval(checkPartnerLeft, 15000)
-    return () => clearInterval(interval)
+
+    // Broadcast: listen for instant "partner_left" from crew partner
+    const broadcastChannel = supabase.channel(`crew-partner-${userData.dbId}`)
+      .on('broadcast', { event: 'partner_left' }, ({ payload }: any) => {
+        const evId = payload?.eventId
+        if (!evId) return
+        // Same logic as checkPartnerLeft but instant
+        const chatIdToRemove = officialEventChatMapRef.current[evId]
+        const partnerChat = chatListRef.current.find((c: any) => c.id === chatIdToRemove)
+        const eventTitle = partnerChat?.title || payload?.eventTitle || 'your event'
+        if (chatIdToRemove) setChatList(prev => prev.filter((c: any) => c.id !== chatIdToRemove))
+        setJoinedEvents(prev => ({ ...prev, [evId]: 'joined' }))
+        supabase.from('event_attendees').update({ status: 'looking' })
+          .eq('event_ref_id', evId).eq('profile_id', userData.dbId)
+        addNotif({ type: 'partner_left', emoji: '👋', color: '#EF4444', title: 'Your partner left', body: `They cancelled their plans for "${eventTitle}" — searching for a new match 🔍` })
+        showToast('Your crew partner left — searching again 🔍')
+      })
+      .subscribe()
+
+    return () => { clearInterval(interval); supabase.removeChannel(broadcastChannel) }
   }, [userData?.dbId])
 
   // ── Realtime: detect when added to a crew group chat ─────────────────────
@@ -5179,7 +5197,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         cancelled.forEach((inv: any) => {
           setChatList(prev => prev.filter(c => c.id !== inv.chat_id))
-          setJoinedEvents(prev => { const n = { ...prev }; delete n[inv.event_ref_id]; return n })
+          if (cancelledEventIdsRef.current.has(inv.event_ref_id)) {
+            // We left this event ourselves — remove it
+            setJoinedEvents(prev => { const n = { ...prev }; delete n[inv.event_ref_id]; return n })
+          } else {
+            // Partner left or declined — keep the event as 'joined' so we continue searching
+            setJoinedEvents(prev => ({ ...prev, [inv.event_ref_id]: 'joined' }))
+          }
         })
       }
       const acceptedData = (data || []).filter((inv: any) => inv.status === 'accepted')
@@ -5293,6 +5317,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }, [approvedJoiners, userCreatedEvents])
 
   const refillInFlightRef = useRef<Set<string>>(new Set())
+  const fetchRequestsRef = useRef<(() => Promise<void>) | null>(null)
 
   // Poll real join requests from DB for hosted events
   useEffect(() => {
@@ -5449,10 +5474,44 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         return merged
       })
     }
+    fetchRequestsRef.current = fetchRequests
     fetchRequests()
     const interval = setInterval(fetchRequests, 15000)
-    return () => clearInterval(interval)
+    return () => { clearInterval(interval); fetchRequestsRef.current = null }
   }, [userData?.dbId, userCreatedEvents.length])
+
+  // Broadcast: host listens for instant "member_left" from joiners
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const channel = supabase.channel(`host-events-${userData.dbId}`)
+      .on('broadcast', { event: 'member_left' }, ({ payload }: any) => {
+        const { eventId, requesterId } = payload || {}
+        if (!eventId || !requesterId) return
+        // Immediately clear from approvedJoiners
+        setApprovedJoiners(prev => {
+          const current = prev[eventId] || []
+          const updated = current.filter((p: any) => p.id !== requesterId)
+          if (updated.length === current.length) return prev
+          return { ...prev, [eventId]: updated }
+        })
+        // Immediately remove from host's chatList
+        setChatList(prev => {
+          const chatIdx = prev.findIndex((c: any) => c.hostEventId === eventId)
+          if (chatIdx < 0) return prev
+          const chat = prev[chatIdx]
+          const newProfiles = (chat.memberProfiles || []).filter((p: any) => p.id !== requesterId)
+          if (newProfiles.length === (chat.memberProfiles || []).length) return prev
+          if (newProfiles.length === 0) return prev.filter((_: any, i: number) => i !== chatIdx)
+          const updated = [...prev]
+          updated[chatIdx] = { ...chat, memberProfiles: newProfiles, members: newProfiles.length + 1, avatars: newProfiles.map((p: any) => p.photo).filter(Boolean), colors: newProfiles.map((p: any) => p.color) }
+          return updated
+        })
+        // Also trigger a full re-fetch to sync everything
+        fetchRequestsRef.current?.()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [userData?.dbId])
 
   // Poll own join request statuses (requester side)
   useEffect(() => {
@@ -6486,6 +6545,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
                 // Убираем ивент из планов Пети
                 setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
+                // Broadcast to host immediately
+                const hostEvId = leavingChat.memberProfiles?.find((p: any) => p._isHost)?.id
+                  || (dbCommunityEvents.find((e: any) => e.id === evId)?.hostId)
+                if (hostEvId) {
+                  supabase.channel(`host-events-${hostEvId}`).send({
+                    type: 'broadcast', event: 'member_left',
+                    payload: { eventId: evId, requesterId: userData.dbId },
+                  })
+                }
               }
 
               // Если хост уходит из своего чата → удаляем ивент (cascade удалит chat у участников)
@@ -6522,7 +6590,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onPlansOpen={markNotifsReadForPlans}
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
-              setChatList(prev => prev.filter(c => c.event !== ev.title && c.hostEventId !== ev.id))
+              const officialChatId = officialEventChatMapRef.current[ev.id]
+              setChatList(prev => prev.filter(c => c.communityEventId !== ev.id && c.event !== ev.title && c.hostEventId !== ev.id && c.id !== officialChatId))
               // Mark as cancelled so poll never re-adds it
               cancelledEventIdsRef.current.add(ev.id)
               if (ev.type === 'official' && userData?.dbId) {
@@ -6530,6 +6599,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
+                // Broadcast instantly to crew partner so they don't wait 15s
+                const partnerChatId = officialEventChatMapRef.current[ev.id]
+                const partnerChat = chatListRef.current.find((c: any) => c.id === partnerChatId)
+                const partnerId = partnerChat?.partnerProfile?.id
+                  || partnerChat?.memberProfiles?.find((p: any) => p.id !== userData.dbId)?.id
+                if (partnerId) {
+                  supabase.channel(`crew-partner-${partnerId}`).send({
+                    type: 'broadcast', event: 'partner_left',
+                    payload: { eventId: ev.id, eventTitle: ev.title || partnerChat?.title || '' },
+                  })
+                }
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
@@ -6538,6 +6618,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               } else if (userData?.dbId) {
                 // Community event: delete join_request from DB so poll doesn't re-add it
                 supabase.from('join_requests').delete().eq('event_id', ev.id).eq('requester_id', userData.dbId)
+                // Broadcast instant "member_left" to host so they don't wait for poll
+                if (ev.hostId) {
+                  supabase.channel(`host-events-${ev.hostId}`).send({
+                    type: 'broadcast',
+                    event: 'member_left',
+                    payload: { eventId: ev.id, requesterId: userData.dbId },
+                  })
+                }
               }
               showToast("Spot freed. Others can join now 🎟️")
             }}
