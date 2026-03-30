@@ -5788,8 +5788,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const isChatDuoSend = openChat.type === 'duo' || (openChat.type === 'group' && !openChat.communityEventId && !openChat.hostEventId)
     if (isChatDuoSend && openChat.id && userData?.dbId) {
       const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null }
-      supabase.from('messages').insert({ chat_id: openChat.id, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
-        .then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
+      // Skip DB insert if chat has a fake local ID (Date.now() > 1e12) — not a real DB chat
+      if (openChat.id < 1e12) {
+        supabase.from('messages').insert({ chat_id: openChat.id, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
+          .then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
+      }
       const bcast = { type: 'broadcast', event: 'message', payload }
       if (duoBroadcastRef.current) duoBroadcastRef.current.send(bcast)
       else duoBroadcastQueueRef.current.push(bcast)
