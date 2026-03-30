@@ -4658,7 +4658,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [kavHeight, setKavHeight] = useState(0)
   useEffect(() => {
     if (Platform.OS !== 'android') return
-    const show = Keyboard.addListener('keyboardDidShow', e => setChatKeyboardHeight(e.endCoordinates.height))
+    const show = Keyboard.addListener('keyboardDidShow', e => { const h = e.endCoordinates.height; requestAnimationFrame(() => setChatKeyboardHeight(h)) })
     const hide = Keyboard.addListener('keyboardDidHide', () => setChatKeyboardHeight(0))
     return () => { show.remove(); hide.remove() }
   }, [])
@@ -5850,6 +5850,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
     }
     loadHistory()
+    // Polling fallback — catches messages missed while chat was closed or broadcast dropped
+    const pollInterval = setInterval(loadHistory, 10000)
     // Broadcast subscription для real-time доставки
     if (duoBroadcastRef.current) {
       supabase.removeChannel(duoBroadcastRef.current)
@@ -5871,7 +5873,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           duoBroadcastQueueRef.current = []
         }
       })
-    return () => { supabase.removeChannel(channel); duoBroadcastRef.current = null; duoBroadcastQueueRef.current = [] }
+    return () => { clearInterval(pollInterval); supabase.removeChannel(channel); duoBroadcastRef.current = null; duoBroadcastQueueRef.current = [] }
   }, [openChat?.id, openChat?.type, userData?.dbId])
 
   // Realtime чат для community events (и для хоста через hostEventId)
@@ -5886,7 +5888,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const chatId = openChat.id
 
     // Загружаем историю сообщений
-    supabase.from('messages')
+    const loadCommunityHistory = () => supabase.from('messages')
       .select('id, sender_id, text, created_at, reply_to_text, reply_to_sender')
       .eq('community_event_id', evId)
       .order('created_at', { ascending: true })
@@ -5913,6 +5915,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
       })
+    loadCommunityHistory()
+    // Polling fallback — catches messages missed while chat was closed or broadcast dropped
+    const communityPollInterval = setInterval(loadCommunityHistory, 10000)
 
     // Broadcast подписка для real-time доставки
     if (communityBroadcastRef.current) {
@@ -5982,6 +5987,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
     realtimeChatRef.current = channel
     return () => {
+      clearInterval(communityPollInterval)
       supabase.removeChannel(channel)
       realtimeChatRef.current = null
       communityBroadcastRef.current = null
@@ -6018,6 +6024,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             ? { ...c, lastMsg: chat.type === 'duo' ? m.text : `${senderName}: ${m.text}`, time, isNew: true }
             : c
         ))
+        // Also add to chatMessages so User 1 sees it immediately when opening the chat
+        const inboxMsg = {
+          from: 'them',
+          text: m.text,
+          time,
+          ...(chat.type !== 'duo' && { senderName, senderPhoto: sender?.photo || '', senderColor: sender?.color || '#818CF8' }),
+          replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
+          _dbId: m.id,
+        }
+        setChatMessages(prev => {
+          const existing = prev[chat.id] || []
+          if (existing.some((msg: any) => msg._dbId === m.id)) return prev // dedupe
+          return { ...prev, [chat.id]: [...existing, inboxMsg] }
+        })
       })
       .subscribe()
     inboxChannelRef.current = channel
@@ -6026,6 +6046,33 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       inboxChannelRef.current = null
     }
   }, [userData?.dbId])
+
+  // Background broadcast subscriptions for all duo chats — receive messages even when chat is closed
+  const bgDuoChannelsRef = useRef<Record<number, any>>({})
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const openChatId = openChat?.id
+    // Rebuild all background channels excluding the currently open chat (handled by open-chat subscription)
+    Object.values(bgDuoChannelsRef.current).forEach(ch => supabase.removeChannel(ch))
+    bgDuoChannelsRef.current = {}
+    const duoChats = chatList.filter((c: any) => c.type === 'duo' && c.id && c.id !== openChatId)
+    duoChats.forEach((chat: any) => {
+      const channel = supabase.channel(`duo_chat_${chat.id}`)
+        .on('broadcast', { event: 'message' }, ({ payload }: any) => {
+          if (payload.sender_id === userData.dbId) return
+          const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          const newMsg = { from: 'them', text: payload.text, time, replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
+          setChatMessages(prev => ({ ...prev, [chat.id]: [...(prev[chat.id] || []), newMsg] }))
+          setChatList(prev => prev.map((c: any) => c.id === chat.id ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
+        })
+        .subscribe()
+      bgDuoChannelsRef.current[chat.id] = channel
+    })
+    return () => {
+      Object.values(bgDuoChannelsRef.current).forEach(ch => supabase.removeChannel(ch))
+      bgDuoChannelsRef.current = {}
+    }
+  }, [chatList.filter((c: any) => c.type === 'duo').map((c: any) => c.id).join(','), userData?.dbId, openChat?.id])
 
   // Scroll to bottom when chat opens (after modal animation ~300ms)
   useEffect(() => {
