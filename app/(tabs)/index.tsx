@@ -6556,15 +6556,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             </LinearGradient>
           </TouchableOpacity>
 
-          {([
-            { id: 'messages', icon: 'message-circle', label: 'Chats' },
-            { id: 'profile',  icon: 'user',           label: 'Profile' },
-          ] as const).map(tab => (
-            <TouchableOpacity key={tab.id} style={s.navItem} onPress={() => { if (tab.id === 'messages') setMessagesInitialSubTab('going'); setActiveTab(tab.id) }}>
-              <Feather name={tab.icon} size={22} color={activeTab === tab.id ? '#6366F1' : '#94A3B8'} />
-              <Text style={[s.navLabel, activeTab === tab.id && { color: '#6366F1' }]}>{tab.label}</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity style={s.navItem} onPress={() => { setMessagesInitialSubTab('messages'); setActiveTab('messages') }}>
+            <View style={{ position: 'relative' }}>
+              <Feather name="message-circle" size={22} color={activeTab === 'messages' ? '#6366F1' : '#94A3B8'} />
+              {chatList.some((c: any) => c.isNew) && activeTab !== 'messages' && (
+                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366F1', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+              )}
+            </View>
+            <Text style={[s.navLabel, activeTab === 'messages' && { color: '#6366F1' }]}>Chats</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('profile')}>
+            <Feather name="user" size={22} color={activeTab === 'profile' ? '#6366F1' : '#94A3B8'} />
+            <Text style={[s.navLabel, activeTab === 'profile' && { color: '#6366F1' }]}>Profile</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Create event modal */}
