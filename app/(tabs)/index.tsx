@@ -6385,14 +6385,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 // 1-on-1 event → direct chat + auto-navigate
                 const newChat = {
                   id: Date.now(), type: 'duo',
+                  hostEventId: eventId,
                   name: joiner.name, age: joiner.age,
                   transport: joiner.transport, color: joiner.color,
                   photo: joiner.photo, lastMsg: `✅ You approved ${joiner.name}!`,
                   time: 'now', isNew: true, expiresIn: 24,
                   event: ev?.title || 'Your Social', eventEmoji: '🎉',
-                  partnerProfile: joiner,
+                  partnerProfile: joiner, memberProfiles: [joiner],
                 }
-                setChatList(prev => [newChat, ...prev])
+                setChatList(prev => {
+                  // Don't create duplicate if chat for this event already exists
+                  if (prev.some(c => c.hostEventId === eventId)) return prev
+                  return [newChat, ...prev]
+                })
                 addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} is joining you!`, body: ev?.title || 'Check your chats', chatId: Date.now() })
                 setTimeout(() => {
                   setMessagesInitialSubTab('messages')
