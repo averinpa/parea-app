@@ -5460,6 +5460,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           })
           // Restore/sync from DB
           validRequests.forEach((req: any) => {
+            if (cancelledEventIdsRef.current.has(req.event_id)) return
             if (req.status === 'pending' && !updated[req.event_id]) {
               updated[req.event_id] = 'pending'
               changed = true
@@ -6502,9 +6503,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onLeaveEvent={ev => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setChatList(prev => prev.filter(c => c.event !== ev.title && c.hostEventId !== ev.id))
+              // Mark as cancelled so poll never re-adds it
+              cancelledEventIdsRef.current.add(ev.id)
               if (ev.type === 'official' && userData?.dbId) {
-                // Mark as cancelled locally so poll never re-adds it
-                cancelledEventIdsRef.current.add(ev.id)
                 setCancelledEventIds(prev => [...new Set([...prev, ev.id])])
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
@@ -6514,6 +6515,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
                   return next
                 })
+              } else if (userData?.dbId) {
+                // Community event: delete join_request from DB so poll doesn't re-add it
+                supabase.from('join_requests').delete().eq('event_id', ev.id).eq('requester_id', userData.dbId)
               }
               showToast("Spot freed. Others can join now 🎟️")
             }}
