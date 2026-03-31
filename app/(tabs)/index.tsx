@@ -1664,6 +1664,13 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     const lower = timeStr.toLowerCase()
     if (lower.startsWith('today')) return today
     if (lower.startsWith('tomorrow')) { const d = new Date(today); d.setDate(d.getDate() + 1); return d }
+    // Format: "2026-03-31" (ISO, from community event createDay)
+    const isoMatch = timeStr.match(/(\d{4})-(\d{2})-(\d{2})/)
+    if (isoMatch) {
+      const d = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
     // Format: "26/03/2026" or "26.03.2026" — check before day-of-week
     const dmyMatch = timeStr.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/)
     if (dmyMatch) {
@@ -2473,8 +2480,10 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
     meet: { emoji: '📍', label: 'Meeting there' },
   }
 
-  const isToday = (t: string) => !!t?.startsWith('Today')
-  const isTomorrow = (t: string) => !!t?.startsWith('Tomorrow')
+  const todayIso = new Date().toISOString().split('T')[0]
+  const tomorrowIso = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const isToday = (t: string) => !!t?.startsWith('Today') || !!t?.startsWith(todayIso)
+  const isTomorrow = (t: string) => !!t?.startsWith('Tomorrow') || !!t?.startsWith(tomorrowIso)
 
   return (
     <View style={{ flex: 1 }}>
@@ -4820,7 +4829,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }, [])
 
   const allSeekers = dbSeekers.length > 0 ? dbSeekers : MOCK_SEEKERS
-  const evHost = eventDetail?.type === 'community' ? allSeekers[(eventDetail.id - 1) % allSeekers.length] : null
+  const evHost = eventDetail?.type === 'community' && !eventDetail.isHosted
+    ? (eventDetail.hostProfile || allSeekers[(eventDetail.id - 1) % allSeekers.length])
+    : null
   const evSpotsLeft = eventDetail?.maxParticipants ? eventDetail.maxParticipants - eventDetail.participantsCount : null
   const evIsFull = evSpotsLeft !== null && evSpotsLeft <= 0
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
