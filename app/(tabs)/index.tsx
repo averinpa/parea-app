@@ -4487,7 +4487,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
       <View style={{ flex: 1 }}>
 
         {/* Header */}
-        <View style={{ paddingTop: Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ paddingTop: Platform.OS === 'ios' ? 16 : Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>My Profile</Text>
           <TouchableOpacity
             onPress={() => { setProfilePreviewOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
