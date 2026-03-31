@@ -479,10 +479,11 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
   const [country, setCountry] = useState(COUNTRIES[0])
   const [countryModal, setCountryModal] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
+  const [agreed, setAgreed] = useState(false)
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
   const isPhoneValid = localPhone.replace(/\D/g, '').length >= country.digits
-  const isValid = tab === 'email' ? isEmailValid : isPhoneValid
+  const isValid = (tab === 'email' ? isEmailValid : isPhoneValid) && agreed
 
   const handlePhoneChange = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, country.digits)
@@ -620,12 +621,33 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
                 </TouchableOpacity>
               </View>
 
-              <Text style={{ textAlign: 'center', fontSize: 12, color: '#94A3B8', marginTop: 28, lineHeight: 18 }}>
-                {'By tapping "Continue" you agree to our '}
-                <Text style={{ color: '#6366F1', fontWeight: '600' }} onPress={() => Alert.alert('Terms of Service', 'Link will be added soon.')}>Terms of Service</Text>
-                {' and '}
-                <Text style={{ color: '#6366F1', fontWeight: '600' }} onPress={() => Alert.alert('Privacy Policy', 'Link will be added soon.')}>Privacy Policy</Text>
-              </Text>
+              {/* GDPR consent checkbox */}
+              <TouchableOpacity
+                onPress={() => setAgreed(v => !v)}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 28 }}>
+                <View style={{
+                  width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+                  borderColor: agreed ? '#6366F1' : '#CBD5E1',
+                  backgroundColor: agreed ? '#6366F1' : 'transparent',
+                  alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0,
+                }}>
+                  {agreed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+                <Text style={{ flex: 1, fontSize: 13, color: '#64748B', lineHeight: 20 }}>
+                  {'I have read and agree to the '}
+                  <Text style={{ color: '#6366F1', fontWeight: '700' }}
+                    onPress={() => Alert.alert('Terms of Service', 'Full terms available at parea.app/terms')}>
+                    Terms of Service
+                  </Text>
+                  {' and '}
+                  <Text style={{ color: '#6366F1', fontWeight: '700' }}
+                    onPress={() => Alert.alert('Privacy Policy', 'Full policy available at parea.app/privacy')}>
+                    Privacy Policy
+                  </Text>
+                  {'. I confirm I am 18 years of age or older.'}
+                </Text>
+              </TouchableOpacity>
 
             </View>
           </ScrollView>
