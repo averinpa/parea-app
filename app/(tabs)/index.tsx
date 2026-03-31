@@ -3,6 +3,7 @@ import { Feather, Ionicons } from '@expo/vector-icons'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
+import * as WebBrowser from 'expo-web-browser'
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -637,12 +638,12 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
                 <Text style={{ flex: 1, fontSize: 13, color: '#64748B', lineHeight: 20 }}>
                   {'I have read and agree to the '}
                   <Text style={{ color: '#6366F1', fontWeight: '700' }}
-                    onPress={() => Alert.alert('Terms of Service', 'Full terms available at parea.app/terms')}>
+                    onPress={() => WebBrowser.openBrowserAsync('https://averinpa.github.io/parea-app/terms')}>
                     Terms of Service
                   </Text>
                   {' and '}
                   <Text style={{ color: '#6366F1', fontWeight: '700' }}
-                    onPress={() => Alert.alert('Privacy Policy', 'Full policy available at parea.app/privacy')}>
+                    onPress={() => WebBrowser.openBrowserAsync('https://averinpa.github.io/parea-app/privacy')}>
                     Privacy Policy
                   </Text>
                   {'. I confirm I am 18 years of age or older.'}
