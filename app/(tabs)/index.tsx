@@ -2580,8 +2580,8 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
             <View style={{ gap: 8 }}>
               <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4 }}>Expired 🗂️</Text>
               {expiredHostedEvents.map((ev: any) => (
-                <View key={ev.id} style={{ borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.35)', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                <View key={ev.id} style={{ borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
                   <TouchableOpacity
                     onPress={() => onCancelHostedEvent?.(ev)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -6660,7 +6660,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <TouchableOpacity style={s.navItem} onPress={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}>
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
-              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0) || userCreatedEvents.some((ev: any) => (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)) && (
+              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0) || userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > Date.now()) && (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)) && (
                 <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: Object.values(pendingJoinRequests).some(r => r.length > 0) ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
