@@ -6652,7 +6652,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         </View>
 
         {/* Bottom nav */}
-        <View style={s.bottomNav}>
+        <View style={[s.bottomNav, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
           <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('home')}>
             <Feather name="home" size={22} color={activeTab === 'home' ? '#6366F1' : '#94A3B8'} />
             <Text style={[s.navLabel, activeTab === 'home' && { color: '#6366F1' }]}>Home</Text>
@@ -8120,7 +8120,7 @@ const s = StyleSheet.create({
   bottomBar: { paddingHorizontal: 24, paddingTop: 8, gap: 10 },
 
   // Feed bottom nav
-  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 0, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 12, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 24 : 10, alignItems: 'center' },
+  bottomNav: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 0, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 12, paddingTop: 10, alignItems: 'center' },
   navItem: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 4 },
   navLabel: { fontSize: 10, fontWeight: '600', color: '#94A3B8' },
   navCreateBtn: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#fff', marginTop: -24, alignItems: 'center', justifyContent: 'center', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 12 },
