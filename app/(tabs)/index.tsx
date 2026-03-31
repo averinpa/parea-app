@@ -6652,7 +6652,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         </View>
 
         {/* Bottom nav */}
-        <View style={[s.bottomNav, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
+        <View style={[s.bottomNav, { paddingBottom: 8 }]}>
           <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('home')}>
             <Feather name="home" size={22} color={activeTab === 'home' ? '#6366F1' : '#94A3B8'} />
             <Text style={[s.navLabel, activeTab === 'home' && { color: '#6366F1' }]}>Home</Text>
