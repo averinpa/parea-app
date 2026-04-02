@@ -2754,12 +2754,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       {isCommunity ? (
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                          {isConfirmed ? '✅ You\'re in the group' : joinedEvents[ev.id] === 'pending' ? '⏳ Waiting for host approval' : (() => {
-                            const approvedAt = approvedAtMap[ev.id]
-                            if (!approvedAt) return '✓ Host approved you — confirm below!'
-                            const hoursLeft = Math.max(0, Math.ceil(6 - (Date.now() - approvedAt) / 3600000))
-                            return `✓ Host approved you — ${hoursLeft}h to confirm`
-                          })()}
+                          {isConfirmed ? '✅ You\'re in the group' : joinedEvents[ev.id] === 'pending' ? '⏳ Waiting for host approval' : '✓ Host approved you'}
                         </Text>
                       ) : (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -3777,6 +3772,22 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       </View>
                     ))}
                   </View>
+
+                  {/* Confirmation deadline banner for approved community joiners */}
+                  {isCommunity && joinedEvents?.[ev.id] === 'joined' && (() => {
+                    const approvedAt = approvedAtMap[ev.id]
+                    if (!approvedAt) return null
+                    const hoursLeft = Math.max(0, Math.ceil(6 - (Date.now() - approvedAt) / 3600000))
+                    return (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(251,191,36,0.12)', borderRadius: 14, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' }}>
+                        <Text style={{ fontSize: 18 }}>⏰</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#FBBF24' }}>Confirm your spot!</Text>
+                          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{hoursLeft}h left — tap "Open Chat" below to confirm</Text>
+                        </View>
+                      </View>
+                    )
+                  })()}
 
                   {/* Progress */}
                   <View style={{ marginBottom: 18 }}>
@@ -6317,6 +6328,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             eventAttendeesMap={eventAttendeesMap}
             communityEventMembers={communityEventMembers}
             hostConfirmedMembers={hostConfirmedMembers}
+            approvedAtMap={approvedAtMap}
             incomingCrewInvites={incomingCrewInvites}
             sentCrewInvites={sentCrewInvites}
             readyCountMap={readyCountMap}
