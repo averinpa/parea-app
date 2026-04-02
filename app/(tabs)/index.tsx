@@ -4780,9 +4780,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         supabase
           .from('join_requests')
           .select('event_id')
-          .in('status', ['approved', 'confirmed']),
+          .eq('status', 'confirmed'),
       ])
-      // Count approved+confirmed per event
+      // Count only confirmed per event (approved = reserved but not yet accepted by joiner)
       const participantCounts: Record<number, number> = {}
       countData?.forEach((r: any) => {
         participantCounts[r.event_id] = (participantCounts[r.event_id] || 0) + 1
@@ -4830,7 +4830,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const jrChannel = supabase.channel('join_requests_counts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'join_requests' }, (payload: any) => {
         const r = payload.new
-        if (r.status === 'approved' || r.status === 'confirmed') {
+        if (r.status === 'confirmed') {
           setDbCommunityEvents(prev => prev.map(e =>
             e.id === r.event_id ? { ...e, participantsCount: (e.participantsCount || 1) + 1 } : e
           ))
