@@ -6563,7 +6563,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               const ev = userCreatedEvents.find(e => e.id === eventId)
               const maxParticipants = ev?.maxParticipants || 5
               const slotsTotal = maxParticipants - 1 // host takes 1 slot
-              const alreadyApproved = (approvedJoiners[eventId] || []).length
+              const alreadyApproved = (approvedJoiners[eventId] || []).length + (hostConfirmedMembers[eventId] || []).length
               if (alreadyApproved >= slotsTotal) {
                 showToast("Event is already full!")
                 return
