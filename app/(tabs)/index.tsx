@@ -3667,9 +3667,6 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <Text style={{ fontSize: 11, fontWeight: '700', color: '#43E97B' }}>✓ {approvedCount} approved</Text>
                       </View>
                       <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>{slotsLeft} spot{slotsLeft !== 1 ? 's' : ''} left</Text>
-                      <TouchableOpacity onPress={() => onGoToMessages?.()} style={{ marginLeft: 'auto' as any }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8' }}>Open chat →</Text>
-                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
