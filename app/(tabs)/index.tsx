@@ -5636,13 +5636,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // Fallback: postgres_changes catches DELETE even when broadcast fails
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'join_requests' }, (payload: any) => {
         const old = payload.old || {}
-        // old.requester_id and old.event_id are available only if REPLICA IDENTITY FULL is set
         if (old.requester_id && old.event_id) {
           handleMemberLeft(old.event_id, old.requester_id)
         } else {
-          // Fallback: just trigger full re-fetch
           fetchRequestsRef.current?.()
         }
+      })
+      // When joiner confirms (status → confirmed), instantly update host's slot counter
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'join_requests' }, () => {
+        fetchRequestsRef.current?.()
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
