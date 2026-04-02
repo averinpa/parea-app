@@ -6548,7 +6548,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             hostedEvents={userCreatedEvents}
             pendingJoinRequests={pendingJoinRequests}
             approvedJoiners={approvedJoiners}
-            hostConfirmedMembers={hostConfirmedMembers}
             onCancelHostedEvent={(ev: any) => {
               deletedCommunityEventIds.current.add(ev.id)
               setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id))
