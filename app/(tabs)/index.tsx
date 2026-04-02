@@ -2754,7 +2754,12 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       {isCommunity ? (
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                          {isConfirmed ? '✅ You\'re in the group' : joinedEvents[ev.id] === 'pending' ? '⏳ Waiting for host approval' : '✓ Host approved you'}
+                          {isConfirmed ? '✅ You\'re in the group' : joinedEvents[ev.id] === 'pending' ? '⏳ Waiting for host approval' : (() => {
+                            const approvedAt = approvedAtMap[ev.id]
+                            if (!approvedAt) return '✓ Host approved you — confirm below!'
+                            const hoursLeft = Math.max(0, Math.ceil(6 - (Date.now() - approvedAt) / 3600000))
+                            return `✓ Host approved you — ${hoursLeft}h to confirm`
+                          })()}
                         </Text>
                       ) : (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -4985,6 +4990,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
   const [hostConfirmedMembers, setHostConfirmedMembers] = useState<Record<number, any[]>>({})
+  const [approvedAtMap, setApprovedAtMap] = useState<Record<number, number>>({}) // eventId → timestamp when host approved
   const [communityEventMembers, setCommunityEventMembers] = useState<Record<number, any[]>>({})
   const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
 
@@ -5636,7 +5642,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!userData?.dbId) return
     const pollStatus = async () => {
       const [{ data: reqData }, { data: evData }] = await Promise.all([
-        supabase.from('join_requests').select('event_id, status').eq('requester_id', userData.dbId),
+        supabase.from('join_requests').select('event_id, status, updated_at').eq('requester_id', userData.dbId),
         supabase.from('community_events').select('id'),
       ])
       if (reqData) {
@@ -5669,6 +5675,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (!updated[req.event_id] || updated[req.event_id] === 'pending') {
                 updated[req.event_id] = 'joined'
                 changed = true
+              }
+              if (req.updated_at) {
+                setApprovedAtMap(prev => prev[req.event_id] ? prev : { ...prev, [req.event_id]: new Date(req.updated_at).getTime() })
               }
             }
             if (req.status === 'confirmed') {
