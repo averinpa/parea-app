@@ -1675,6 +1675,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [officialDbEvents, setOfficialDbEvents] = useState<any[]>([])
   const [officialDbLoading, setOfficialDbLoading] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [forYouFilter, setForYouFilter] = useState(false)
   const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
   const now = Date.now()
 
@@ -1798,6 +1799,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   // Apply search + category filter to community
   const communityFiltered = communityAll.filter(ev => {
     if (categoryFilter && ev.category !== categoryFilter) return false
+    if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       if (!ev.title.toLowerCase().includes(q) && !(ev.description || '').toLowerCase().includes(q)) return false
@@ -1818,6 +1820,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const officialEvents = officialAll.filter(ev => {
     if (ev.city && ev.city !== city) return false
     if (categoryFilter && ev.category !== categoryFilter) return false
+    if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       if (!(ev.title || '').toLowerCase().includes(q) && !(ev.category || '').toLowerCase().includes(q)) return false
@@ -1995,7 +1998,23 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
                 </Text>
               </TouchableOpacity>
+
             </View>
+          </View>
+
+          {/* All / For You toggle */}
+          <View style={{ flexDirection: 'row', marginHorizontal: 20, marginBottom: 14, backgroundColor: '#EEF2FF', borderRadius: 14, padding: 3 }}>
+            <TouchableOpacity onPress={() => setForYouFilter(false)} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center',
+              backgroundColor: !forYouFilter ? '#fff' : 'transparent',
+              shadowColor: !forYouFilter ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: !forYouFilter ? 2 : 0 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: !forYouFilter ? '#4338CA' : '#94A3B8' }}>All Events</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setForYouFilter(true)} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4,
+              backgroundColor: forYouFilter ? '#fff' : 'transparent',
+              shadowColor: forYouFilter ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: forYouFilter ? 2 : 0 }}>
+              <Text style={{ fontSize: 13 }}>✨</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: forYouFilter ? '#EC4899' : '#94A3B8' }}>For You</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Search bar */}
@@ -2228,7 +2247,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
         {/* Category filter chips */}
         {communityAll.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 14 }}>
-          <TouchableOpacity onPress={() => setCategoryFilter(null)}
+          <TouchableOpacity onPress={() => { setCategoryFilter(null); setForYouFilter(false) }}
             style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: !categoryFilter ? '#6366F1' : '#fff' }}>
             <Text style={{ fontSize: 13, fontWeight: '700', color: !categoryFilter ? '#fff' : '#64748B' }}>All</Text>
           </TouchableOpacity>
