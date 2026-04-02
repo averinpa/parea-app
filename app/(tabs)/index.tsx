@@ -481,10 +481,12 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
   const [countryModal, setCountryModal] = useState(false)
   const [isChecking, setIsChecking] = useState(false)
   const [agreed, setAgreed] = useState(false)
+  const [showAgreementWarning, setShowAgreementWarning] = useState(false)
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
   const isPhoneValid = localPhone.replace(/\D/g, '').length >= country.digits
-  const isValid = (tab === 'email' ? isEmailValid : isPhoneValid) && agreed
+  const isCredentialValid = tab === 'email' ? isEmailValid : isPhoneValid
+  const isValid = isCredentialValid && agreed
 
   const handlePhoneChange = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, country.digits)
@@ -492,7 +494,12 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
   }
 
   const handleContinue = async () => {
-    if (!isValid || isChecking) return
+    if (isChecking) return
+    if (isCredentialValid && !agreed) {
+      setShowAgreementWarning(true)
+      return
+    }
+    if (!isValid) return
     setIsChecking(true)
     try {
       if (tab === 'email') {
@@ -595,7 +602,7 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
               {/* Continue button */}
               <TouchableOpacity
                 style={[s.btnPrimary, { backgroundColor: isValid ? '#6366F1' : 'rgba(99,102,241,0.35)', marginTop: 14, shadowColor: '#6366F1', shadowOpacity: isValid ? 0.45 : 0, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: isValid ? 8 : 0 }]}
-                onPress={handleContinue} disabled={!isValid || isChecking}>
+                onPress={handleContinue} disabled={isChecking}>
                 {isChecking ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue</Text>}
               </TouchableOpacity>
 
@@ -624,12 +631,12 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
 
               {/* GDPR consent checkbox */}
               <TouchableOpacity
-                onPress={() => setAgreed(v => !v)}
+                onPress={() => { setAgreed(v => !v); setShowAgreementWarning(false) }}
                 activeOpacity={0.8}
                 style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 28 }}>
                 <View style={{
                   width: 22, height: 22, borderRadius: 6, borderWidth: 2,
-                  borderColor: agreed ? '#6366F1' : '#CBD5E1',
+                  borderColor: showAgreementWarning ? '#EF4444' : agreed ? '#6366F1' : '#CBD5E1',
                   backgroundColor: agreed ? '#6366F1' : 'transparent',
                   alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0,
                 }}>
@@ -649,6 +656,11 @@ function RegistrationScreen({ onBack, onSendOtp }: { onBack: () => void; onSendO
                   {'. I confirm I am 18 years of age or older.'}
                 </Text>
               </TouchableOpacity>
+              {showAgreementWarning && (
+                <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 6, marginLeft: 34 }}>
+                  Please agree to the Terms of Service and Privacy Policy to continue
+                </Text>
+              )}
 
             </View>
           </ScrollView>
@@ -1313,19 +1325,16 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                     {/* Checklist */}
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                       {[
-                        { label: 'Clear face', ci: 0 },
-                        { label: 'Good lighting', ci: 1 },
-                        { label: 'No sunglasses', ci: 2 },
-                      ].map(({ label, ci }) => {
-                        const st = checklist[ci]
-                        const ok = st === 'ok', bad = st === 'warn'
-                        return (
-                          <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: ok ? 'rgba(34,197,94,0.12)' : bad ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.6)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: ok ? 'rgba(34,197,94,0.35)' : bad ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.85)' }}>
-                            <Text style={{ fontSize: 11 }}>{ok ? '✅' : bad ? '❌' : '·'}</Text>
-                            <Text style={{ fontSize: 12, color: ok ? '#16a34a' : bad ? '#DC2626' : '#94A3B8', fontWeight: '500' }}>{label}</Text>
-                          </View>
-                        )
-                      })}
+                        'No nudity or sexual content',
+                        'No minors (18+ only)',
+                        'No hate symbols or violence',
+                        'Your face must be visible',
+                      ].map(label => (
+                        <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.85)' }}>
+                          <Text style={{ fontSize: 11 }}>·</Text>
+                          <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>{label}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )
@@ -7153,9 +7162,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   {/* Header */}
                   <View style={{ position: 'relative' }}>
                     {eventDetail.image_url ? (
-                      <Image source={{ uri: eventDetail.image_url }} style={{ width: '100%', height: 220 }} resizeMode="cover" />
+                      <View style={{ width: '100%', height: 280, overflow: 'hidden' }}>
+                        <Image source={{ uri: eventDetail.image_url }} style={{ width: '100%', height: 420, position: 'absolute', top: 0 }} resizeMode="cover" />
+                      </View>
                     ) : (
-                      <LinearGradient colors={eventDetail.gradient as any} style={{ height: 220 }} />
+                      <LinearGradient colors={eventDetail.gradient as any} style={{ height: 280 }} />
                     )}
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 40, paddingHorizontal: 20, paddingBottom: 20 }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
