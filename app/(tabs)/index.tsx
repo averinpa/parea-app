@@ -5395,7 +5395,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const fetchRequests = async () => {
       const { data: allReqData, error } = await supabase
         .from('join_requests')
-        .select('id, event_id, requester_id, status, transport, created_at')
+        .select('id, event_id, requester_id, status, transport, updated_at')
         .in('event_id', eventIds)
         .in('status', ['pending', 'approved', 'confirmed'])
       if (error) console.warn('join_requests poll error:', error.message)
