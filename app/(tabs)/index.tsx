@@ -6836,6 +6836,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       'Food':   { emoji: '🍽️', items: [{ id:'coffee', emoji:'☕', label:'Coffee' },{ id:'meze', emoji:'🥘', label:'Meze' },{ id:'wine', emoji:'🍷', label:'Wine' },{ id:'brunch', emoji:'🥂', label:'Brunch' },{ id:'sunset', emoji:'🌅', label:'Sunset' }] },
                       'Work':   { emoji: '💼', items: [{ id:'networking', emoji:'🤝', label:'Networking' },{ id:'crypto', emoji:'🪙', label:'Crypto' },{ id:'cowork', emoji:'💻', label:'Co-working' }] },
                       'Relax':  { emoji: '🌿', items: [{ id:'beach', emoji:'🏖️', label:'Beach' },{ id:'hiking', emoji:'🥾', label:'Hiking' },{ id:'boat', emoji:'⛵', label:'Boat' },{ id:'boardgames', emoji:'🎲', label:'Board Games' }] },
+                      'Culture':{ emoji: '🎭', items: [{ id:'dance', emoji:'💃', label:'Dance' },{ id:'concert', emoji:'🎤', label:'Concert' },{ id:'theatre', emoji:'🎭', label:'Theatre' },{ id:'music', emoji:'🎸', label:'Music' },{ id:'art', emoji:'🎨', label:'Art' }] },
                     }
                     const catItems = [...(CATS[createCategory]?.items || []), { id: 'other', emoji: '✏️', label: 'Other' }]
                     const cardW = (W - 40 - 20) / 3
@@ -7072,8 +7073,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         const TYPE_TO_CAT: Record<string, string> = {
                           padel:'sports',tennis:'sports',yoga:'sports',gym:'sports',water:'sports',
                           coffee:'coffee',meze:'food',wine:'wine',brunch:'food',sunset:'outdoors',
-                          networking:'tech',crypto:'tech',coworking:'tech',
+                          networking:'tech',crypto:'tech',coworking:'tech',cowork:'tech',
                           beach:'outdoors',hiking:'outdoors',boat:'outdoors',boardgames:'gaming',
+                          dance:'dance',concert:'music',theatre:'dance',music:'music',art:'culture',
                         }
                         const SIZE_MAX: Record<string, number> = { duo: 2, squad: 5, party: 20 }
                         const GRAD_POOL: [string,string][] = [
