@@ -5395,7 +5395,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const fetchRequests = async () => {
       const { data: allReqData, error } = await supabase
         .from('join_requests')
-        .select('id, event_id, requester_id, status, transport, updated_at')
+        .select('id, event_id, requester_id, status, transport, created_at')
         .in('event_id', eventIds)
         .in('status', ['pending', 'approved', 'confirmed'])
       if (error) console.warn('join_requests poll error:', error.message)
@@ -5403,7 +5403,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // Auto-expire approved requests older than 6h — free slot if joiner didn't confirm
       const APPROVE_EXPIRY_MS = 6 * 60 * 60 * 1000
       const expiredApproved = (allReqData || []).filter((r: any) =>
-        r.status === 'approved' && r.updated_at && Date.now() - new Date(r.updated_at).getTime() > APPROVE_EXPIRY_MS
+        r.status === 'approved' && r.created_at && Date.now() - new Date(r.created_at).getTime() > APPROVE_EXPIRY_MS
       )
       if (expiredApproved.length > 0) {
         supabase.from('join_requests').delete().in('id', expiredApproved.map((r: any) => r.id))
