@@ -5395,20 +5395,31 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const fetchRequests = async () => {
       const { data: allReqData, error } = await supabase
         .from('join_requests')
-        .select('id, event_id, requester_id, status, transport')
+        .select('id, event_id, requester_id, status, transport, updated_at')
         .in('event_id', eventIds)
         .in('status', ['pending', 'approved', 'confirmed'])
       if (error) console.warn('join_requests poll error:', error.message)
-      const reqData = (allReqData || []).filter((r: any) => r.status === 'pending')
-      const approvedData = (allReqData || []).filter((r: any) => r.status === 'approved')
+
+      // Auto-expire approved requests older than 6h — free slot if joiner didn't confirm
+      const APPROVE_EXPIRY_MS = 6 * 60 * 60 * 1000
+      const expiredApproved = (allReqData || []).filter((r: any) =>
+        r.status === 'approved' && r.updated_at && Date.now() - new Date(r.updated_at).getTime() > APPROVE_EXPIRY_MS
+      )
+      if (expiredApproved.length > 0) {
+        supabase.from('join_requests').delete().in('id', expiredApproved.map((r: any) => r.id))
+          .then(() => addNotif({ type: 'info', emoji: '⏰', color: '#F59E0B', title: 'Spot freed', body: 'A joiner didn\'t confirm in time — slot is open again' }))
+      }
+      const validReqData = (allReqData || []).filter((r: any) => !expiredApproved.some((e: any) => e.id === r.id))
+      const reqData = validReqData.filter((r: any) => r.status === 'pending')
+      const approvedData = validReqData.filter((r: any) => r.status === 'approved')
 
       const data = await (async () => {
-        const allIds = [...new Set((allReqData || []).map((r: any) => r.requester_id))]
+        const allIds = [...new Set(validReqData.map((r: any) => r.requester_id))]
         if (allIds.length === 0) return []
         const { data: profiles } = await supabase.from('profiles').select('*').in('id', allIds)
         const profileMap: Record<string, any> = {}
         profiles?.forEach((p: any) => { profileMap[p.id] = p })
-        return (allReqData || []).map((r: any) => ({ ...r, profiles: profileMap[r.requester_id] || {} }))
+        return validReqData.map((r: any) => ({ ...r, profiles: profileMap[r.requester_id] || {} }))
       })()
 
       // Pending requests
