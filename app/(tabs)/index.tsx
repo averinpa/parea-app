@@ -3514,8 +3514,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
           {activeHosted.map((ev: any) => {
             const allRequests: any[] = pendingJoinRequests[ev.id] || []
             const approvedCount = (approvedJoiners?.[ev.id] || []).length
+            const confirmedCount = (communityEventMembers[ev.id] || []).length
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
-            const slotsLeft = slotsTotal - approvedCount
+            const slotsLeft = slotsTotal - confirmedCount // only confirmed participants fill slots
             // Full and no pending requests — show same empty stub as others
             if (slotsLeft <= 0 && allRequests.length === 0) return null
             // Score + sort, show top 12
@@ -6497,6 +6498,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
                   return next
                 })
+              }
+              if (ev.type === 'community' && userData?.dbId) {
+                supabase.from('join_requests').delete().eq('event_id', ev.id).eq('requester_id', userData.dbId)
+                  .then(({ error }) => { if (error) console.warn('join_requests delete error:', error.message) })
               }
               showToast("We let them know your plans changed 📅")
             }}
