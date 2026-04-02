@@ -112,9 +112,12 @@ const INTEREST_TO_CATEGORY: Record<string, string> = {
   '🥾 Hiking': 'outdoors', '🍕 Foodie': 'food', '🧘 Yoga': 'sports', '🎨 Art': 'culture',
   '🎸 Music': 'music', '✈️ Travel': 'outdoors', '🏓 Padel': 'sports', '✂️ Crafts': 'culture',
   '👗 Fashion': 'culture', '💻 IT': 'tech', '🏄 Water Sports': 'outdoors',
+  '🏊 Swimming': 'sports', '🏖️ Beach': 'outdoors', '🎤 Concerts': 'music',
+  '💃 Dance': 'dance', '📷 Photography': 'culture', '📚 Books': 'culture',
+  '🎮 Gaming': 'gaming', '🎭 Theatre': 'dance', '🎲 Board Games': 'gaming',
 }
 
-const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵' }
+const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵', dance: '💃' }
 
 const BENTO_SONGS = ['Pop 🎤', 'Hip-Hop 🎧', 'R&B / Soul 🎶', 'Electronic / House 🎛️', 'Indie / Alternative 🎸', 'Jazz / Blues 🎷', 'Classical 🎻', 'Rock / Metal 🤘', 'Reggaeton / Latin 💃', 'Afrobeats 🥁', 'K-Pop 🌸', 'Lo-fi / Chillhop 🌙', 'Country 🤠', 'Funk / Disco 🕺']
 const BENTO_FLAGS = ['Spontaneous plans 🟢', 'Great listener 🟢', 'Dog lover 🟢', 'Always on time 🟢', 'Foodie 🟢', 'Late replies 🚩', "Cancels last minute 🚩", 'No sense of humour 🚩', "Can't make plans 🚩"]
