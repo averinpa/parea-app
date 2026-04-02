@@ -2497,11 +2497,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {} }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {} }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>; allEvents?: any[]; onEventDetail?: (ev: any) => void;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
-  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>; passedRequests?: Record<number, string[]>;
+  initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; hostConfirmedMembers?: Record<number, any[]>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>; passedRequests?: Record<number, string[]>;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   useEffect(() => { if (initialSubTab) setSubTab(initialSubTab) }, [initialSubTab])
@@ -2618,7 +2618,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                         </View>
                       ) : null}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(approvedJoiners[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
                     </View>
                   </View>
@@ -3358,7 +3358,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {} }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {} }: any) {
   // Official + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
@@ -3513,12 +3513,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
           {/* Host approval section — AI-ranked */}
           {activeHosted.map((ev: any) => {
             const allRequests: any[] = pendingJoinRequests[ev.id] || []
-            const approvedCount = (approvedJoiners?.[ev.id] || []).length
-            const confirmedCount = (approvedJoiners?.[ev.id] || []).length
+            const approvedCount = (approvedJoiners?.[ev.id] || []).length   // approved, not yet confirmed
+            const confirmedCount = (hostConfirmedMembers[ev.id] || []).length // joiner confirmed → slot truly filled
             const slotsTotal = (ev.maxParticipants || 5) - 1 // spots for guests (host takes 1)
             const slotsLeft = slotsTotal - confirmedCount // only confirmed participants fill slots
-            // Full and no pending requests — show same empty stub as others
-            if (slotsLeft <= 0 && allRequests.length === 0) return null
+            // Full and no pending/approved requests — hide panel
+            if (slotsLeft <= 0 && allRequests.length === 0 && approvedCount === 0) return null
             // Score + sort, show top 12
             const scored = allRequests
               .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
@@ -3633,18 +3633,18 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       +{allRequests.length - 12} more hidden · approve or pass to see them
                     </Text>
                   )}
-                  {/* Searching for replacement */}
-                  {slotsLeft > 0 && approvedCount > 0 && allRequests.length === 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' }}>
-                      <Text style={{ fontSize: 20 }}>🔍</Text>
+                  {/* Waiting for approved joiner to confirm */}
+                  {approvedCount > 0 && allRequests.length === 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.1)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' }}>
+                      <Text style={{ fontSize: 20 }}>⏳</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#A5B4FC' }}>Looking for {slotsLeft} replacement{slotsLeft !== 1 ? 's' : ''}...</Text>
-                        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>New requests will appear here shortly</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#FBBF24' }}>Waiting for {approvedCount === 1 ? (approvedJoiners?.[ev.id]?.[0]?.name || 'them') : `${approvedCount} people`} to confirm...</Text>
+                        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>They need to open the app and accept</Text>
                       </View>
                     </View>
                   )}
-                  {/* Group full state */}
-                  {slotsLeft <= 0 && approvedCount > 0 && (
+                  {/* Group full state — only when joiner actually confirmed */}
+                  {slotsLeft <= 0 && confirmedCount > 0 && approvedCount === 0 && (
                     <View style={{ gap: 10, paddingTop: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.12)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)' }}>
                         <Text style={{ fontSize: 22 }}>🎉</Text>
@@ -3668,7 +3668,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <Text style={{ fontSize: 11, fontWeight: '700', color: '#43E97B' }}>✓ {approvedCount} approved</Text>
                       </View>
                       <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>{slotsLeft} spot{slotsLeft !== 1 ? 's' : ''} left</Text>
-                      {(communityEventMembers[ev.id] || []).length > 0 && (
+                      {(hostConfirmedMembers[ev.id] || []).length > 0 && (
                         <TouchableOpacity onPress={() => onGoToMessages?.()} style={{ marginLeft: 'auto' as any }}>
                           <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8' }}>Open chat →</Text>
                         </TouchableOpacity>
@@ -4984,6 +4984,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
+  const [hostConfirmedMembers, setHostConfirmedMembers] = useState<Record<number, any[]>>({})
   const [communityEventMembers, setCommunityEventMembers] = useState<Record<number, any[]>>({})
   const [passedRequests, setPassedRequests] = useState<Record<number, string[]>>({})
 
@@ -5436,10 +5437,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
       setPendingJoinRequests(newRequests)
 
-      // Sync approvedJoiners from DB — handles cases where someone cancelled/left
-      // Include 'confirmed' so host's slot counter reflects fully confirmed members too
+      // Sync approvedJoiners from DB — only 'approved' (not yet confirmed by joiner)
       const newApproved: Record<number, any[]> = {}
-      data.filter((r: any) => r.status === 'approved' || r.status === 'confirmed').forEach((req: any) => {
+      data.filter((r: any) => r.status === 'approved').forEach((req: any) => {
         const p = req.profiles || {}
         const evId = req.event_id
         if (!newApproved[evId]) newApproved[evId] = []
@@ -5448,6 +5448,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       setApprovedJoiners(prev => {
         const next = { ...prev }
         eventIds.forEach(id => { next[id] = newApproved[id] || [] })
+        return next
+      })
+
+      // Track confirmed joiners separately (joiner confirmed → slot is truly filled)
+      const newConfirmed: Record<number, any[]> = {}
+      data.filter((r: any) => r.status === 'confirmed').forEach((req: any) => {
+        const p = req.profiles || {}
+        const evId = req.event_id
+        if (!newConfirmed[evId]) newConfirmed[evId] = []
+        newConfirmed[evId].push({ id: p.id, requestId: req.id, name: p.name || 'User', age: p.age || '', color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#6366F1'], photo: p.photos?.[0] || null, photos: p.photos || [], bio: p.bio || '', langs: p.langs || [], _real: true })
+      })
+      setHostConfirmedMembers(prev => {
+        const next = { ...prev }
+        eventIds.forEach(id => { next[id] = newConfirmed[id] || [] })
         return next
       })
 
@@ -5531,7 +5545,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
       // Sync approvedJoiners from DB (catches when joiner leaves)
       const syncedApproved: Record<number, any[]> = {}
-      data.filter((r: any) => r.status === 'approved' || r.status === 'confirmed').forEach((req: any) => {
+      data.filter((r: any) => r.status === 'approved').forEach((req: any) => {
         const p = req.profiles || {}
         const evId = req.event_id
         if (!syncedApproved[evId]) syncedApproved[evId] = []
@@ -5540,6 +5554,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       setApprovedJoiners(prev => {
         const merged = { ...prev }
         eventIds.forEach((id: number) => { merged[id] = syncedApproved[id] || [] })
+        return merged
+      })
+      const syncedConfirmed: Record<number, any[]> = {}
+      data.filter((r: any) => r.status === 'confirmed').forEach((req: any) => {
+        const p = req.profiles || {}
+        const evId = req.event_id
+        if (!syncedConfirmed[evId]) syncedConfirmed[evId] = []
+        syncedConfirmed[evId].push({ id: p.id, requestId: req.id, name: p.name || 'User', age: p.age || '', color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#6366F1'], photo: p.photos?.[0] || null, photos: p.photos || [], bio: p.bio || '', langs: p.langs || [], _real: true })
+      })
+      setHostConfirmedMembers(prev => {
+        const merged = { ...prev }
+        eventIds.forEach((id: number) => { merged[id] = syncedConfirmed[id] || [] })
         return merged
       })
     }
@@ -6270,6 +6296,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             tonightVibe={tonightVibe}
             eventAttendeesMap={eventAttendeesMap}
             communityEventMembers={communityEventMembers}
+            hostConfirmedMembers={hostConfirmedMembers}
             incomingCrewInvites={incomingCrewInvites}
             sentCrewInvites={sentCrewInvites}
             readyCountMap={readyCountMap}
@@ -6521,6 +6548,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             hostedEvents={userCreatedEvents}
             pendingJoinRequests={pendingJoinRequests}
             approvedJoiners={approvedJoiners}
+            hostConfirmedMembers={hostConfirmedMembers}
             onCancelHostedEvent={(ev: any) => {
               deletedCommunityEventIds.current.add(ev.id)
               setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id))
