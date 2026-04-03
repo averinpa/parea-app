@@ -3356,7 +3356,14 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
 
 function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {}, topInset = 0 }: any) {
   // Official + approved community events — shown as crew cards
-  const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
+  const myEvents = (allEvents || []).filter((e: any) => {
+    const status = joinedEvents?.[e.id]
+    if (!status || e.isHosted) return false
+    if (e.type === 'community') return status === 'joined'
+    // Official: show if pending/joined OR confirmed but has no active chat (partner left)
+    if (status === 'confirmed') return !officialEventChatMap[e.id]
+    return true
+  })
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
   // Community events pending host approval — shown as waiting cards
   const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && !e.isHosted && e.type === 'community' && (!e.expiresAt || e.expiresAt > Date.now()))
