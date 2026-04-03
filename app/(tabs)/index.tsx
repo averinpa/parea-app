@@ -6812,7 +6812,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <TouchableOpacity style={s.navItem} onPress={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}>
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
-              {(Object.entries(joinedEvents).some(([, v]) => v !== 'confirmed') || Object.values(pendingJoinRequests).some(r => r.length > 0) || userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > Date.now()) && (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)) && (
+              {(() => {
+                const allKnownEvs = [...feedOfficialDbEvents, ...dbCommunityEvents, ...userCreatedEvents]
+                const now = Date.now()
+                const hasActiveJoined = Object.entries(joinedEvents).some(([id, v]) => {
+                  if (v === 'confirmed') return false
+                  const ev = allKnownEvs.find(e => e.id === Number(id))
+                  if (!ev) return false
+                  if (ev.expiresAt && ev.expiresAt <= now) return false
+                  return true
+                })
+                const hasPending = Object.values(pendingJoinRequests).some(r => r.length > 0)
+                const hasHostActivity = userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > now) && (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)
+                return (hasActiveJoined || hasPending || hasHostActivity)
+              })() && (
                 <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: Object.values(pendingJoinRequests).some(r => r.length > 0) ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
