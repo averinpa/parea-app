@@ -5186,6 +5186,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         // Remove duo chat for this event
         const chatIdToRemove = officialEventChatMapRef.current[evId]
         if (chatIdToRemove) setChatList(prev => prev.filter((c: any) => c.id !== chatIdToRemove))
+        setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[evId]; return n })
         // Reset event status back to 'going'
         setJoinedEvents(prev => ({ ...prev, [evId]: 'joined' }))
         // Reset event_attendees status back to 'looking' in DB
@@ -5207,6 +5208,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const partnerChat = chatListRef.current.find((c: any) => c.id === chatIdToRemove)
         const eventTitle = partnerChat?.title || payload?.eventTitle || 'your event'
         if (chatIdToRemove) setChatList(prev => prev.filter((c: any) => c.id !== chatIdToRemove))
+        setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[evId]; return n })
         setJoinedEvents(prev => ({ ...prev, [evId]: 'joined' }))
         supabase.from('event_attendees').update({ status: 'looking' })
           .eq('event_ref_id', evId).eq('profile_id', userData.dbId)
