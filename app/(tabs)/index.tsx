@@ -6726,6 +6726,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userEventFormat={userEventFormat}
             userEventTransport={userEventTransport}
             approvedJoiners={approvedJoiners}
+            hostConfirmedMembers={hostConfirmedMembers}
             approvedAtMap={approvedAtMap}
             eventAttendeesMap={eventAttendeesMap}
             onCancelHostedEvent={(ev) => {
