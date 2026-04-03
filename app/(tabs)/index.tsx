@@ -3354,7 +3354,7 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {} }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {}, topInset = 0 }: any) {
   // Official + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
@@ -3486,7 +3486,6 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     )
   }
 
-  const insets = useSafeAreaInsets()
   const subtitle = (() => {
     if (hasHostActivity) return '👑 You have join requests'
     const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
@@ -3501,7 +3500,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
       <AuroraBg />
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 22, paddingTop: insets.top + 12, paddingBottom: 20 }}>
+        <View style={{ paddingHorizontal: 22, paddingTop: topInset + 12, paddingBottom: 20 }}>
           {/* Label pill */}
           <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.18)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99,102,241,0.35)' }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#818CF8' }} />
@@ -3513,7 +3512,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 8, letterSpacing: 0.1 }}>{subtitle}</Text>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 32 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 100 }}>
           {/* Host approval section — AI-ranked */}
           {activeHosted.map((ev: any) => {
             const allRequests: any[] = pendingJoinRequests[ev.id] || []
@@ -6325,8 +6324,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
             <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
           </View>
-          <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, bottom: 0, zIndex: 10, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
+          <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, bottom: 0, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
           <VibeCheckTab
+            topInset={insets.top}
             joinedEvents={joinedEvents}
             allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents, ...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]}
             userEventFormat={userEventFormat}
