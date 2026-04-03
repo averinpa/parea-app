@@ -4900,12 +4900,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const evHost = eventDetail?.type === 'community' && !eventDetail.isHosted
     ? (eventDetail.hostProfile || allSeekers[(eventDetail.id - 1) % allSeekers.length])
     : null
-  const evActualCount = eventDetail
-    ? (eventDetail.isHosted || eventDetail.host_id === userData?.dbId)
-      ? (hostConfirmedMembers[eventDetail.id] || []).length + 1
-      : eventDetail.participantsCount
-    : 0
-  const evSpotsLeft = eventDetail?.maxParticipants ? eventDetail.maxParticipants - evActualCount : null
+  const evSpotsLeft = eventDetail?.maxParticipants ? eventDetail.maxParticipants - eventDetail.participantsCount : null
   const evIsFull = evSpotsLeft !== null && evSpotsLeft <= 0
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
@@ -7378,7 +7373,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Participants</Text>
                           <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>
-                            {evActualCount} going{evSpotsLeft !== null ? `  ·  ${evSpotsLeft} spots left` : ''}
+                            {(eventDetail.isHosted || eventDetail.host_id === userData?.dbId) ? (hostConfirmedMembers[eventDetail.id] || []).length + 1 : eventDetail.participantsCount} going{evSpotsLeft !== null ? `  ·  ${evSpotsLeft} spots left` : ''}
                           </Text>
                         </View>
                         <View style={{ backgroundColor: evIsFull ? '#fef2f2' : '#f0fdf4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
