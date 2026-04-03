@@ -2542,7 +2542,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
-      <View style={{ paddingTop: 82, paddingHorizontal: 20 }}>
+      <View style={{ paddingTop: 16, paddingHorizontal: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
@@ -2831,16 +2831,16 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                 )
               }}
               activeOpacity={0.88}
-              style={{ borderRadius: 24, overflow: 'hidden' }}>
+              style={{ borderRadius: 18, overflow: 'hidden' }}>
               {/* Card background — gradient tint for unread, plain for read */}
               <LinearGradient
                 colors={chat.isNew
                   ? ['#EEF2FF', '#F5F0FF']
                   : ['#fff', '#FAFAFA']}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10,
                   borderWidth: chat.isNew ? 1.5 : 1,
                   borderColor: chat.isNew ? 'rgba(99,102,241,0.25)' : 'rgba(0,0,0,0.05)',
-                  borderRadius: 24 }}>
+                  borderRadius: 18 }}>
 
                 {/* Avatar */}
                 {chat.type === 'duo' ? (
