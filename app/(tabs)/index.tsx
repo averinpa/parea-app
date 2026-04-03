@@ -3486,23 +3486,31 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     )
   }
 
+  const insets = useSafeAreaInsets()
+  const subtitle = (() => {
+    if (hasHostActivity) return '👑 You have join requests'
+    const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
+    if (myEvents.length > 0 && totalReal > 0) return `${totalReal} people going · tap to see them`
+    if (myEvents.length > 0) return `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · looking for crew...`
+    if (myApprovedCommunityEvents.length > 0) return `You're in — open the chat`
+    if (myCommunityEvents.length > 0) return `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host`
+    return `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`
+  })()
+
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
       <AuroraBg />
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
-          <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-            {(() => {
-              if (hasHostActivity) return '👑 You have join requests'
-              const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
-              if (myEvents.length > 0 && totalReal > 0) return `${totalReal} people going · tap to see them`
-              if (myEvents.length > 0) return `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · looking for crew... 🔍`
-              if (myApprovedCommunityEvents.length > 0) return `✅ You're in — open the chat`
-              if (myCommunityEvents.length > 0) return `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host`
-              return `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`
-            })()}
-          </Text>
+        <View style={{ paddingHorizontal: 22, paddingTop: insets.top + 12, paddingBottom: 20 }}>
+          {/* Label pill */}
+          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.18)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99,102,241,0.35)' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#818CF8' }} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8', letterSpacing: 1.2, textTransform: 'uppercase' }}>Live</Text>
+          </View>
+          {/* Title */}
+          <Text style={{ fontSize: 36, fontWeight: '900', color: '#fff', letterSpacing: -1.5, lineHeight: 40 }}>Vibe{'\n'}Check</Text>
+          {/* Subtitle */}
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 8, letterSpacing: 0.1 }}>{subtitle}</Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 32 }}>
