@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator, Alert, Animated, Dimensions, Image, Keyboard, Linking,
-  KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform,
+  KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, Pressable,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -2612,11 +2612,6 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>📅 {ev.time}</Text>
                       </View>
-                      {ev.location ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>📍 {ev.location}</Text>
-                        </View>
-                      ) : null}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
@@ -2777,14 +2772,10 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       <TouchableOpacity activeOpacity={0.8}
                         onPress={() => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                          if (isConfirmed) {
-                            openCrewSheet(ev, crewProfiles, found, cap)
-                          } else {
-                            onVibeCheck?.(ev)
-                          }
+                          onEventDetail?.(ev)
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>{isCommunity ? 'View event →' : "Who's going? →"}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event →</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -4736,6 +4727,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
   const [eventDetail, setEventDetail] = useState<any>(null)
+  const [eventParticipants, setEventParticipants] = useState<{ ev: any; members: any[] } | null>(null)
   const [matchedWith, setMatchedWith] = useState<any>(null)
   const [vibeResults, setVibeResults] = useState<Record<number, string>>({})
   const [openChat, setOpenChat] = useState<any>(null)
@@ -7356,20 +7348,38 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     )}
 
                     {/* Participants — only for community events */}
-                    {eventDetail.type !== 'official' && <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                        <Feather name="users" size={18} color="#6366F1" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Participants</Text>
-                        <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>
-                          {eventDetail.participantsCount} going{evSpotsLeft !== null ? `  ·  ${evSpotsLeft} spots left` : ''}
-                        </Text>
-                      </View>
-                      <View style={{ backgroundColor: evIsFull ? '#fef2f2' : '#f0fdf4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: evIsFull ? '#EF4444' : '#22c55e' }}>{evIsFull ? 'Full' : 'Open'}</Text>
-                      </View>
-                    </View>}
+                    {eventDetail.type !== 'official' && (
+                      <Pressable
+                        onPress={async () => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                          const isHost = eventDetail.isHosted || eventDetail.host_id === userData?.dbId
+                          if (isHost && (hostConfirmedMembers[eventDetail.id] || []).length > 0) {
+                            setEventParticipants({ ev: eventDetail, members: hostConfirmedMembers[eventDetail.id] }); return
+                          }
+                          if (!isHost && (communityEventMembers[eventDetail.id] || []).length > 0) {
+                            setEventParticipants({ ev: eventDetail, members: communityEventMembers[eventDetail.id] }); return
+                          }
+                          const { data: reqs } = await supabase.from('join_requests').select('requester_id').eq('event_id', eventDetail.id).in('status', ['approved', 'confirmed'])
+                          const ids = (reqs || []).map((r: any) => r.requester_id).filter(Boolean)
+                          if (ids.length === 0) { setEventParticipants({ ev: eventDetail, members: [] }); return }
+                          const { data: profiles } = await supabase.from('profiles').select('id, name, photos, bio, age, color').in('id', ids)
+                          setEventParticipants({ ev: eventDetail, members: (profiles || []).map((p: any) => ({ id: p.id, name: p.name || 'Member', photo: p.photos?.[0] || null, bio: p.bio || '', age: p.age || '', color: p.color || '#818CF8' })) })
+                        }}
+                        style={({ pressed }) => ({ backgroundColor: pressed ? '#F5F3FF' : '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 })}>
+                        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="users" size={18} color="#6366F1" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Participants</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>
+                            {eventDetail.participantsCount} going{evSpotsLeft !== null ? `  ·  ${evSpotsLeft} spots left` : ''}
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: evIsFull ? '#fef2f2' : '#f0fdf4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: evIsFull ? '#EF4444' : '#22c55e' }}>{evIsFull ? 'Full' : 'Open'}</Text>
+                        </View>
+                      </Pressable>
+                    )}
 
                     {/* Organizer (official) */}
                     {eventDetail.type === 'official' && eventDetail.organizer && (
@@ -7457,6 +7467,38 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </View>
                   )
                 })()}
+                {/* Participants sheet — inside event detail modal (iOS: can't nest Modals) */}
+                {eventParticipants && (
+                  <View style={{ ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 100 }}>
+                    <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setEventParticipants(null)} />
+                    <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32, maxHeight: '80%' }}>
+                      <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}>
+                        <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+                      </View>
+                      <View style={{ paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.08)' }}>
+                        <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B' }}>{eventParticipants.ev.title}</Text>
+                        <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700', marginTop: 4 }}>
+                          👥 {eventParticipants.members.length} participant{eventParticipants.members.length !== 1 ? 's' : ''} confirmed
+                        </Text>
+                      </View>
+                      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+                        {eventParticipants.members.length === 0 ? (
+                          <Text style={{ textAlign: 'center', color: '#94A3B8', fontSize: 14, paddingVertical: 24 }}>No confirmed participants yet</Text>
+                        ) : eventParticipants.members.map((p: any, i: number) => (
+                          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, backgroundColor: `${p.color}08`, borderWidth: 1, borderColor: `${p.color}20` }}>
+                            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: p.color, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                              {p.photo ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} /> : <Text style={{ fontSize: 22, color: '#fff', fontWeight: '800' }}>{(p.name || '?')[0]}</Text>}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}{p.age ? `, ${p.age}` : ''}</Text>
+                              {p.bio ? <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={2}>{p.bio}</Text> : null}
+                            </View>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </View>
+                )}
               </SafeAreaView>
             </LinearGradient>
           </Modal>
@@ -7973,6 +8015,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           </View>
         </Modal>
       )}
+
 
       {/* Toast notification */}
       {toast.visible && (
