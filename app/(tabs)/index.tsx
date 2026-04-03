@@ -2640,7 +2640,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     onPress={() => onCancelHostedEvent?.(ev)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={{ fontSize: 16 }}>🗑️</Text>
+                    <Feather name="trash-2" size={16} color="#94A3B8" />
                   </TouchableOpacity>
                 </View>
               ))}
