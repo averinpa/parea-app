@@ -3456,7 +3456,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
         <AuroraBg />
-        <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+        <SafeAreaView edges={['bottom']} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
           <View style={{ alignItems: 'center' }}>
             <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center', marginBottom: 32 }}>
               <Animated.View style={{
@@ -3489,7 +3489,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
       <AuroraBg />
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
         <View style={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 16 }}>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.8 }}>Vibe Check</Text>
           <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
@@ -6318,7 +6318,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
           </View>
           <View style={{ flex: 1, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
-            <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, height: insets.top, backgroundColor: '#0A0812', zIndex: 1 }} />
           <VibeCheckTab
             joinedEvents={joinedEvents}
             allEvents={[...MOCK_EVENTS, ...feedOfficialDbEvents, ...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]}
