@@ -2614,7 +2614,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>📅 {ev.time}</Text>
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(approvedJoiners[ev.id] || []).length + (hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
                       <View style={{ flex: 1 }} />
                       <TouchableOpacity activeOpacity={0.8} onPress={(e) => { e.stopPropagation?.(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
