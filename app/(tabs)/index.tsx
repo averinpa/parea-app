@@ -2519,7 +2519,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   }
 
   const now = Date.now()
-  const myEvents = [...MOCK_EVENTS, ...allEvents.filter((e: any) => e._fromDb || e.type === 'community')].filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
+  const myEvents = [...MOCK_EVENTS, ...allEvents.filter((e: any) => e._fromDb || e.type === 'community')].filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]) && (!ev.expiresAt || ev.expiresAt > now))
   const activeHostedEvents = hostedEvents.filter(ev => !ev.expiresAt || ev.expiresAt > now)
   const expiredHostedEvents = hostedEvents.filter(ev => ev.expiresAt && ev.expiresAt <= now)
 
@@ -3363,9 +3363,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   const myEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] && joinedEvents[e.id] !== 'confirmed' && !e.isHosted && (e.type !== 'community' || joinedEvents[e.id] === 'joined'))
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
   // Community events pending host approval — shown as waiting cards
-  const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && !e.isHosted && e.type === 'community')
+  const myCommunityEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && !e.isHosted && e.type === 'community' && (!e.expiresAt || e.expiresAt > Date.now()))
   // User-created socials the user requested to join — shown as "awaiting approval"
-  const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted)
+  const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted && (!e.expiresAt || e.expiresAt > Date.now()))
   const activeHosted = (hostedEvents || []).filter((e: any) => !e.expiresAt || e.expiresAt > Date.now())
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
   const [previewProfile, setPreviewProfile] = useState<any>(null)
@@ -4149,9 +4149,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </View>
 
                   {isPending ? (
-                    <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 14 }}>
-                      <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 19 }}>
-                        ⏳ Request sent. The host reviews compatibility scores — {compatScore >= 60 ? 'your chances look great! 🔥' : 'keep your profile complete for better chances.'}
+                    <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 14, gap: 6 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>⏳ Waiting for host approval</Text>
+                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>
+                        {compatScore >= 60 ? 'Your match score looks great — good chances! 🔥' : 'The host reviews all requests by compatibility score.'}{'\n'}You'll get a notification when they respond.
                       </Text>
                     </View>
                   ) : (
@@ -4202,14 +4203,14 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       </View>
                     </View>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)' }}>
-                    <Text style={{ fontSize: 22 }}>⏳</Text>
-                    <View style={{ flex: 1 }}>
+                  <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontSize: 18 }}>⏳</Text>
                       <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                        {langMatch ? `Host speaks your language 🌍` : 'The organizer reviews all requests'}
-                      </Text>
                     </View>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>
+                      {langMatch ? 'The host speaks your language — great sign! 🌍' : 'The organizer reviews requests manually.'}{'\n'}You'll be notified as soon as they respond.
+                    </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => onLeave?.(ev)}
@@ -4835,6 +4836,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             _real: true,
           } : null,
           description: e.description || (e.location ? `📍 ${e.location}` : ''),
+          expiresAt: (() => { try { const t = (e.time || '').replace(', ', 'T') + ':00'; const d = new Date(t); return isNaN(d.getTime()) ? 0 : d.getTime(); } catch { return 0 } })(),
           _dbCommunity: true,
         })))
       }
@@ -5185,7 +5187,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         // Reset event_attendees status back to 'looking' in DB
         supabase.from('event_attendees').update({ status: 'looking' })
           .eq('event_ref_id', evId).eq('profile_id', userData.dbId)
-        showToast('Your crew partner left — searching again 🔍')
+        showToast('We\'ll find you a new match', 'Partner left 👋', '🔍')
       }
     }
     checkPartnerLeft()
@@ -5205,7 +5207,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         supabase.from('event_attendees').update({ status: 'looking' })
           .eq('event_ref_id', evId).eq('profile_id', userData.dbId)
         addNotif({ type: 'partner_left', emoji: '👋', color: '#EF4444', title: 'Your partner left', body: `They cancelled their plans for "${eventTitle}" — searching for a new match 🔍` })
-        showToast('Your crew partner left — searching again 🔍')
+        showToast('We\'ll find you a new match', 'Partner left 👋', '🔍')
       })
       .subscribe()
 
@@ -5257,7 +5259,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (chatData?.event_id) {
           setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
         }
-        showToast('You\'re in the crew! 🎉')
+        showToast('Check your Messages tab for the chat', 'You\'re in! 🎉', '✅')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       })
       .subscribe()
@@ -5863,15 +5865,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }
   // ── End Notifications ──────────────────────────────────────────────────────
 
-  const [toast, setToast] = useState<{ visible: boolean; text: string }>({ visible: false, text: '' })
+  const [toast, setToast] = useState<{ visible: boolean; text: string; title?: string; emoji?: string }>({ visible: false, text: '' })
   const toastAnim = useRef(new Animated.Value(0)).current
 
-  const showToast = (text: string) => {
-    setToast({ visible: true, text })
+  const showToast = (text: string, title?: string, emoji?: string) => {
+    setToast({ visible: true, text, title, emoji })
     toastAnim.setValue(0)
     Animated.sequence([
       Animated.spring(toastAnim, { toValue: 1, friction: 8, useNativeDriver: true }),
-      Animated.delay(2200),
+      Animated.delay(3500),
       Animated.timing(toastAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
     ]).start(() => setToast({ visible: false, text: '' }))
   }
@@ -5880,7 +5882,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const FORMAT_EMOJI: Record<string, string> = { '1+1': '👥', squad: '🫂', party: '🎉' }
     const TRANSPORT_EMOJI: Record<string, string> = { car: '🚗', lift: '🙋', meet: '📍' }
     const parts = [FORMAT_EMOJI[format] || '👥', TRANSPORT_EMOJI[transport] || '📍'].filter(Boolean)
-    showToast(`${parts.join(' · ')}`)
+    showToast(`${parts.join(' · ')}`, 'Finding your crew...', '🔍')
     // Clear stale invite/pass state from previous sessions for this event
     setSentCrewInvites(prev => {
       const next = { ...prev }
@@ -6376,13 +6378,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
                       setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatData.id }))
                       setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== mutualInvite.id))
-                      showToast('Mutual match! 🎉')
+                      showToast('You both want to go together!', 'It\'s a match! 🎉', '🎉')
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
                       setMessagesInitialSubTab('messages'); setActiveTab('messages')
                       return
                     }
                   }
-                  showToast('Invite sent! 🎯')
+                  showToast('They\'ll see your invite soon', 'Invite sent! 🎯', '🎯')
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
                   return
                 }
@@ -6397,7 +6399,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const count = readyData?.length || 1
                 setReadyCountMap(prev => ({ ...prev, [ev.id]: count }))
                 if (count < 2) {
-                  showToast('1 ready — waiting for someone! ⏳')
+                  showToast('We\'ll notify you when someone joins', 'You\'re the first one! ⏳', '⏳')
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                   return
                 }
@@ -6462,7 +6464,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => [newChat, ...prev])
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
               addNotif({ type: 'confirmed', emoji: '✅', color: '#10B981', title: 'You\'re in!', body: `Your crew for "${ev.title}" is ready`, chatId: createdChatId })
-              showToast(`Chat created! 🎉`)
+              showToast('Your crew is ready — say hi!', 'Chat created! 💬', '💬')
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
@@ -6483,7 +6485,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
-                showToast('Joined the crew! 🎉')
+                showToast('Check your Messages tab for the chat', 'Joined the crew! 🎉', '✅')
               } else {
                 // Create new chat with all ready members
                 const [userMin, userMax] = ({ '1+1': [2,2], squad: [3,5], party: [6,20] } as any)[userEventFormat[ev.id] || 'squad'] || [3,5]
@@ -6493,7 +6495,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
                 const { data: chatData } = await supabase.from('chats')
                   .insert({ type: 'group', last_msg: `🎉 ${ev.title}` }).select().single()
-                if (!chatData) { showToast('Something went wrong'); return }
+                if (!chatData) { showToast('Please try again', 'Something went wrong', '⚠️'); return }
                 const memberIds = (readyData || []).map((r: any) => r.profile_id)
                 if (!memberIds.includes(userData?.dbId)) memberIds.push(userData?.dbId)
                 await supabase.from('chat_members').insert(memberIds.map((id: string) => ({ chat_id: chatData.id, profile_id: id })))
@@ -6510,7 +6512,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
-                showToast('Crew assembled! 🎉')
+                showToast('Check your Messages tab for the group chat', 'Crew assembled! 🎉', '🎉')
               }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages'); setActiveTab('messages')
@@ -6523,7 +6525,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 .insert({ type: 'duo', last_msg: '🎉 Crew confirmed!' })
                 .select()
                 .single()
-              if (!chatData) { acceptingInviteRef.current.delete(invite.id); showToast('Something went wrong, try again'); return }
+              if (!chatData) { acceptingInviteRef.current.delete(invite.id); showToast('Please try again', 'Something went wrong', '⚠️'); return }
               await supabase.from('chat_members').insert([
                 { chat_id: chatData.id, profile_id: userData?.dbId },
                 { chat_id: chatData.id, profile_id: invite.inviter_id },
@@ -6547,7 +6549,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setJoinedEvents(prev => ({ ...prev, [invite.event_ref_id]: 'confirmed' }))
               setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
               setOfficialEventChatMap(prev => ({ ...prev, [invite.event_ref_id]: chatData.id }))
-              showToast('Crew confirmed! 🎉')
+              showToast('Check your Messages tab for the group chat', 'Crew confirmed! 🎉', '✅')
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages')
               setActiveTab('messages')
@@ -6555,7 +6557,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onDeclineInvite={async (invite: any) => {
               await supabase.from('crew_invites').update({ status: 'declined' }).eq('id', invite.id)
               setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
-              showToast('Declined')
+              showToast('Invite removed', 'Declined', '👋')
             }}
             onLeave={(ev: any) => {
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
@@ -6577,7 +6579,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 supabase.from('join_requests').delete().eq('event_id', ev.id).eq('requester_id', userData.dbId)
                   .then(({ error }) => { if (error) console.warn('join_requests delete error:', error.message) })
               }
-              showToast("We let them know your plans changed 📅")
+              showToast('They\'ve been notified', 'Plans changed 📅', '📅')
             }}
             hostedEvents={userCreatedEvents}
             pendingJoinRequests={pendingJoinRequests}
@@ -6591,7 +6593,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
               supabase.from('community_events').delete().eq('id', ev.id).then(({ error }) => { if (error) console.warn('event delete error:', error.message) })
               supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error }) => { if (error) console.warn('join_requests delete error:', error.message) })
-              showToast("Event cancelled 🗑️")
+              showToast('All requests and chats removed', 'Event cancelled 🗑️', '🗑️')
             }}
             onApproveJoiner={(eventId: number, joiner: any) => {
               const ev = userCreatedEvents.find(e => e.id === eventId)
@@ -6599,7 +6601,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               const slotsTotal = maxParticipants - 1 // host takes 1 slot
               const alreadyApproved = (approvedJoiners[eventId] || []).length + (hostConfirmedMembers[eventId] || []).length
               if (alreadyApproved >= slotsTotal) {
-                showToast("Event is already full!")
+                showToast('No more spots available', 'Event is full 🔒', '🔒')
                 return
               }
               // Update DB if real joiner
@@ -6626,7 +6628,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   setPendingJoinRequests(prev => ({ ...prev, [eventId]: [] }))
                 }
               }
-              showToast(`${joiner.name} approved! ✅`)
+              showToast('They have 6h to confirm their spot', `${joiner.name} approved ✅`, '✅')
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
             }}
             onRejectJoiner={(eventId: number, joiner: any) => {
@@ -6634,7 +6636,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ...prev,
                 [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
               }))
-              showToast(`Request declined`)
+              showToast('Their request has been removed', 'Request declined ❌', '❌')
             }}
             passedRequests={passedRequests}
             onPassJoiner={(eventId: number, joiner: any) => {
@@ -6711,7 +6713,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setApprovedJoiners(prev => { const n = { ...prev }; delete n[leavingChat.hostEventId]; return n })
               }
               setChatList(prev => prev.filter(c => c.id !== id))
-              showToast(leavingChat?.communityEventId && !leavingChat?.hostEventId ? "Left the group" : "Event cancelled and chat removed 🗑️")
+              showToast(
+                leavingChat?.communityEventId && !leavingChat?.hostEventId
+                  ? 'You\'ve left the group chat'
+                  : 'Chat removed',
+                leavingChat?.communityEventId && !leavingChat?.hostEventId
+                  ? 'Left the group 👋'
+                  : 'Event cancelled 🗑️',
+                leavingChat?.communityEventId && !leavingChat?.hostEventId ? '👋' : '🗑️'
+              )
             }}
             allEvents={[...feedOfficialDbEvents, ...dbCommunityEvents]}
             onEventDetail={setEventDetail}
@@ -6731,7 +6741,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               supabase.from('community_events').delete().eq('id', ev.id).then(({ error, status, statusText }) => { console.log('community_events delete:', { eventId: ev.id, error: error?.message, status, statusText }) })
               supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error, count }) => { console.log('join_requests delete:', { eventId: ev.id, error: error?.message, count }) })
               addNotif({ type: 'event_cancelled', emoji: '🗑️', color: '#EF4444', title: 'Event cancelled', body: `"${ev.title}" has been removed` })
-              showToast("Event cancelled 🗑️")
+              showToast('All requests and chats removed', 'Event cancelled 🗑️', '🗑️')
             }}
             onVibeCheck={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}
             onPlansOpen={markNotifsReadForPlans}
@@ -6775,7 +6785,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     }
                   })
               }
-              showToast("Spot freed. Others can join now 🎟️")
+              showToast('A new spot is now open for others', 'Spot freed 🎟️', '🎟️')
             }}
             onUpdatePlans={ev => {
               setActiveTab('home')
@@ -7230,7 +7240,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
-                        showToast('Your social is live! 🎉')
+                        showToast('Others can find it in the feed now', 'Your social is live! 🎉', '🎉')
                       }}>
                       <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Social 🚀</Text>
                     </TouchableOpacity>
@@ -7568,7 +7578,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           setApprovedJoiners(prev => { const n = { ...prev }; delete n[openChat.hostEventId]; return n })
                           setChatList(prev => prev.filter(c => c.id !== openChat.id))
                           setOpenChat(null)
-                          showToast("Event cancelled 🗑️")
+                          showToast('All requests and chats removed', 'Event cancelled 🗑️', '🗑️')
                         }},
                         { text: 'Close', style: 'cancel' },
                       ]
@@ -7595,7 +7605,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           }))
                           setChatList(prev => prev.filter(c => c.id !== chatId))
                           setOpenChat(null)
-                          showToast("We let them know your plans changed 📅")
+                          showToast('They\'ve been notified', 'Plans changed 📅', '📅')
                         }},
                         { text: 'Close', style: 'cancel' },
                       ]
@@ -7607,6 +7617,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
+              {(() => {
+                const chatEvId = openChat.hostEventId || openChat.communityEventId
+                const chatEv = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents].find(e => e.id === chatEvId) : null
+                const isExpired = chatEv?.expiresAt > 0 && chatEv.expiresAt < Date.now()
+                return isExpired ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
+                    <Text style={{ fontSize: 14 }}>🗂️</Text>
+                    <Text style={{ fontSize: 12, color: '#64748B', flex: 1, lineHeight: 17 }}>This event has ended. The chat will be automatically deleted within 24 hours.</Text>
+                  </View>
+                ) : null
+              })()}
               <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={e => { const h = Math.round(e.nativeEvent.layout.height); setKavHeight(h); if (kavBaseHeight.current === 0) kavBaseHeight.current = h }}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
@@ -7935,7 +7956,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 }))
                                 addNotif({ type: 'member_left', emoji: '👋', color: '#F59E0B', title: `${p.name} left the group`, body: openChat.event || '' })
                                 setGroupMembersOpen(false)
-                                showToast(`${p.name} removed`)
+                                showToast('They\'ve been removed from the group', `${p.name} removed`, '👋')
                               }},
                               { text: 'Cancel', style: 'cancel' },
                             ]
@@ -7961,10 +7982,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
         }}>
           <View style={{ backgroundColor: '#1E1B4B', borderRadius: 20, paddingHorizontal: 22, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20, elevation: 16 }}>
-            <Text style={{ fontSize: 22 }}>🔍</Text>
+            <Text style={{ fontSize: 22 }}>{toast.emoji || '✨'}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>Finding your crew...</Text>
-              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{toast.text}</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{toast.title || toast.text}</Text>
+              {toast.title ? <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{toast.text}</Text> : null}
             </View>
           </View>
         </Animated.View>
