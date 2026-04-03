@@ -7437,42 +7437,26 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 </ScrollView>
 
                 {/* Sticky Join button */}
-                {!eventDetail.isHosted && (() => {
-                  const joined = joinedEvents[eventDetail.id]
-                  const isFull = evIsFull
-                  return (
-                    <View style={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 8, backgroundColor: 'rgba(245,243,255,0.96)', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)' }}>
-                      {joined ? (
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            handleJoinEvent(eventDetail)
-                            setEventDetail(null)
-                          }}
-                          style={{ borderRadius: 18, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0fdf4', borderWidth: 2, borderColor: '#22c55e' }}>
-                          <Text style={{ fontSize: 16, fontWeight: '800', color: '#16a34a' }}>✓ Joined — tap to leave</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          activeOpacity={0.85}
-                          disabled={isFull}
-                          onPress={() => {
-                            setEventDetail(null)
-                            setPendingJoinEv(eventDetail)
-                            setActiveTab('home')
-                          }}
-                          style={[s.btnPrimary, isFull
-                            ? { backgroundColor: '#E2E8F0', shadowOpacity: 0 }
-                            : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
-                          ]}>
-                          <Text style={[s.btnPrimaryText, { color: isFull ? '#94A3B8' : '#fff' }]}>
-                            {isFull ? 'Event is full' : eventDetail.type === 'official' ? "I'm Going →" : 'Join this Social →'}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )
-                })()}
+                {!eventDetail.isHosted && !joinedEvents[eventDetail.id] && (
+                  <View style={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 8, backgroundColor: 'rgba(245,243,255,0.96)', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.08)' }}>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      disabled={evIsFull}
+                      onPress={() => {
+                        setEventDetail(null)
+                        setPendingJoinEv(eventDetail)
+                        setActiveTab('home')
+                      }}
+                      style={[s.btnPrimary, evIsFull
+                        ? { backgroundColor: '#E2E8F0', shadowOpacity: 0 }
+                        : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
+                      ]}>
+                      <Text style={[s.btnPrimaryText, { color: evIsFull ? '#94A3B8' : '#fff' }]}>
+                        {evIsFull ? 'Event is full' : eventDetail.type === 'official' ? "I'm Going →" : 'Join this Social →'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
                 {/* Participants sheet — inside event detail modal (iOS: can't nest Modals) */}
                 {eventParticipants && (
                   <View style={{ ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end', zIndex: 100 }}>
