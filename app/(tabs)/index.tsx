@@ -2506,6 +2506,21 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   useEffect(() => { if (initialSubTab) setSubTab(initialSubTab) }, [initialSubTab])
   const [crewSheet, setCrewSheet] = useState<{ ev: any; profiles: any[]; found: number; cap: number } | null>(null)
+
+  const formatChatTime = (time: string) => {
+    if (!time || time === 'now') return 'now'
+    const d = new Date(time)
+    if (isNaN(d.getTime())) return time
+    const now = new Date()
+    if (now.getTime() - d.getTime() < 60000) return 'now'
+    const isToday = d.toDateString() === now.toDateString()
+    const yesterday = new Date(now)
+    yesterday.setDate(now.getDate() - 1)
+    const isYesterday = d.toDateString() === yesterday.toDateString()
+    if (isToday) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    if (isYesterday) return 'Yesterday'
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  }
   const crewSheetAnim = useRef(new Animated.Value(0)).current
   const hasNew = chatList.some(c => c.isNew)
   const [memberPreview, setMemberPreview] = useState<any>(null)
@@ -2911,14 +2926,14 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     <Text style={{ fontSize: 15, fontWeight: '800', color: chat.isNew ? '#4338CA' : '#1E1B4B', letterSpacing: -0.2, flex: 1 }} numberOfLines={1}>
                       {chat.type === 'duo' ? `${chat.name}, ${chat.age}` : chat.event}
                     </Text>
-                    <Text style={{ fontSize: 11, color: chat.isNew ? '#818CF8' : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8, flexShrink: 0 }}>{chat.time}</Text>
+                    <Text style={{ fontSize: 11, color: chat.isNew ? '#818CF8' : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8, flexShrink: 0 }}>{formatChatTime(chat.time)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                     <Text style={{ fontSize: 13 }}>{chat.eventEmoji || '📍'}</Text>
                     <Text style={{ fontSize: 11, color: '#818CF8', fontWeight: '600' }} numberOfLines={1}>
                       {chat.type === 'duo' ? chat.event : `${chat.members} members`}
                     </Text>
-                    {chat.expiresIn <= 6 && (
+                    {chat.chatExpiresAt && Math.ceil((chat.chatExpiresAt - Date.now()) / 3600000) <= 6 && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
                         <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#EF4444' }} />
                         <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>Expiring</Text>
@@ -4784,6 +4799,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
   const [dbCommunityEvents, setDbCommunityEvents] = useState<any[]>([])
+  const dbCommunityEventsRef = useRef<any[]>([])
   const deletedCommunityEventIds = useRef<Set<number>>(new Set())
   const communityEventChatMap = useRef<Record<number, number>>({}) // eventId → chatId
 
@@ -5255,7 +5271,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           color: partner?.color || '#818CF8',
           photo: partner?.photo || '',
           lastMsg: '🎉 Crew confirmed! Say hi',
-          time: 'now', isNew: true, expiresIn: 24,
+          time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
           event: eventTitle, eventEmoji: '🎉',
           partnerProfile: partner,
         } : {
@@ -5266,7 +5282,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           colors: otherMembers.map((p: any) => p.color),
           memberProfiles: otherMembers,
           lastMsg: '🎉 You\'re in the crew! Say hi 👋',
-          time: 'now', isNew: true, expiresIn: 24,
+          time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
         }
         setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
         if (chatData?.event_id) {
@@ -5333,7 +5349,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             color: partner?.color || '#818CF8',
             photo: partner?.photos?.[0] || '',
             lastMsg: '🎉 Crew confirmed! Say hi',
-            time: 'now', isNew: true, expiresIn: 24,
+            time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
             event: inv.event_title, eventEmoji: '🎉',
             partnerProfile: partner,
           }, ...prev]
@@ -5547,7 +5563,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               avatars: newProfiles.map((p: any) => p.photo).filter(Boolean),
               colors: newProfiles.map((p: any) => p.color),
               lastMsg: `✅ ${confirmedJoiners[confirmedJoiners.length - 1]?.name} joined`,
-              time: 'now', isNew: true,
+              time: new Date().toISOString(), isNew: true,
             }
             return updated
           } else {
@@ -5560,7 +5576,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               avatars: confirmedJoiners.map((p: any) => p.photo).filter(Boolean),
               colors: confirmedJoiners.map((p: any) => p.color),
               lastMsg: `✅ ${confirmedJoiners[0]?.name} joined the group`,
-              time: 'now', isNew: true, expiresIn: 24,
+              time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
             }, ...prev]
           }
         })
@@ -5801,6 +5817,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     }
   }, [dbCommunityEvents])
 
+  useEffect(() => { dbCommunityEventsRef.current = dbCommunityEvents }, [dbCommunityEvents])
+
   // Auto-expire hosted events and their chats 24h after event ends
   useEffect(() => {
     const check = () => {
@@ -5810,7 +5828,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const expired = prev.filter(ev => ev.expiresAt > 0 && now > ev.expiresAt + EXPIRE_AFTER)
         if (expired.length === 0) return prev
         const expiredIds = new Set(expired.map((ev: any) => ev.id))
-        // Remove chats linked to expired events
+        // Remove chats linked to expired hosted events
         setChatList(cl => cl.filter(c => !expiredIds.has(c.hostEventId)))
         setPendingJoinRequests(pjr => {
           const n = { ...pjr }
@@ -5824,6 +5842,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         return prev.filter(ev => !expiredIds.has(ev.id))
       })
+      // Remove chats that have explicit chatExpiresAt in the past
+      // Also remove community event chats (legacy, no chatExpiresAt) linked to events that ended 24h+ ago
+      setChatList(cl => cl.filter(c => {
+        if (c.chatExpiresAt) return c.chatExpiresAt > now
+        if (c.communityEventId) {
+          const ev = dbCommunityEventsRef.current.find((e: any) => e.id === c.communityEventId)
+          if (ev?.expiresAt > 0 && ev.expiresAt + EXPIRE_AFTER < now) return false
+        }
+        return true
+      }))
     }
     check()
     const interval = setInterval(check, 60 * 60 * 1000) // check every hour
@@ -5876,6 +5904,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (s < 86400) return `${Math.floor(s / 3600)}h ago`
     return `${Math.floor(s / 86400)}d ago`
   }
+
   // ── End Notifications ──────────────────────────────────────────────────────
 
   const [toast, setToast] = useState<{ visible: boolean; text: string; title?: string; emoji?: string }>({ visible: false, text: '' })
@@ -5989,7 +6018,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const text = chatInput.trim()
     const newMsg = { from: 'me', text, time: 'now', replyTo: replyTo || undefined }
     setChatMessages(prev => ({ ...prev, [openChat.id]: [...(prev[openChat.id] || []), newMsg] }))
-    setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: 'now' } : c))
+    setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: new Date().toISOString() } : c))
     setChatInput('')
     setReplyTo(null)
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
@@ -6029,7 +6058,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       setTimeout(() => {
         const replyMsg = { from: 'them', text: replyText, time: 'now' }
         setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), replyMsg] }))
-        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: replyText, time: 'now', isNew: true } : c))
+        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: replyText, time: new Date().toISOString(), isNew: true } : c))
         // Notify only if chat is not currently open
         setOpenChat((cur: any) => {
           if (!cur || cur.id !== chatId) {
@@ -6046,7 +6075,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setTimeout(() => {
           const replyMsg = { from: 'them', text: replyText, time: 'now', senderName: sender.name, senderPhoto: sender.photo, senderColor: sender.color }
           setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), replyMsg] }))
-          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: `${sender.name}: ${replyText}`, time: 'now', isNew: true } : c))
+          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: `${sender.name}: ${replyText}`, time: new Date().toISOString(), isNew: true } : c))
           setOpenChat((cur: any) => {
             if (!cur || cur.id !== chatId) {
               addNotif({ type: 'new_message', emoji: '💬', color: '#6366F1', title: `${sender.name} in ${openChat.event}`, body: replyText, chatId })
@@ -6210,7 +6239,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
         const lastMsgText = isSystemMsg ? m.text : `${sender?.name || 'Someone'}: ${m.text}`
-        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: lastMsgText, time: 'now', isNew: !isSystemMsg } : c))
+        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: lastMsgText, time: new Date().toISOString(), isNew: !isSystemMsg } : c))
         if (!isSystemMsg) {
           setOpenChat((cur: any) => {
             if (!cur || cur.id !== chatId) {
@@ -6384,7 +6413,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       setChatList(prev => prev.some(c => c.id === chatData.id) ? prev : [{
                         id: chatData.id, type: 'duo', name: partner.name || 'Your crew',
                         age: partner.age || '', color: partner.color || '#818CF8', photo: partner.photo || '',
-                        lastMsg: '🎉 Mutual match! Say hi 👋', time: 'now', isNew: true, expiresIn: 24,
+                        lastMsg: '🎉 Mutual match! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                         event: ev.title, eventEmoji: '🎉', partnerProfile: partner,
                       }, ...prev])
                       setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
@@ -6458,7 +6487,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 colors: chatMembers.map((p: any) => p.color),
                 memberProfiles: chatMembers,
                 lastMsg: '🎉 Group chat created! Say hi',
-                time: 'now', isNew: true, expiresIn: 24,
+                time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 communityEventId: ev.id,
               } : {
                 id: Date.now(), type: 'duo',
@@ -6467,7 +6496,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 transport: partners[0]?.transport || 'meet',
                 color: partners[0]?.color || '#818CF8',
                 photo: '', lastMsg: '👋 You matched! Say hello',
-                time: 'now', isNew: true, expiresIn: 24,
+                time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                 partnerProfile: partners[0] || null,
                 communityEventId: ev.id,
@@ -6494,7 +6523,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   members: preview.members.length + 1,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
-                  lastMsg: '🎉 You joined the crew!', time: 'now', isNew: true, expiresIn: 24, communityEventId: ev.id,
+                  lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000, communityEventId: ev.id,
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
@@ -6521,7 +6550,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   members: memberIds.length,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
-                  lastMsg: '🎉 Crew assembled! Say hi 👋', time: 'now', isNew: true, expiresIn: 24, communityEventId: ev.id,
+                  lastMsg: '🎉 Crew assembled! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000, communityEventId: ev.id,
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
@@ -6554,7 +6583,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 color: inviter.color || '#818CF8',
                 photo: inviter.photos?.[0] || '',
                 lastMsg: '🎉 Crew confirmed! Say hi',
-                time: 'now', isNew: true, expiresIn: 24,
+                time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 event: invite.event_title, eventEmoji: '🎉',
                 partnerProfile: inviter,
               }
@@ -7682,12 +7711,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const chatEvId = openChat.hostEventId || openChat.communityEventId
                 const chatEv = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents].find(e => e.id === chatEvId) : null
                 const isExpired = chatEv?.expiresAt > 0 && chatEv.expiresAt < Date.now()
-                return isExpired ? (
+                if (!isExpired) return null
+                const expiresAt = openChat.chatExpiresAt || (chatEv?.expiresAt ? chatEv.expiresAt + 24 * 60 * 60 * 1000 : 0)
+                const hoursLeft = expiresAt ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 3600000)) : 0
+                const expiryText = hoursLeft <= 0 ? 'This chat will be deleted soon.' : hoursLeft === 1 ? 'This event has ended. Chat deletes in less than 1 hour.' : `This event has ended. Chat deletes in ${hoursLeft}h.`
+                return (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
                     <Text style={{ fontSize: 14 }}>🗂️</Text>
-                    <Text style={{ fontSize: 12, color: '#64748B', flex: 1, lineHeight: 17 }}>This event has ended. The chat will be automatically deleted within 24 hours.</Text>
+                    <Text style={{ fontSize: 12, color: '#64748B', flex: 1, lineHeight: 17 }}>{expiryText}</Text>
                   </View>
-                ) : null
+                )
               })()}
               <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={e => { const h = Math.round(e.nativeEvent.layout.height); setKavHeight(h); if (kavBaseHeight.current === 0) kavBaseHeight.current = h }}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
