@@ -5780,10 +5780,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // Clean up joinedEvents + chats for community events that no longer exist in DB
   useEffect(() => {
     const dbIds = new Set(dbCommunityEvents.map(e => e.id))
-    // Also remove userCreatedEvents that no longer exist in DB
+    // Re-add hosted events that were accidentally removed from userCreatedEvents (race condition fix)
+    const hostedInDb = dbCommunityEvents.filter(e => e.isHosted)
     setUserCreatedEvents(prev => {
-      const filtered = prev.filter(ev => dbIds.has(ev.id))
-      return filtered.length !== prev.length ? filtered : prev
+      const prevIds = new Set(prev.map(e => e.id))
+      const missing = hostedInDb.filter(e => !prevIds.has(e.id) && !deletedCommunityEventIds.current.has(e.id))
+      if (missing.length === 0) {
+        // Also remove events no longer in DB (skip recently created ones)
+        const filtered = prev.filter(ev => dbIds.has(ev.id) || (ev.createdAt && Date.now() - ev.createdAt < 60000))
+        return filtered.length !== prev.length ? filtered : prev
+      }
+      const restored = missing.map(e => ({ ...e, isHosted: true }))
+      const filtered = [...prev.filter(ev => dbIds.has(ev.id) || (ev.createdAt && Date.now() - ev.createdAt < 60000)), ...restored]
+      return filtered
     })
     const deletedIds: number[] = []
     setJoinedEvents(prev => {
@@ -7288,6 +7297,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           hostLangs: createLangs,
                           hostVibe: createVibe,
                           expiresAt,
+                          createdAt: Date.now(),
                         }
                         setUserCreatedEvents(prev => [...prev, newEvent])
 
