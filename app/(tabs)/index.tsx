@@ -6668,14 +6668,29 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               }))
               const isDuo = maxParticipants <= 2
 
+              // Reject remaining pending joiners in DB when slots are now full
+              const rejectRemainingInDb = (remaining: any[]) => {
+                const realRemaining = remaining.filter((r: any) => r._real && r.requestId)
+                if (realRemaining.length > 0) {
+                  supabase.from('join_requests').delete()
+                    .in('id', realRemaining.map((r: any) => r.requestId))
+                    .then(({ error }) => { if (error) console.warn('reject remaining error:', error.message) })
+                }
+              }
+
               if (isDuo) {
-                // 1-on-1 event → chat will be created when joiner confirms (status='confirmed')
+                // 1-on-1 event → reject all other pending immediately (only 1 slot)
+                const remaining = (pendingJoinRequests[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId)
+                rejectRemainingInDb(remaining)
+                setPendingJoinRequests(prev => ({ ...prev, [eventId]: [] }))
                 addNotif({ type: 'match', emoji: '✨', color: '#EC4899', title: `${joiner.name} approved! Waiting for their confirmation`, body: ev?.title || '' })
               } else {
                 // Squad/Party — обновляем approvedJoiners, чат создастся когда участник нажмёт Confirm
                 const newApproved = [...(approvedJoiners[eventId] || []), joiner]
                 setApprovedJoiners(prev => ({ ...prev, [eventId]: newApproved }))
                 if (newApproved.length >= slotsTotal) {
+                  const remaining = (pendingJoinRequests[eventId] || [])
+                  rejectRemainingInDb(remaining)
                   setPendingJoinRequests(prev => ({ ...prev, [eventId]: [] }))
                 }
               }
@@ -6687,6 +6702,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ...prev,
                 [eventId]: (prev[eventId] || []).filter((r: any) => r.requestId !== joiner.requestId),
               }))
+              if (joiner._real && joiner.requestId) {
+                supabase.from('join_requests').delete().eq('id', joiner.requestId)
+                  .then(({ error }) => { if (error) console.warn('reject error:', error.message) })
+              }
               showToast('Their request has been removed', 'Request declined ❌', '❌')
             }}
             passedRequests={passedRequests}
