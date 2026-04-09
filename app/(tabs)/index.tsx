@@ -6918,10 +6918,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   return true
                 })
                 const hasHostActivity = userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > now) && (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)
-                return (hasActiveJoined || hasPending || hasHostActivity)
-              })() && (
-                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: hasPending ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
-              )}
+                if (!(hasActiveJoined || hasPending || hasHostActivity)) return null
+                return <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: hasPending ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+              })()}
             </View>
             <Text style={[s.navLabel, activeTab === 'vibecheck' && { color: '#6366F1' }]}>Vibe</Text>
           </TouchableOpacity>
