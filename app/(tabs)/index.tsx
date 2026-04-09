@@ -6917,7 +6917,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   if (ev.expiresAt && ev.expiresAt <= now) return false
                   return true
                 })
-                const hasHostActivity = userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > now) && (pendingJoinRequests[ev.id] || []).length > 0)
+                const hasHostActivity = userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > now) && (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)
                 return (hasActiveJoined || hasPending || hasHostActivity)
               })() && (
                 <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: hasPending ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
