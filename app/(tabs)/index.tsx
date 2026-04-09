@@ -5548,6 +5548,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const evId = +evIdStr
         const ev = userCreatedEvents.find(e => e.id === evId)
         if (!ev) return
+        if (ev.expiresAt > 0 && ev.expiresAt < Date.now()) return
         setChatList(prev => {
           const existingIdx = prev.findIndex(c => c.hostEventId === evId)
           if (existingIdx >= 0) {
@@ -6028,10 +6029,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     "See you all there!", "So excited for this 🌊", "Who else is coming early?",
   ]
 
+  const formatChatDateLabel = (dateStr: string) => {
+    if (!dateStr) return ''
+    const today = new Date().toISOString().slice(0, 10)
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    if (dateStr === today) return 'Today'
+    if (dateStr === yesterday) return 'Yesterday'
+    const d = new Date(dateStr)
+    return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+
   const handleSend = () => {
     if (!chatInput.trim() || !openChat) return
     const text = chatInput.trim()
-    const newMsg = { from: 'me', text, time: 'now', replyTo: replyTo || undefined }
+    const newMsg = { from: 'me', text, time: 'now', date: new Date().toISOString().slice(0, 10), replyTo: replyTo || undefined }
     setChatMessages(prev => ({ ...prev, [openChat.id]: [...(prev[openChat.id] || []), newMsg] }))
     setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: new Date().toISOString() } : c))
     setChatInput('')
@@ -6071,7 +6082,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (openChat.type === 'duo') {
       const replyText = DUO_REPLIES[Math.floor(Math.random() * DUO_REPLIES.length)]
       setTimeout(() => {
-        const replyMsg = { from: 'them', text: replyText, time: 'now' }
+        const replyMsg = { from: 'them', text: replyText, time: 'now', date: new Date().toISOString().slice(0, 10) }
         setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), replyMsg] }))
         setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: replyText, time: new Date().toISOString(), isNew: true } : c))
         // Notify only if chat is not currently open
@@ -6088,7 +6099,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const sender = profiles[Math.floor(Math.random() * profiles.length)]
         const replyText = GROUP_REPLIES[Math.floor(Math.random() * GROUP_REPLIES.length)]
         setTimeout(() => {
-          const replyMsg = { from: 'them', text: replyText, time: 'now', senderName: sender.name, senderPhoto: sender.photo, senderColor: sender.color }
+          const replyMsg = { from: 'them', text: replyText, time: 'now', date: new Date().toISOString().slice(0, 10), senderName: sender.name, senderPhoto: sender.photo, senderColor: sender.color }
           setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), replyMsg] }))
           setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: `${sender.name}: ${replyText}`, time: new Date().toISOString(), isNew: true } : c))
           setOpenChat((cur: any) => {
@@ -6129,6 +6140,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             return {
               from: isMe ? 'me' : 'them',
               text: m.text, time,
+              date: t.toISOString().slice(0, 10),
               replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
               _dbId: m.id,
             }
@@ -6149,7 +6161,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
           if (payload.sender_id === userData.dbId) return // своё уже добавили
           const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          const newMsg = { from: 'them', text: payload.text, time, replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
+          const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
           setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
           setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
@@ -6193,6 +6205,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             from: isMe ? 'me' : 'them',
             text: m.text,
             time,
+            date: t.toISOString().slice(0, 10),
             senderName: isMe ? '' : (sender?.name || ''),
             senderPhoto: isMe ? '' : (sender?.photo || ''),
             senderColor: isMe ? '' : (sender?.color || '#818CF8'),
@@ -6239,6 +6252,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }
         }
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const msgDate = new Date(m.created_at).toISOString().slice(0, 10)
         // Системные сообщения (e.g. "X left the group") — показываем по центру
         const isSystemMsg = m.text?.includes('left the group')
         const newMsg = isSystemMsg ? {
@@ -6247,6 +6261,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           from: 'them',
           text: m.text,
           time,
+          date: msgDate,
           senderName: sender?.name || '',
           senderPhoto: sender?.photo || '',
           senderColor: sender?.color || '#818CF8',
@@ -6317,6 +6332,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           from: 'them',
           text: m.text,
           time,
+          date: new Date(m.created_at).toISOString().slice(0, 10),
           ...(chat.type !== 'duo' && { senderName, senderPhoto: sender?.photo || '', senderColor: sender?.color || '#818CF8' }),
           replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
           _dbId: m.id,
@@ -6349,7 +6365,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .on('broadcast', { event: 'message' }, ({ payload }: any) => {
           if (payload.sender_id === userData.dbId) return
           const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          const newMsg = { from: 'them', text: payload.text, time, replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
+          const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
           setChatMessages(prev => ({ ...prev, [chat.id]: [...(prev[chat.id] || []), newMsg] }))
           setChatList(prev => prev.map((c: any) => c.id === chat.id ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
         })
@@ -6894,11 +6910,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   if (ev.expiresAt && ev.expiresAt <= now) return false
                   return true
                 })
-                const hasPending = Object.values(pendingJoinRequests).some(r => r.length > 0)
-                const hasHostActivity = userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > now) && (approvedJoiners[ev.id] || []).length < (ev.maxParticipants || 5) - 1)
+                const hasPending = Object.entries(pendingJoinRequests).some(([evId, reqs]) => {
+                  if (!reqs.length) return false
+                  const ev = userCreatedEvents.find((e: any) => e.id === Number(evId))
+                  if (!ev) return false
+                  if (ev.expiresAt && ev.expiresAt <= now) return false
+                  return true
+                })
+                const hasHostActivity = userCreatedEvents.some((ev: any) => (!ev.expiresAt || ev.expiresAt > now) && (pendingJoinRequests[ev.id] || []).length > 0)
                 return (hasActiveJoined || hasPending || hasHostActivity)
               })() && (
-                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: Object.values(pendingJoinRequests).some(r => r.length > 0) ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: hasPending ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
             <Text style={[s.navLabel, activeTab === 'vibecheck' && { color: '#6366F1' }]}>Vibe</Text>
@@ -7760,8 +7782,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
-                  {(chatMessages[openChat.id] || []).map((msg: any, i: number) => (
-                    <View key={i} style={{ marginBottom: 10, alignItems: msg.from === 'system' ? 'center' : msg.from === 'me' ? 'flex-end' : 'flex-start' }}>
+                  {(chatMessages[openChat.id] || []).map((msg: any, i: number) => {
+                    const allMsgs = chatMessages[openChat.id] || []
+                    const prevMsg = allMsgs[i - 1]
+                    const showDateSep = msg.date && msg.date !== prevMsg?.date
+                    return (
+                    <React.Fragment key={i}>
+                      {showDateSep && (
+                        <View style={{ alignItems: 'center', marginVertical: 8 }}>
+                          <View style={{ paddingHorizontal: 12, paddingVertical: 4, backgroundColor: 'rgba(100,116,139,0.12)', borderRadius: 99 }}>
+                            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{formatChatDateLabel(msg.date)}</Text>
+                          </View>
+                        </View>
+                      )}
+                    <View style={{ marginBottom: 10, alignItems: msg.from === 'system' ? 'center' : msg.from === 'me' ? 'flex-end' : 'flex-start' }}>
                       {msg.from === 'system' && (
                         <View style={{ paddingHorizontal: 14, paddingVertical: 5, backgroundColor: 'rgba(100,116,139,0.1)', borderRadius: 99 }}>
                           <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>{msg.text}</Text>
@@ -7821,7 +7855,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </View>
                       )}
                     </View>
-                  ))}
+                    </React.Fragment>
+                    )
+                  })}
                 </ScrollView>
 
                 {replyTo && (
