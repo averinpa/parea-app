@@ -7778,7 +7778,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   </View>
                 )
               })()}
-              <KeyboardAvoidingView style={[{ flex: 1 }, Platform.OS === 'android' && { paddingBottom: chatKeyboardHeight }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+              <KeyboardAvoidingView style={[{ flex: 1 }, Platform.OS === 'android' && (Platform.Version as number) >= 34 && { marginBottom: chatKeyboardHeight }]} behavior={Platform.OS === 'ios' ? 'padding' : (Platform.Version as number) >= 34 ? undefined : 'height'} keyboardVerticalOffset={0}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
                   {(chatMessages[openChat.id] || []).map((msg: any, i: number) => {
