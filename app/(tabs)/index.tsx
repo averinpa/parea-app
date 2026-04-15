@@ -4946,7 +4946,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const evHost = eventDetail?.type === 'community' && !eventDetail.isHosted
     ? (eventDetail.hostProfile || allSeekers[(eventDetail.id - 1) % allSeekers.length])
     : null
-  const evSpotsLeft = eventDetail?.maxParticipants ? eventDetail.maxParticipants - eventDetail.participantsCount : null
+  const evSpotsLeft = eventDetail?.maxParticipants
+    ? eventDetail.maxParticipants - (
+        (eventDetail.isHosted || eventDetail.host_id === userData?.dbId)
+          ? (hostConfirmedMembers[eventDetail.id] || []).length + 1
+          : eventDetail.participantsCount
+      )
+    : null
   const evIsFull = evSpotsLeft !== null && evSpotsLeft <= 0
   const [userEventFormat, setUserEventFormat] = useState<Record<number, string>>({})
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
