@@ -4090,7 +4090,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             onPress={() => onConfirm?.(ev, partners, format)}
                             style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: isWaiting ? 'rgba(251,191,36,0.2)' : inviteSentToAll ? 'rgba(67,233,123,0.25)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: isWaiting || inviteSentToAll ? 0 : 0.4, shadowRadius: 12, elevation: isWaiting || inviteSentToAll ? 0 : 6 }}>
                             <Text style={{ fontSize: 15, fontWeight: '900', color: isWaiting ? '#FBBF24' : inviteSentToAll ? '#43E97B' : '#052e16' }}>
-                              {isCommunity ? 'Confirm & Open Chat 🚀' : isWaiting ? '1 ready — waiting... ⏳' : inviteSentToAll ? 'Invite sent ✓' : "Let's go! 🚀"}
+                              {isCommunity ? 'Confirm & Open Chat 🚀' : isWaiting ? 'You\'re ready · waiting for crew ⏳' : inviteSentToAll ? 'Invite sent ✓' : "Let's go! 🚀"}
                             </Text>
                           </TouchableOpacity>
                         )
