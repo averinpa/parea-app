@@ -5098,6 +5098,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const PERSIST_KEY = `parea_feed_${userData?.authId || 'local'}`
 
   useEffect(() => {
+    if (!userData?.authId) return
     AsyncStorage.getItem(PERSIST_KEY).then(raw => {
       if (!raw) { persistLoaded.current = true; setPersistLoadedState(true); return }
       try {
@@ -5138,7 +5139,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       persistLoaded.current = true
       setPersistLoadedState(true)
     })
-  }, [])
+  }, [userData?.authId])
 
 
   useEffect(() => {
