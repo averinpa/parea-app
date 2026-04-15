@@ -5367,6 +5367,54 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => { supabase.removeChannel(channel) }
   }, [userData?.dbId])
 
+  // ── Fallback poll: check chat_members every 30s for chats added via party/squad flow ──
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const poll = async () => {
+      const { data: memberships } = await supabase
+        .from('chat_members')
+        .select('chat_id, chats:chat_id(id, type, event_id, last_msg)')
+        .eq('profile_id', userData.dbId)
+      if (!memberships || memberships.length === 0) return
+      for (const m of memberships) {
+        const chat = m.chats as any
+        if (!chat || !chat.event_id) continue
+        // Already confirmed for this event — skip
+        if (joinedEventsRef.current[chat.event_id] === 'confirmed') continue
+        // Already in chatList — skip
+        if (chatListRef.current.some((c: any) => c.id === chat.id)) continue
+        // Fetch members
+        const { data: members } = await supabase
+          .from('chat_members')
+          .select('profile_id, profiles:profile_id(id, name, photos, color, age)')
+          .eq('chat_id', chat.id)
+        if (!members || members.length < 2) continue
+        const otherMembers = members.filter((mem: any) => mem.profile_id !== userData.dbId).map((mem: any) => {
+          const p = (mem as any).profiles || {}
+          return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
+        })
+        const newChat = {
+          id: chat.id, type: 'group',
+          event: dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || 'Crew Chat',
+          eventEmoji: '🎉', members: members.length,
+          avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
+          colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
+          lastMsg: chat.last_msg || '🎉 You\'re in the crew!',
+          time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        }
+        setChatList(prev => prev.some(c => c.id === chat.id) ? prev : [newChat, ...prev])
+        setJoinedEvents(prev => ({ ...prev, [chat.event_id]: 'confirmed' }))
+        setOfficialEventChatMap(prev => ({ ...prev, [chat.event_id]: chat.id }))
+        setCrewPreviewMap(prev => ({ ...prev, [chat.event_id]: null }))
+        setReadyCountMap(prev => { const n = { ...prev }; delete n[chat.event_id]; return n })
+        showToast('Check your Messages tab', 'You\'re in the crew! 🎉', '✅')
+      }
+    }
+    poll()
+    const interval = setInterval(poll, 30000)
+    return () => clearInterval(interval)
+  }, [userData?.dbId])
+
   // ── Poll for accepted invites (inviter side) — sync chat to local state ───
   useEffect(() => {
     if (!userData?.dbId) return
