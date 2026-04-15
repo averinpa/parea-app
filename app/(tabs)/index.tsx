@@ -4810,6 +4810,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
+  const feedOfficialDbEventsRef = useRef<any[]>([])
   const [dbCommunityEvents, setDbCommunityEvents] = useState<any[]>([])
   const dbCommunityEventsRef = useRef<any[]>([])
   const deletedCommunityEventIds = useRef<Set<number>>(new Set())
@@ -5280,10 +5281,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       for (const evId of confirmedEventIds) {
         if (activeEventIds.has(evId)) continue
         // For party/squad: chat created via chat_members (no crew_invite) — verify user is still in chat
-        const chatId = officialEventChatMapRef.current[evId]
+        let chatId = officialEventChatMapRef.current[evId]
+        if (!chatId) {
+          // officialEventChatMap may not be set yet — look up by event_id
+          const { data: chatRow } = await supabase.from('chats').select('id').eq('event_id', evId).limit(1).maybeSingle()
+          if (chatRow?.id) chatId = chatRow.id
+        }
         if (chatId) {
           const { data: membership } = await supabase.from('chat_members').select('chat_id').eq('chat_id', chatId).eq('profile_id', userData.dbId).maybeSingle()
-          if (membership) continue // still in chat — not a "partner left" scenario
+          if (membership) {
+            // Update local map so next check is faster
+            if (!officialEventChatMapRef.current[evId]) setOfficialEventChatMap(prev => ({ ...prev, [evId]: chatId }))
+            continue // still in chat — not a "partner left" scenario
+          }
         }
         console.log('Partner left event', evId, '— resetting to looking')
         // Remove duo chat for this event
@@ -5343,7 +5353,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         const isDuo = chatData?.type === 'duo' || members.length === 2
         const partner = otherMembers[0]
-        const eventTitle = inviteData?.event_title || dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || 'Crew Chat'
+        const eventTitle = inviteData?.event_title || dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || 'Crew Chat'
         const newChat = isDuo ? {
           id: chatId, type: 'duo',
           name: partner?.name || 'Your crew',
@@ -5408,7 +5418,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         const newChat = {
           id: chat.id, type: 'group',
-          event: dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || 'Crew Chat',
+          event: dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || feedOfficialDbEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || 'Crew Chat',
           eventEmoji: '🎉', members: members.length,
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
           colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
@@ -5963,6 +5973,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }, [dbCommunityEvents])
 
   useEffect(() => { dbCommunityEventsRef.current = dbCommunityEvents }, [dbCommunityEvents])
+  useEffect(() => { feedOfficialDbEventsRef.current = feedOfficialDbEvents }, [feedOfficialDbEvents])
 
   // Auto-expire hosted events and their chats 24h after event ends
   useEffect(() => {
