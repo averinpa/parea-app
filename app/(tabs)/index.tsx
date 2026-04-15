@@ -4062,9 +4062,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
                                 <Text style={{ fontSize: 15 }}>🎯</Text>
                                 <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>Crew found!</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>{format === 'party' ? 'Party crew ready!' : 'Crew found!'}</Text>
                                   <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
-                                    {crewPreview.members.map((m: any) => m.name).join(', ')}
+                                    {format === 'party' ? `${crewPreview.members.length} people ready to go` : crewPreview.members.map((m: any) => m.name).join(', ')}
                                   </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: -8 }}>
@@ -4078,7 +4078,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                 activeOpacity={0.85}
                                 onPress={() => onJoinCrew?.(ev)}
                                 style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Join crew 🚀</Text>
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>{format === 'party' ? 'Join party chat 🎉' : 'Join crew 🚀'}</Text>
                               </TouchableOpacity>
                             </View>
                           )
@@ -6606,41 +6606,58 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
                   return
                 }
-                // ── Party: open crew chat — anyone can join immediately ──────
+                // ── Party: waiting flow — join only when others are ready ────
                 if (format === 'party') {
-                  await supabase.from('event_attendees').update({ status: 'confirmed' })
+                  // Mark self as ready
+                  await supabase.from('event_attendees').update({ status: 'ready' })
                     .eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
+                  // If a chat already exists — join immediately
                   const { data: existingChat } = await supabase.from('chats')
                     .select('id').eq('event_id', ev.id).limit(1).maybeSingle()
-                  let chatId: number
                   if (existingChat?.id) {
-                    chatId = existingChat.id
-                    await supabase.from('chat_members').upsert({ chat_id: chatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
-                  } else {
-                    const { data: chatData, error: chatErr } = await supabase.from('chats')
-                      .insert({ type: 'group', last_msg: `🎉 ${ev.title}`, event_id: ev.id }).select().single()
-                    if (!chatData) { console.error('party chat error:', chatErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
-                    chatId = chatData.id
-                    await supabase.from('chat_members').insert({ chat_id: chatId, profile_id: userData?.dbId })
+                    await supabase.from('chat_members').upsert({ chat_id: existingChat.id, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                    await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
+                    const { data: members } = await supabase.from('chat_members')
+                      .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', existingChat.id)
+                    const otherMembers = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
+                      const p = (m as any).profiles || {}
+                      return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                    })
+                    setChatList(prev => prev.some(c => c.id === existingChat.id) ? prev : [{
+                      id: existingChat.id, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                      members: (members || []).length, avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
+                      colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
+                      lastMsg: '🎉 Party crew chat! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+                    }, ...prev])
+                    setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                    setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: existingChat.id }))
+                    setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
+                    showToast('Check your Messages tab for the party chat', 'Joined the party! 🎉', '🎉')
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                    setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                    return
                   }
-                  const { data: members } = await supabase.from('chat_members')
-                    .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', chatId)
-                  const otherMembers = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
-                    const p = (m as any).profiles || {}
+                  // No chat yet — check if others are ready
+                  const { data: readyData } = await supabase.from('event_attendees')
+                    .select('*, profiles(*)')
+                    .eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
+                    .neq('profile_id', userData?.dbId)
+                    .lte('group_size_min', 20).gte('group_size_max', 6)
+                  const othersCount = readyData?.length || 0
+                  setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
+                  if (othersCount < 1) {
+                    // First one — wait for others
+                    showToast('We\'ll notify you when someone joins', 'You\'re ready! ⏳', '⏳')
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    return
+                  }
+                  // Others are ready — show Join button
+                  const memberProfiles = (readyData || []).map((r: any) => {
+                    const p = r.profiles || {}
                     return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
                   })
-                  setChatList(prev => prev.some(c => c.id === chatId) ? prev : [{
-                    id: chatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-                    members: (members || []).length, avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
-                    colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
-                    lastMsg: '🎉 Party crew chat! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-                  }, ...prev])
-                  setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
-                  setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatId }))
-                  setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
-                  showToast('Check your Messages tab for the party chat', 'Joined the party! 🎉', '🎉')
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                  setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                  setCrewPreviewMap(prev => ({ ...prev, [ev.id]: { members: memberProfiles, chatId: null } }))
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                   return
                 }
                 // ── Squad: threshold flow with crew preview ──────────────────
