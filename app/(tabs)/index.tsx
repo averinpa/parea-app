@@ -6273,6 +6273,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .order('created_at', { ascending: true })
         .limit(100)
         .then(({ data, error }) => {
+          console.log('loadHistory chatId:', chatId, 'count:', data?.length, 'error:', error?.message)
           if (error) { console.warn('history load error:', error.message); return }
           if (!data || data.length === 0) {
             // If chat was empty and this is the first try, retry after 2s
