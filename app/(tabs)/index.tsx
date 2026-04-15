@@ -5367,6 +5367,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           setJoinedEvents(prev => ({ ...prev, [chatData.event_id]: 'confirmed' }))
           setCrewPreviewMap(prev => ({ ...prev, [chatData.event_id]: null }))
           setReadyCountMap(prev => { const n = { ...prev }; delete n[chatData.event_id]; return n })
+          // Mark self as confirmed so we don't appear in others' VibeCheck
+          supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', chatData.event_id).eq('profile_id', userData.dbId).then(() => {})
         }
         showToast('Check your Messages tab for the chat', 'You\'re in! 🎉', '✅')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -5415,6 +5417,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setOfficialEventChatMap(prev => ({ ...prev, [chat.event_id]: chat.id }))
         setCrewPreviewMap(prev => ({ ...prev, [chat.event_id]: null }))
         setReadyCountMap(prev => { const n = { ...prev }; delete n[chat.event_id]; return n })
+        // Mark self as confirmed so we don't appear in others' VibeCheck
+        supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', chat.event_id).eq('profile_id', userData.dbId).then(() => {})
         showToast('Check your Messages tab', 'You\'re in the crew! 🎉', '✅')
       }
     }
@@ -6672,6 +6676,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (preview.chatId) {
                 // Join existing chat
                 await supabase.from('chat_members').insert({ chat_id: preview.chatId, profile_id: userData?.dbId })
+                // Mark self as confirmed so we don't appear in others' VibeCheck
+                await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                 const memberProfiles = preview.members
                 setChatList(prev => prev.some(c => c.id === preview.chatId) ? prev : [{
                   id: preview.chatId!, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
@@ -6705,6 +6711,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 if (existingChatId) {
                   // Chat already created by other user — just join it
                   await supabase.from('chat_members').upsert({ chat_id: existingChatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                  // Mark self as confirmed so we don't appear in others' VibeCheck
+                  await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                   const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
                     const p = r.profiles || {}
                     return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
