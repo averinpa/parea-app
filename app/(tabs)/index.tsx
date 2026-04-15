@@ -5123,7 +5123,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (saved.chatList) setChatList(saved.chatList)
-        if (saved.chatMessages) setChatMessages(saved.chatMessages)
+        if (saved.chatMessages) {
+          // Filter out system messages — they're session-only, shouldn't survive restart
+          const cleaned: Record<string, any[]> = {}
+          Object.entries(saved.chatMessages).forEach(([id, msgs]: [string, any]) => {
+            const filtered = (msgs || []).filter((m: any) => m.from !== 'system')
+            if (filtered.length > 0) cleaned[id] = filtered
+          })
+          setChatMessages(cleaned)
+        }
         if (saved.cancelledEventIds) {
           setCancelledEventIds(saved.cancelledEventIds)
           cancelledEventIdsRef.current = new Set(saved.cancelledEventIds)
