@@ -6622,7 +6622,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   members: preview.members.length + 1,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
-                  lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000, communityEventId: ev.id,
+                  lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
@@ -6649,7 +6649,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   members: memberIds.length,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
-                  lastMsg: '🎉 Crew assembled! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000, communityEventId: ev.id,
+                  lastMsg: '🎉 Crew assembled! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
