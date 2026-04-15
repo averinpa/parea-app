@@ -5044,6 +5044,47 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .subscribe()
     return () => { clearInterval(interval); supabase.removeChannel(rtChannel) }
   }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
+
+  // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 1)
+  useEffect(() => {
+    const waitingIds = Object.keys(readyCountMap).map(Number).filter(id => readyCountMap[id] === 1 && !crewPreviewMap[id])
+    if (waitingIds.length === 0 || !userData?.dbId) return
+    const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
+    const check = async () => {
+      for (const evId of waitingIds) {
+        const format = userEventFormat[evId] || 'squad'
+        const [userMin, userMax] = FORMAT_SIZES[format] || [3, 5]
+        const { data: readyData } = await supabase
+          .from('event_attendees').select('*, profiles(*)')
+          .eq('event_ref_id', evId).eq('status', 'ready')
+          .lte('group_size_min', userMax).gte('group_size_max', userMin)
+        const count = readyData?.length || 1
+        setReadyCountMap(prev => ({ ...prev, [evId]: count }))
+        if (count >= 2) {
+          const otherReadyIds = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => r.profile_id)
+          let existingChatId: number | null = null
+          if (otherReadyIds.length > 0) {
+            const { data: memberships } = await supabase.from('chat_members').select('chat_id').in('profile_id', otherReadyIds)
+            if (memberships && memberships.length > 0) {
+              const counts: Record<number, number> = {}
+              memberships.forEach((m: any) => { counts[m.chat_id] = (counts[m.chat_id] || 0) + 1 })
+              const shared = Object.entries(counts).find(([, c]) => c >= 1)?.[0]
+              if (shared) existingChatId = Number(shared)
+            }
+          }
+          const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => {
+            const p = r.profiles || {}
+            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+          })
+          setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId } }))
+        }
+      }
+    }
+    check()
+    const interval = setInterval(check, 15000)
+    return () => clearInterval(interval)
+  }, [JSON.stringify(readyCountMap), JSON.stringify(crewPreviewMap), userData?.dbId, JSON.stringify(userEventFormat)])
+
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
   const [approvedJoiners, setApprovedJoiners] = useState<Record<number, any[]>>({})
