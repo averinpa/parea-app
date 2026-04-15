@@ -6208,6 +6208,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
     // Для дуо чатов (crew invite) — пишем в Supabase через chat_id + broadcast
     const isChatDuoSend = openChat.type === 'duo' || (openChat.type === 'group' && !openChat.communityEventId && !openChat.hostEventId)
+    console.log('handleSend:', { type: openChat.type, communityEventId: openChat.communityEventId, hostEventId: openChat.hostEventId, isChatDuoSend, chatId: openChat.id, hasBroadcast: !!duoBroadcastRef.current })
     if (isChatDuoSend && openChat.id && userData?.dbId) {
       const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null }
       // Skip DB insert if chat has a fake local ID (Date.now() > 1e12) — not a real DB chat
@@ -6216,8 +6217,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           .then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
       }
       const bcast = { type: 'broadcast', event: 'message', payload }
-      if (duoBroadcastRef.current) duoBroadcastRef.current.send(bcast)
-      else duoBroadcastQueueRef.current.push(bcast)
+      if (duoBroadcastRef.current) { console.log('broadcasting on duo_chat_' + openChat.id); duoBroadcastRef.current.send(bcast) }
+      else { console.log('queuing broadcast'); duoBroadcastQueueRef.current.push(bcast) }
       return
     }
 
