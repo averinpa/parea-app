@@ -6626,6 +6626,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
+                setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: preview.chatId! }))
                 showToast('Check your Messages tab for the chat', 'Joined the crew! 🎉', '✅')
               } else {
                 // Create new chat with all ready members
@@ -6655,6 +6656,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
+                setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatData.id }))
                 showToast('Check your Messages tab for the group chat', 'Crew assembled! 🎉', '🎉')
               }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
