@@ -4958,6 +4958,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   officialEventChatMapRef.current = officialEventChatMap
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
   const acceptingInviteRef = useRef<Set<number>>(new Set())
+  const partyChatMemberChannels = useRef<Record<number, any>>({})
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
 
@@ -5391,6 +5392,51 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [userData?.dbId])
+
+  // ── Party chat: live member updates — subscribe to chat_members per party chat ──
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const currentChatIds = Object.values(officialEventChatMap)
+    // Subscribe to newly added chatIds
+    currentChatIds.forEach(chatId => {
+      if (partyChatMemberChannels.current[chatId]) return
+      const ch = supabase.channel(`party_members_${chatId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_members', filter: `chat_id=eq.${chatId}` }, async (payload: any) => {
+          const newProfileId = payload.new.profile_id
+          if (newProfileId === userData.dbId) return // own join, already handled
+          const { data: profile } = await supabase.from('profiles').select('id, name, photos, color').eq('id', newProfileId).single()
+          if (!profile) return
+          const newMember = { id: profile.id, name: profile.name || 'User', photo: (profile as any).photos?.[0] || null, color: (profile as any).color || '#818CF8' }
+          setChatList(prev => prev.map(c => {
+            if (c.id !== chatId) return c
+            const already = (c.memberProfiles || []).some((m: any) => m.id === profile.id)
+            if (already) return c
+            return {
+              ...c,
+              members: (c.members || 1) + 1,
+              memberProfiles: [...(c.memberProfiles || []), newMember],
+              avatars: [...(c.avatars || []), newMember.photo].filter(Boolean),
+              colors: [...(c.colors || []), newMember.color],
+            }
+          }))
+          setChatMessages(prev => {
+            const msgs = prev[chatId] || []
+            const sysMsg = { from: 'system', text: `${profile.name || 'Someone'} joined`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+            return { ...prev, [chatId]: [...msgs, sysMsg] }
+          })
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+        })
+        .subscribe()
+      partyChatMemberChannels.current[chatId] = ch
+    })
+    // Unsubscribe from chats no longer in map
+    Object.entries(partyChatMemberChannels.current).forEach(([id, ch]) => {
+      if (!currentChatIds.includes(Number(id))) {
+        supabase.removeChannel(ch)
+        delete partyChatMemberChannels.current[Number(id)]
+      }
+    })
+  }, [officialEventChatMap, userData?.dbId])
 
   // ── Fallback poll: check chat_members every 30s for chats added via party/squad flow ──
   useEffect(() => {
@@ -6208,7 +6254,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
     // Для дуо чатов (crew invite) — пишем в Supabase через chat_id + broadcast
     const isChatDuoSend = openChat.type === 'duo' || (openChat.type === 'group' && !openChat.communityEventId && !openChat.hostEventId)
-    console.log('handleSend:', { type: openChat.type, communityEventId: openChat.communityEventId, hostEventId: openChat.hostEventId, isChatDuoSend, chatId: openChat.id, hasBroadcast: !!duoBroadcastRef.current })
     if (isChatDuoSend && openChat.id && userData?.dbId) {
       const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null }
       // Skip DB insert if chat has a fake local ID (Date.now() > 1e12) — not a real DB chat
@@ -6273,7 +6318,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .order('created_at', { ascending: true })
         .limit(100)
         .then(({ data, error }) => {
-          console.log('loadHistory chatId:', chatId, 'count:', data?.length, 'error:', error?.message)
           if (error) { console.warn('history load error:', error.message); return }
           if (!data || data.length === 0) {
             // If chat was empty and this is the first try, retry after 2s
@@ -6613,30 +6657,36 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   // Mark self as ready
                   await supabase.from('event_attendees').update({ status: 'ready' })
                     .eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
-                  // If a chat already exists — join immediately
-                  const { data: existingChat } = await supabase.from('chats')
-                    .select('id').eq('event_id', ev.id).limit(1).maybeSingle()
-                  if (existingChat?.id) {
-                    await supabase.from('chat_members').upsert({ chat_id: existingChat.id, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                  // If a chat already exists — join immediately (atomic get-or-create)
+                  const { data: existingChatId } = await supabase.rpc('get_or_create_party_chat', { p_event_id: ev.id, p_title: ev.title }).single()
+                  if (existingChatId) {
+                    await supabase.from('chat_members').upsert({ chat_id: existingChatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
                     await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                     const { data: members } = await supabase.from('chat_members')
-                      .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', existingChat.id)
+                      .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', existingChatId)
                     const otherMembers = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
                       const p = (m as any).profiles || {}
                       return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
                     })
-                    setChatList(prev => prev.some(c => c.id === existingChat.id) ? prev : [{
-                      id: existingChat.id, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                    // Only navigate to chat if others are already there
+                    const hasOthers = otherMembers.length > 0
+                    setChatList(prev => prev.some(c => c.id === existingChatId) ? prev : [{
+                      id: existingChatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                       members: (members || []).length, avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
                       colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
                       lastMsg: '🎉 Party crew chat! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                     }, ...prev])
                     setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
-                    setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: existingChat.id }))
+                    setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: existingChatId as number }))
                     setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
-                    showToast('Check your Messages tab for the party chat', 'Joined the party! 🎉', '🎉')
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                    setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                    if (hasOthers) {
+                      showToast('Check your Messages tab for the party chat', 'Joined the party! 🎉', '🎉')
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                      setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                    } else {
+                      showToast('We\'ll notify you when someone joins', 'You\'re ready! ⏳', '⏳')
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    }
                     return
                   }
                   // No chat yet — check if others are ready
@@ -6765,63 +6815,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: preview.chatId! }))
                 showToast('Check your Messages tab for the chat', 'Joined the crew! 🎉', '✅')
               } else {
-                // Check DB first by event_id — works even if other users are already 'confirmed'
-                const { data: existingChatRow } = await supabase
-                  .from('chats').select('id').eq('event_id', ev.id).limit(1).maybeSingle()
-                if (existingChatRow?.id) {
-                  const existingChatId = existingChatRow.id
-                  // Chat already created — join it and fetch member profiles
-                  await supabase.from('chat_members').upsert({ chat_id: existingChatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
-                  await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
-                  const { data: members } = await supabase
-                    .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)')
-                    .eq('chat_id', existingChatId)
-                  const memberProfiles = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
-                    const p = (m as any).profiles || {}
-                    return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
-                  })
-                  setChatList(prev => prev.some(c => c.id === existingChatId) ? prev : [{
-                    id: existingChatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-                    members: (members || []).length, avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
-                    colors: memberProfiles.map((p: any) => p.color), memberProfiles,
-                    lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-                  }, ...prev])
-                  setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
-                  setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
-                  setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: existingChatId }))
-                  showToast('Check your Messages tab for the group chat', 'Joined the crew! 🎉', '🎉')
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                  setMessagesInitialSubTab('messages'); setActiveTab('messages')
-                  return
-                }
-                // No chat yet — fetch ready users and create one
-                const [userMin, userMax] = ({ '1+1': [2,2], squad: [3,5], party: [6,20] } as any)[userEventFormat[ev.id] || 'squad'] || [3,5]
-                const { data: readyData } = await supabase
-                  .from('event_attendees').select('*, profiles(*)')
-                  .eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
-                  .lte('group_size_min', userMax).gte('group_size_max', userMin)
-                const { data: chatData, error: chatErr } = await supabase.from('chats')
-                  .insert({ type: 'group', last_msg: `🎉 ${ev.title}`, event_id: ev.id }).select().single()
-                if (!chatData) { console.error('chats insert error:', chatErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
-                const memberIds = (readyData || []).map((r: any) => r.profile_id)
-                if (!memberIds.includes(userData?.dbId)) memberIds.push(userData?.dbId)
-                await supabase.from('chat_members').insert(memberIds.map((id: string) => ({ chat_id: chatData.id, profile_id: id })))
-                // Mark all members as 'confirmed' so they don't show up in VibeCheck after restart
-                await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).in('profile_id', memberIds)
-                const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
-                  const p = r.profiles || {}
+                // Atomic get-or-create party chat — eliminates race condition
+                const { data: chatId, error: rpcErr } = await supabase.rpc('get_or_create_party_chat', { p_event_id: ev.id, p_title: ev.title }).single()
+                if (!chatId) { console.error('get_or_create_party_chat error:', rpcErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
+                await supabase.from('chat_members').upsert({ chat_id: chatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
+                const { data: members } = await supabase
+                  .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)')
+                  .eq('chat_id', chatId)
+                const memberProfiles = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
+                  const p = (m as any).profiles || {}
                   return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
                 })
-                setChatList(prev => prev.some(c => c.id === chatData.id) ? prev : [{
-                  id: chatData.id, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-                  members: memberIds.length,
-                  avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
+                setChatList(prev => prev.some(c => c.id === chatId) ? prev : [{
+                  id: chatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                  members: (members || []).length, avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
                   lastMsg: '🎉 Crew assembled! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 }, ...prev])
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
-                setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatData.id }))
+                setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatId as number }))
                 showToast('Check your Messages tab for the group chat', 'Crew assembled! 🎉', '🎉')
               }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
