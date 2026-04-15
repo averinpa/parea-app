@@ -5340,7 +5340,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_members', filter: `profile_id=eq.${userData.dbId}` }, async (payload: any) => {
         const chatId = payload.new.chat_id
         if (chatListRef.current.some((c: any) => c.id === chatId)) return
-        // Fetch chat type and members
+        // Fetch chat type and members to check if user left this event
         const [{ data: chatData }, { data: members }, { data: inviteData }] = await Promise.all([
           supabase.from('chats').select('type, event_id').eq('id', chatId).single(),
           supabase.from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', chatId),
@@ -5374,6 +5374,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           lastMsg: '🎉 You\'re in the crew! Say hi 👋',
           time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
         }
+        // Don't re-add if user explicitly left this event
+        if (chatData?.event_id && cancelledEventIdsRef.current.has(chatData.event_id)) return
         setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
         if (chatData?.event_id) {
           setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
@@ -5404,6 +5406,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (!chat || !chat.event_id) continue
         // Already confirmed for this event — skip
         if (joinedEventsRef.current[chat.event_id] === 'confirmed') continue
+        // User explicitly left this event — don't re-add
+        if (cancelledEventIdsRef.current.has(chat.event_id)) continue
         // Already in chatList — skip
         if (chatListRef.current.some((c: any) => c.id === chat.id)) continue
         // Fetch members
