@@ -4054,8 +4054,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     <View style={{ gap: 10 }}>
                       {(() => {
                         const crewPreview = !isCommunity && (format === 'squad' || format === 'party') ? crewPreviewMap[ev.id] : null
-                        const readyCount = readyCountMap[ev.id]
-                        const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 1 && !crewPreview
+                        const readyCount = readyCountMap[ev.id] // others ready (excludes self)
+                        const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 0 && !crewPreview
                         if (crewPreview) {
                           return (
                             <View style={{ gap: 10 }}>
@@ -5037,9 +5037,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => { clearInterval(interval); supabase.removeChannel(rtChannel) }
   }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
 
-  // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 1)
+  // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 0 = only self is ready)
   useEffect(() => {
-    const waitingIds = Object.keys(readyCountMap).map(Number).filter(id => readyCountMap[id] === 1 && !crewPreviewMap[id])
+    const waitingIds = Object.keys(readyCountMap).map(Number).filter(id => readyCountMap[id] === 0 && !crewPreviewMap[id])
     if (waitingIds.length === 0 || !userData?.dbId) return
     const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
     const check = async () => {
@@ -5049,11 +5049,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const { data: readyData } = await supabase
           .from('event_attendees').select('*, profiles(*)')
           .eq('event_ref_id', evId).eq('status', 'ready')
+          .neq('profile_id', userData.dbId)
           .lte('group_size_min', userMax).gte('group_size_max', userMin)
-        const count = readyData?.length || 1
-        setReadyCountMap(prev => ({ ...prev, [evId]: count }))
-        if (count >= 2) {
-          const otherReadyIds = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => r.profile_id)
+        const othersCount = readyData?.length || 0
+        setReadyCountMap(prev => ({ ...prev, [evId]: othersCount }))
+        if (othersCount >= 1) {
+          const otherReadyIds = (readyData || []).map((r: any) => r.profile_id)
           let existingChatId: number | null = null
           if (otherReadyIds.length > 0) {
             const { data: memberships } = await supabase.from('chat_members').select('chat_id').in('profile_id', otherReadyIds)
@@ -6524,16 +6525,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const { data: readyData } = await supabase
                   .from('event_attendees').select('*, profiles(*)')
                   .eq('event_ref_id', ev.id).eq('status', 'ready')
+                  .neq('profile_id', userData?.dbId)
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
-                const count = readyData?.length || 1
-                setReadyCountMap(prev => ({ ...prev, [ev.id]: count }))
-                if (count < 2) {
+                const othersCount = readyData?.length || 0
+                setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
+                if (othersCount < 1) {
                   showToast('We\'ll notify you when someone joins', 'You\'re the first one! ⏳', '⏳')
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                   return
                 }
                 // Check if a crew chat already exists
-                const otherReadyIds = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => r.profile_id)
+                const otherReadyIds = (readyData || []).map((r: any) => r.profile_id)
                 let existingChatId: number | null = null
                 if (otherReadyIds.length > 0) {
                   const { data: otherMemberships } = await supabase
