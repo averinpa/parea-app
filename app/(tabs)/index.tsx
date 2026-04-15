@@ -6640,6 +6640,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const memberIds = (readyData || []).map((r: any) => r.profile_id)
                 if (!memberIds.includes(userData?.dbId)) memberIds.push(userData?.dbId)
                 await supabase.from('chat_members').insert(memberIds.map((id: string) => ({ chat_id: chatData.id, profile_id: id })))
+                // Mark all members as 'confirmed' so they don't show up in VibeCheck after restart
+                await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).in('profile_id', memberIds)
                 const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
                   const p = r.profiles || {}
                   return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
