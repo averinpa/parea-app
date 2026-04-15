@@ -3818,27 +3818,22 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ marginBottom: 18 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                       <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '700', letterSpacing: 0.5 }}>
-                        {isCommunity ? 'GROUP MEMBERS' : isParty && isActive ? 'GROUP ACTIVE · STILL OPEN' : 'CREW FOUND'}
+                        {isCommunity ? 'GROUP MEMBERS' : isParty ? 'PARTY · OPEN TO JOIN' : 'CREW FOUND'}
                       </Text>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor }}>
-                        {isCommunity ? `${ev.participantsCount || cap} going` : isParty ? `${found} / ${cap} joined` : `${found} / ${cap}`}
+                        {isCommunity ? `${ev.participantsCount || cap} going` : `${found} / ${cap}`}
                       </Text>
                     </View>
-                    {/* Two-segment bar for party: threshold zone + overflow zone */}
                     <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
                       <LinearGradient
                         colors={isActive ? ['#43E97B','#22c55e'] : ['#6366F1','#818CF8']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                         style={{ height: 3, borderRadius: 99, width: `${(found / cap) * 100}%` as any }}
                       />
-                      {/* Threshold marker for party */}
-                      {isParty && (
-                        <View style={{ position: 'absolute', left: `${(threshold / cap) * 100}%` as any, top: -2, width: 2, height: 7, backgroundColor: '#43E97B', borderRadius: 1 }} />
-                      )}
                     </View>
                     {isParty && (
                       <Text style={{ fontSize: 10, color: 'rgba(67,233,123,0.6)', marginTop: 5, fontWeight: '600' }}>
-                        {found >= threshold ? `${found - threshold} more joined after launch · ${cap - found} spots left` : `Group launches at ${threshold} people`}
+                        {cap - found > 0 ? `${cap - found} spots left` : 'Full'}
                       </Text>
                     )}
                   </View>
