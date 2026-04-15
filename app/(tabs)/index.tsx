@@ -5419,6 +5419,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               colors: [...(c.colors || []), newMember.color],
             }
           }))
+          setOpenChat((cur: any) => {
+            if (!cur || cur.id !== chatId) return cur
+            const already = (cur.memberProfiles || []).some((m: any) => m.id === profile.id)
+            if (already) return cur
+            return {
+              ...cur,
+              members: (cur.members || 1) + 1,
+              memberProfiles: [...(cur.memberProfiles || []), newMember],
+              avatars: [...(cur.avatars || []), newMember.photo].filter(Boolean),
+              colors: [...(cur.colors || []), newMember.color],
+            }
+          })
           setChatMessages(prev => {
             const msgs = prev[chatId] || []
             const sysMsg = { from: 'system', text: `${profile.name || 'Someone'} joined`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
