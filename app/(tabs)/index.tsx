@@ -5268,6 +5268,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // Events that are confirmed but have no accepted invite → partner left
       for (const evId of confirmedEventIds) {
         if (activeEventIds.has(evId)) continue
+        // For party/squad: chat created via chat_members (no crew_invite) — verify user is still in chat
+        const chatId = officialEventChatMapRef.current[evId]
+        if (chatId) {
+          const { data: membership } = await supabase.from('chat_members').select('chat_id').eq('chat_id', chatId).eq('profile_id', userData.dbId).maybeSingle()
+          if (membership) continue // still in chat — not a "partner left" scenario
+        }
         console.log('Partner left event', evId, '— resetting to looking')
         // Remove duo chat for this event
         const chatIdToRemove = officialEventChatMapRef.current[evId]
