@@ -5102,6 +5102,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       try {
         const saved = JSON.parse(raw)
         if (saved.joinedEvents) setJoinedEvents(saved.joinedEvents)
+        if (saved.userEventFormat) setUserEventFormat(saved.userEventFormat)
+        if (saved.userEventTransport) setUserEventTransport(saved.userEventTransport)
         if (saved.userCreatedEvents) setUserCreatedEvents(saved.userCreatedEvents)
         if (saved.pendingJoinRequests) setPendingJoinRequests(saved.pendingJoinRequests)
         if (saved.approvedJoiners) {
@@ -5141,10 +5143,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (!persistLoaded.current) return
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
-      joinedEvents, userCreatedEvents, pendingJoinRequests,
+      joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests,
       approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds,
     }))
-  }, [joinedEvents, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   useEffect(() => {
