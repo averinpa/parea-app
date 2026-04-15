@@ -6726,9 +6726,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .from('event_attendees').select('*, profiles(*)')
                   .eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
-                const { data: chatData } = await supabase.from('chats')
+                const { data: chatData, error: chatErr } = await supabase.from('chats')
                   .insert({ type: 'group', last_msg: `🎉 ${ev.title}`, event_id: ev.id }).select().single()
-                if (!chatData) { showToast('Please try again', 'Something went wrong', '⚠️'); return }
+                if (!chatData) { console.error('chats insert error:', chatErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
                 const memberIds = (readyData || []).map((r: any) => r.profile_id)
                 if (!memberIds.includes(userData?.dbId)) memberIds.push(userData?.dbId)
                 await supabase.from('chat_members').insert(memberIds.map((id: string) => ({ chat_id: chatData.id, profile_id: id })))
