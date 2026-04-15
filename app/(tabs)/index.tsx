@@ -4981,7 +4981,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           .select('*, profiles(*)')
           .eq('event_ref_id', evId)
           .neq('profile_id', userData.dbId)
-          .eq('status', 'looking')
+          .in('status', ['looking', 'ready'])
           .lte('group_size_min', userMax)
           .gte('group_size_max', userMin)
           .limit(20)
