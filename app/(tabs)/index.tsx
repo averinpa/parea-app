@@ -3838,7 +3838,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     </View>
                     {isParty && (
                       <Text style={{ fontSize: 10, color: 'rgba(67,233,123,0.6)', marginTop: 5, fontWeight: '600' }}>
-                        {isActive ? `${found - threshold} more joined after launch · ${cap - found} spots left` : `Group launches at ${threshold} people`}
+                        {found >= threshold ? `${found - threshold} more joined after launch · ${cap - found} spots left` : `Group launches at ${threshold} people`}
                       </Text>
                     )}
                   </View>
