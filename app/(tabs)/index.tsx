@@ -5848,6 +5848,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   // Auto-expire hosted events and their chats 24h after event ends
   useEffect(() => {
+    if (!persistLoadedState) return
     const check = () => {
       const now = Date.now()
       const EXPIRE_AFTER = 24 * 60 * 60 * 1000 // 24 hours
@@ -5883,7 +5884,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     check()
     const interval = setInterval(check, 60 * 60 * 1000) // check every hour
     return () => clearInterval(interval)
-  }, [])
+  }, [persistLoadedState])
 
   // Watch for crew/partner found on joined events
   const prevActiveEventsRef = useRef<Set<number>>(new Set())
