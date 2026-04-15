@@ -5332,7 +5332,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         const isDuo = chatData?.type === 'duo' || members.length === 2
         const partner = otherMembers[0]
-        const eventTitle = inviteData?.event_title || 'Crew Chat'
+        const eventTitle = inviteData?.event_title || dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || 'Crew Chat'
         const newChat = isDuo ? {
           id: chatId, type: 'duo',
           name: partner?.name || 'Your crew',
@@ -5356,6 +5356,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
         if (chatData?.event_id) {
           setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
+          setJoinedEvents(prev => ({ ...prev, [chatData.event_id]: 'confirmed' }))
+          setCrewPreviewMap(prev => ({ ...prev, [chatData.event_id]: null }))
+          setReadyCountMap(prev => { const n = { ...prev }; delete n[chatData.event_id]; return n })
         }
         showToast('Check your Messages tab for the chat', 'You\'re in! 🎉', '✅')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -6632,7 +6635,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .eq('event_ref_id', ev.id).eq('status', 'ready')
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
                 const { data: chatData } = await supabase.from('chats')
-                  .insert({ type: 'group', last_msg: `🎉 ${ev.title}` }).select().single()
+                  .insert({ type: 'group', last_msg: `🎉 ${ev.title}`, event_id: ev.id }).select().single()
                 if (!chatData) { showToast('Please try again', 'Something went wrong', '⚠️'); return }
                 const memberIds = (readyData || []).map((r: any) => r.profile_id)
                 if (!memberIds.includes(userData?.dbId)) memberIds.push(userData?.dbId)
