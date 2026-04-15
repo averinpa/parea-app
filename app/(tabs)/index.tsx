@@ -6629,12 +6629,44 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: preview.chatId! }))
                 showToast('Check your Messages tab for the chat', 'Joined the crew! 🎉', '✅')
               } else {
-                // Create new chat with all ready members
+                // Check DB first — another user may have already created the chat
                 const [userMin, userMax] = ({ '1+1': [2,2], squad: [3,5], party: [6,20] } as any)[userEventFormat[ev.id] || 'squad'] || [3,5]
                 const { data: readyData } = await supabase
                   .from('event_attendees').select('*, profiles(*)')
                   .eq('event_ref_id', ev.id).eq('status', 'ready')
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
+                const otherIds = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => r.profile_id)
+                let existingChatId: number | null = null
+                if (otherIds.length > 0) {
+                  const { data: memberships } = await supabase.from('chat_members').select('chat_id').in('profile_id', otherIds)
+                  if (memberships && memberships.length > 0) {
+                    const counts: Record<number, number> = {}
+                    memberships.forEach((m: any) => { counts[m.chat_id] = (counts[m.chat_id] || 0) + 1 })
+                    const shared = Object.entries(counts).find(([, c]) => c >= 1)?.[0]
+                    if (shared) existingChatId = Number(shared)
+                  }
+                }
+                if (existingChatId) {
+                  // Chat already created by other user — just join it
+                  await supabase.from('chat_members').upsert({ chat_id: existingChatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                  const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
+                    const p = r.profiles || {}
+                    return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                  })
+                  setChatList(prev => prev.some(c => c.id === existingChatId) ? prev : [{
+                    id: existingChatId!, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                    members: (readyData || []).length, avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
+                    colors: memberProfiles.map((p: any) => p.color), memberProfiles,
+                    lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+                  }, ...prev])
+                  setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                  setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
+                  setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: existingChatId! }))
+                  showToast('Check your Messages tab for the group chat', 'Joined the crew! 🎉', '🎉')
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                  setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                  return
+                }
                 const { data: chatData } = await supabase.from('chats')
                   .insert({ type: 'group', last_msg: `🎉 ${ev.title}`, event_id: ev.id }).select().single()
                 if (!chatData) { showToast('Please try again', 'Something went wrong', '⚠️'); return }
