@@ -4979,8 +4979,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       await Promise.all(officialJoined.map(async (evId) => {
         const evFormat = userEventFormat[evId] || 'squad'
         const [userMin, userMax] = FORMAT_SIZES[evFormat] || [2, 5]
-        // For party: include confirmed users so others can see the crew and join
-        const statusFilter = evFormat === 'party' ? ['looking', 'ready', 'confirmed'] : ['looking', 'ready']
+        // Include confirmed users so others can see them and join existing crew chats
+        const statusFilter = ['looking', 'ready', 'confirmed']
         const { data } = await supabase
           .from('event_attendees')
           .select('*, profiles(*)')
@@ -5148,6 +5148,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             if (val === 'accepted') acceptedInviteKeysRef.current.add(key)
           })
         }
+        if (saved.officialEventChatMap) {
+          setOfficialEventChatMap(saved.officialEventChatMap)
+          officialEventChatMapRef.current = saved.officialEventChatMap
+        }
       } catch {}
       persistLoaded.current = true
       setPersistLoadedState(true)
@@ -5159,9 +5163,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!persistLoaded.current) return
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests,
-      approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds,
+      approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap,
     }))
-  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   useEffect(() => {
@@ -6378,6 +6382,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           duoBroadcastRef.current = channel
           duoBroadcastQueueRef.current.forEach(p => channel.send(p))
           duoBroadcastQueueRef.current = []
+          // Reload history to catch messages sent during subscription setup
+          loadHistory()
         }
       })
     return () => { clearInterval(pollInterval); supabase.removeChannel(channel); duoBroadcastRef.current = null; duoBroadcastQueueRef.current = [] }
@@ -6738,10 +6744,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                 const { data: readyData } = await supabase
                   .from('event_attendees').select('*, profiles(*)')
-                  .eq('event_ref_id', ev.id).eq('status', 'ready')
+                  .eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
                   .neq('profile_id', userData?.dbId)
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
-                const othersCount = readyData?.length || 0
+                const registeredSquadReady = (readyData || []).filter((r: any) => r.profiles?.name && r.profiles?.id)
+                const othersCount = registeredSquadReady.length
                 setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
                 if (othersCount < 1) {
                   showToast('We\'ll notify you when someone joins', 'You\'re the first one! ⏳', '⏳')
@@ -6749,7 +6756,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   return
                 }
                 // Check if a crew chat already exists
-                const otherReadyIds = (readyData || []).map((r: any) => r.profile_id)
+                const otherReadyIds = registeredSquadReady.map((r: any) => r.profile_id)
                 let existingChatId: number | null = null
                 if (otherReadyIds.length > 0) {
                   const { data: otherMemberships } = await supabase
@@ -6761,9 +6768,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     if (sharedChatId) existingChatId = Number(sharedChatId)
                   }
                 }
-                const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData?.dbId).map((r: any) => {
-                  const p = r.profiles || {}
-                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                const memberProfiles = registeredSquadReady.map((r: any) => {
+                  const p = r.profiles
+                  return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
                 })
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: { members: memberProfiles, chatId: existingChatId } }))
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
