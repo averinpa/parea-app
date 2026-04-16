@@ -6846,11 +6846,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: preview.chatId! }))
                 showToast('Check your Messages tab for the chat', 'Joined the crew! 🎉', '✅')
               } else {
-                // Atomic get-or-create party chat — eliminates race condition
+                // Atomic get-or-create party/squad chat
                 const { data: chatId, error: rpcErr } = await supabase.rpc('get_or_create_party_chat', { p_event_id: ev.id, p_title: ev.title }).single()
                 if (!chatId) { console.error('get_or_create_party_chat error:', rpcErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
+                // Add self
                 await supabase.from('chat_members').upsert({ chat_id: chatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
                 await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
+                // Add all crew members from preview so they also get the chat
+                if (preview.members.length > 0) {
+                  const otherRows = preview.members.map((p: any) => ({ chat_id: chatId, profile_id: p.id }))
+                  await supabase.from('chat_members').upsert(otherRows, { onConflict: 'chat_id,profile_id' })
+                  await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).in('profile_id', preview.members.map((p: any) => p.id))
+                }
                 const { data: members } = await supabase
                   .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)')
                   .eq('chat_id', chatId)
