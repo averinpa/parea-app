@@ -7132,9 +7132,29 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setCancelledEventIds(prev => [...new Set([...prev, ev.id])])
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                   .then(({ error, count }) => { console.log('event_attendees delete (leave):', { eventId: ev.id, profileId: userData.dbId, error: error?.message, count }) })
-                // Remove from chat_members so re-joining creates a fresh start
+                // Remove from chat_members; if no active members remain, delete the chat
+                // so get_or_create_party_chat creates a fresh one on re-join
                 if (officialChatId) {
                   supabase.from('chat_members').delete().eq('chat_id', officialChatId).eq('profile_id', userData.dbId)
+                    .then(async () => {
+                      // Check if anyone else with active event_attendees is still in the chat
+                      const { data: remaining } = await supabase.from('chat_members')
+                        .select('profile_id').eq('chat_id', officialChatId)
+                      const remainingIds = (remaining || []).map((r: any) => r.profile_id)
+                      if (remainingIds.length === 0) {
+                        // Chat is empty — delete it so RPC creates a fresh one next time
+                        supabase.from('chats').delete().eq('id', officialChatId)
+                      } else {
+                        // Check if remaining members still have active event_attendees
+                        const { data: activeLeft } = await supabase.from('event_attendees')
+                          .select('profile_id').eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed']).in('profile_id', remainingIds)
+                        if (!activeLeft || activeLeft.length === 0) {
+                          // All remaining members left the event too — delete the chat
+                          supabase.from('chat_members').delete().eq('chat_id', officialChatId)
+                            .then(() => supabase.from('chats').delete().eq('id', officialChatId))
+                        }
+                      }
+                    })
                 }
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
