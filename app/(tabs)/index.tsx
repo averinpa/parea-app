@@ -6267,7 +6267,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     // Для дуо чатов (crew invite) — пишем в Supabase через chat_id + broadcast
     const isChatDuoSend = openChat.type === 'duo' || (openChat.type === 'group' && !openChat.communityEventId && !openChat.hostEventId)
     if (isChatDuoSend && openChat.id && userData?.dbId) {
-      const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null }
+      const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null, sender_name: userData.name || '', sender_photo: (userData as any).photos?.[0] || null, sender_color: (userData as any).color || '#818CF8' }
       // Skip DB insert if chat has a fake local ID (Date.now() > 1e12) — not a real DB chat
       if (openChat.id < 1e12) {
         supabase.from('messages').insert({ chat_id: openChat.id, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
@@ -6340,10 +6340,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             const isMe = m.sender_id === userData.dbId
             const t = new Date(m.created_at)
             const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            const sender = isMe ? null : (openChat.memberProfiles || []).find((p: any) => p.id === m.sender_id)
             return {
               from: isMe ? 'me' : 'them',
               text: m.text, time,
               date: t.toISOString().slice(0, 10),
+              senderName: isMe ? undefined : (sender?.name || ''),
+              senderPhoto: isMe ? undefined : (sender?.photo || null),
+              senderColor: isMe ? undefined : (sender?.color || '#818CF8'),
               replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
               _dbId: m.id,
             }
@@ -6364,7 +6368,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
           if (payload.sender_id === userData.dbId) return // своё уже добавили
           const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
+          const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), senderName: payload.sender_name || '', senderPhoto: payload.sender_photo || null, senderColor: payload.sender_color || '#818CF8', replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
           setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
           setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
