@@ -7120,12 +7120,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setJoinedEvents(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               const officialChatId = officialEventChatMapRef.current[ev.id]
               setChatList(prev => prev.filter(c => c.communityEventId !== ev.id && c.event !== ev.title && c.hostEventId !== ev.id && c.id !== officialChatId))
+              // Clear chat map so re-joining creates a fresh chat
+              setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               // Mark as cancelled so poll never re-adds it
               cancelledEventIdsRef.current.add(ev.id)
               if ((ev.type === 'official' || ev.id > 100000) && userData?.dbId) {
                 setCancelledEventIds(prev => [...new Set([...prev, ev.id])])
                 supabase.from('event_attendees').delete().eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
                   .then(({ error, count }) => { console.log('event_attendees delete (leave):', { eventId: ev.id, profileId: userData.dbId, error: error?.message, count }) })
+                // Remove from chat_members so re-joining creates a fresh start
+                if (officialChatId) {
+                  supabase.from('chat_members').delete().eq('chat_id', officialChatId).eq('profile_id', userData.dbId)
+                }
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
                 // Broadcast instantly to crew partner so they don't wait 15s
