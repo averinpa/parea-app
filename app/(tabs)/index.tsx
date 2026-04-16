@@ -6680,10 +6680,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                     const { data: members } = await supabase.from('chat_members')
                       .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', existingChatId)
-                    const otherMembers = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
-                      const p = (m as any).profiles || {}
-                      return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
-                    })
+                    const otherMembers = (members || [])
+                      .filter((m: any) => m.profile_id !== userData?.dbId && (m as any).profiles?.name && (m as any).profiles?.id)
+                      .map((m: any) => {
+                        const p = (m as any).profiles
+                        return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                      })
                     // Only navigate to chat if others are already there
                     const hasOthers = otherMembers.length > 0
                     setChatList(prev => prev.some(c => c.id === existingChatId) ? prev : [{
@@ -6711,7 +6713,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     .eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
                     .neq('profile_id', userData?.dbId)
                     .lte('group_size_min', 20).gte('group_size_max', 6)
-                  const othersCount = readyData?.length || 0
+                  // Filter out attendees whose profile is incomplete (not yet registered)
+                  const registeredReady = (readyData || []).filter((r: any) => r.profiles?.name && r.profiles?.id)
+                  const othersCount = registeredReady.length
                   setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
                   if (othersCount < 1) {
                     // First one — wait for others
@@ -6720,9 +6724,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     return
                   }
                   // Others are ready — show Join button
-                  const memberProfiles = (readyData || []).map((r: any) => {
-                    const p = r.profiles || {}
-                    return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                  const memberProfiles = registeredReady.map((r: any) => {
+                    const p = r.profiles
+                    return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
                   })
                   setCrewPreviewMap(prev => ({ ...prev, [ev.id]: { members: memberProfiles, chatId: null } }))
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
