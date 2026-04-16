@@ -6686,8 +6686,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                     const { data: members } = await supabase.from('chat_members')
                       .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', existingChatId)
+                    // Only count members who still have an active event_attendees record
+                    const { data: activeAttendees } = await supabase.from('event_attendees')
+                      .select('profile_id').eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
+                    const activeIds = new Set((activeAttendees || []).map((a: any) => a.profile_id))
                     const otherMembers = (members || [])
-                      .filter((m: any) => m.profile_id !== userData?.dbId && (m as any).profiles?.name && (m as any).profiles?.id)
+                      .filter((m: any) => m.profile_id !== userData?.dbId && (m as any).profiles?.name && (m as any).profiles?.id && activeIds.has(m.profile_id))
                       .map((m: any) => {
                         const p = (m as any).profiles
                         return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
