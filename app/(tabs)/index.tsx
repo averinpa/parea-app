@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, Image, Keyboard, Linking,
+  ActivityIndicator, Alert, Animated, AppState, Dimensions, Image, Keyboard, Linking,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, Pressable,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
@@ -6410,6 +6410,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
         })
     }
+    loadHistoryRef.current = loadHistory
     loadHistory()
     // Polling fallback — catches messages missed while chat was closed or broadcast dropped
     const pollInterval = setInterval(loadHistory, 3000)
@@ -6440,6 +6441,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
     return () => { clearInterval(pollInterval); supabase.removeChannel(channel); duoBroadcastRef.current = null; duoBroadcastQueueRef.current = [] }
   }, [openChat?.id, openChat?.type, userData?.dbId])
+
+  // Reload history when app comes back to foreground — broadcasts are missed while backgrounded
+  const loadHistoryRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && loadHistoryRef.current) {
+        loadHistoryRef.current()
+      }
+    })
+    return () => sub.remove()
+  }, [])
 
   // Realtime чат для community events (и для хоста через hostEventId)
   useEffect(() => {
