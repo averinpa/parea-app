@@ -5002,6 +5002,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
   const acceptingInviteRef = useRef<Set<number>>(new Set())
   const partyChatMemberChannels = useRef<Record<number, any>>({})
+  const partyChatBroadcastChannels = useRef<Record<number, any>>({})
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
 
@@ -5493,12 +5494,39 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         .subscribe()
       partyChatMemberChannels.current[chatId] = ch
+      // Persistent broadcast channel — handles messages both when chat is open and closed
+      if (partyChatBroadcastChannels.current[chatId]) return
+      const bcastCh = supabase.channel(`duo_chat_${chatId}`)
+        .on('broadcast', { event: 'message' }, ({ payload }: any) => {
+          if (payload.sender_id === userData.dbId) return
+          const t = new Date(payload.created_at)
+          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          if (openChatRef.current?.id === chatId) {
+            // Chat is open — append in real-time
+            const sender = (openChatRef.current?.memberProfiles || []).find((p: any) => p.id === payload.sender_id)
+            const newMsg = { from: 'them', text: payload.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || payload.sender_name || '', senderPhoto: sender?.photo || payload.sender_photo || null, senderColor: sender?.color || payload.sender_color || '#818CF8' }
+            setChatMessages((prev: any) => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time } : c))
+            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
+          } else {
+            // Chat is closed — mark unread
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, isNew: true, time: payload.created_at } : c))
+          }
+        })
+        .subscribe()
+      partyChatBroadcastChannels.current[chatId] = bcastCh
     })
     // Unsubscribe from chats no longer in map
     Object.entries(partyChatMemberChannels.current).forEach(([id, ch]) => {
       if (!currentChatIds.includes(Number(id))) {
         supabase.removeChannel(ch)
         delete partyChatMemberChannels.current[Number(id)]
+      }
+    })
+    Object.entries(partyChatBroadcastChannels.current).forEach(([id, ch]) => {
+      if (!currentChatIds.includes(Number(id))) {
+        supabase.removeChannel(ch)
+        delete partyChatBroadcastChannels.current[Number(id)]
       }
     })
   }, [officialEventChatMap, userData?.dbId])
@@ -6414,14 +6442,26 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     loadHistory()
     // Polling fallback — catches messages missed while chat was closed or broadcast dropped
     const pollInterval = setInterval(loadHistory, 3000)
-    // Broadcast subscription для real-time доставки
+    // Party/squad chats have a persistent broadcast channel — reuse it for sending
+    const persistentChannel = partyChatBroadcastChannels.current[chatId]
+    if (persistentChannel) {
+      duoBroadcastRef.current = persistentChannel
+      // Flush queued messages
+      duoBroadcastQueueRef.current.forEach(p => persistentChannel.send(p))
+      duoBroadcastQueueRef.current = []
+      // Reload to catch anything missed while chat was closed
+      loadHistory()
+      setTimeout(loadHistory, 1500)
+      return () => { clearInterval(pollInterval); duoBroadcastRef.current = null }
+    }
+    // Non-party duo chat (crew invite 1+1) — create own channel
     if (duoBroadcastRef.current) {
       supabase.removeChannel(duoBroadcastRef.current)
       duoBroadcastRef.current = null
     }
     const channel = supabase.channel(`duo_chat_${chatId}`)
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
-          if (payload.sender_id === userData.dbId) return // своё уже добавили
+          if (payload.sender_id === userData.dbId) return
           const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), senderName: payload.sender_name || '', senderPhoto: payload.sender_photo || null, senderColor: payload.sender_color || '#818CF8', replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
           setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
@@ -6433,9 +6473,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           duoBroadcastRef.current = channel
           duoBroadcastQueueRef.current.forEach(p => channel.send(p))
           duoBroadcastQueueRef.current = []
-          // Reload history to catch messages sent before subscription
           loadHistory()
-          // Second load after delay — catches messages whose DB insert was still in-flight
           setTimeout(loadHistory, 1500)
         }
       })
