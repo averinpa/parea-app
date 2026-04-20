@@ -1,5 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
+import { Users, UsersRound, PartyPopper } from 'lucide-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -7459,52 +7460,57 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   {/* ── Step 1: Pod Size ── */}
                   {createStep === 1 && (
                     <View style={{ gap: 12 }}>
-                      {[
+                      {([
                         {
-                          id: 'duo', emoji: '👫', label: 'Duo', tag: '2 people',
+                          id: 'duo', Icon: Users, label: 'Duo', tag: '2 people',
                           sub: 'Most personal — just you and one other person',
-                          bg: ['#EEF2FF', '#E0E7FF'], accent: '#6366F1', tagBg: '#C7D2FE',
+                          grad: ['#6366F1', '#818CF8'] as [string,string],
+                          bg: '#EEF2FF', accent: '#6366F1', tagBg: '#C7D2FE',
                         },
                         {
-                          id: 'squad', emoji: '🫂', label: 'Squad', tag: 'up to 5',
+                          id: 'squad', Icon: UsersRound, label: 'Squad', tag: 'up to 5',
                           sub: 'Small group energy — tight circle, good vibes',
-                          bg: ['#F0FDF4', '#DCFCE7'], accent: '#16a34a', tagBg: '#BBF7D0',
+                          grad: ['#16a34a', '#22c55e'] as [string,string],
+                          bg: '#F0FDF4', accent: '#16a34a', tagBg: '#BBF7D0',
                         },
                         {
-                          id: 'party', emoji: '🎉', label: 'Party', tag: 'up to 20',
+                          id: 'party', Icon: PartyPopper, label: 'Party', tag: 'up to 20',
                           sub: 'Open gathering — the more the merrier',
-                          bg: ['#FFF7ED', '#FFEDD5'], accent: '#ea580c', tagBg: '#FED7AA',
+                          grad: ['#ea580c', '#f97316'] as [string,string],
+                          bg: '#FFF7ED', accent: '#ea580c', tagBg: '#FED7AA',
                         },
-                      ].map(opt => {
+                      ] as const).map(opt => {
                         const sel = createSize === opt.id
                         return (
                           <TouchableOpacity key={opt.id} onPress={() => setCreateSize(opt.id)} activeOpacity={0.85}
-                            style={{ borderRadius: 24, overflow: 'hidden', borderWidth: 2.5,
-                              borderColor: sel ? opt.accent : 'rgba(0,0,0,0)',
+                            style={{ borderRadius: 22, borderWidth: 2,
+                              borderColor: sel ? opt.accent : '#F1F5F9',
+                              backgroundColor: sel ? opt.bg : '#fff',
                               shadowColor: sel ? opt.accent : '#000',
-                              shadowOpacity: sel ? 0.22 : 0.05, shadowRadius: sel ? 14 : 4, elevation: sel ? 6 : 1 }}>
-                            <View style={{ backgroundColor: sel ? opt.bg[0] : '#fff', paddingHorizontal: 18, paddingVertical: 16 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                                <View style={{ width: 58, height: 58, borderRadius: 18,
-                                  backgroundColor: sel ? '#fff' : '#F1F5F9',
-                                  alignItems: 'center', justifyContent: 'center' }}>
-                                  <Text style={{ fontSize: 30 }}>{opt.emoji}</Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <Text style={{ fontSize: 19, fontWeight: '900', color: sel ? opt.accent : '#1E1B4B' }}>{opt.label}</Text>
-                                    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
-                                      backgroundColor: sel ? opt.tagBg : '#F1F5F9' }}>
-                                      <Text style={{ fontSize: 11, fontWeight: '700', color: sel ? opt.accent : '#94A3B8' }}>{opt.tag}</Text>
-                                    </View>
+                              shadowOpacity: sel ? 0.18 : 0.04, shadowRadius: sel ? 12 : 3,
+                              shadowOffset: { width: 0, height: sel ? 4 : 1 }, elevation: sel ? 5 : 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 16 }}>
+                              {/* Icon circle with gradient */}
+                              <LinearGradient
+                                colors={sel ? opt.grad : ['#F1F5F9', '#E2E8F0']}
+                                style={{ width: 56, height: 56, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}
+                                start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}>
+                                <opt.Icon size={26} color={sel ? '#fff' : '#94A3B8'} strokeWidth={1.8} />
+                              </LinearGradient>
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                  <Text style={{ fontSize: 18, fontWeight: '900', color: sel ? opt.accent : '#1E1B4B' }}>{opt.label}</Text>
+                                  <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
+                                    backgroundColor: sel ? opt.tagBg : '#F1F5F9' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: sel ? opt.accent : '#94A3B8' }}>{opt.tag}</Text>
                                   </View>
-                                  <Text style={{ fontSize: 13, color: sel ? '#475569' : '#94A3B8', lineHeight: 18, fontWeight: '500' }}>{opt.sub}</Text>
                                 </View>
-                                <View style={{ width: 26, height: 26, borderRadius: 13,
-                                  backgroundColor: sel ? opt.accent : '#E2E8F0',
-                                  alignItems: 'center', justifyContent: 'center' }}>
-                                  {sel && <Feather name="check" size={14} color="#fff" />}
-                                </View>
+                                <Text style={{ fontSize: 13, color: sel ? '#475569' : '#94A3B8', lineHeight: 18, fontWeight: '500' }}>{opt.sub}</Text>
+                              </View>
+                              <View style={{ width: 24, height: 24, borderRadius: 12,
+                                backgroundColor: sel ? opt.accent : '#E2E8F0',
+                                alignItems: 'center', justifyContent: 'center' }}>
+                                {sel && <Feather name="check" size={13} color="#fff" />}
                               </View>
                             </View>
                           </TouchableOpacity>
