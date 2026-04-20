@@ -7272,7 +7272,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const allKnownEvs = [...feedOfficialDbEvents, ...dbCommunityEvents, ...userCreatedEvents]
                 const now = Date.now()
                 const hasActiveJoined = Object.entries(joinedEvents).some(([id, v]) => {
-                  if (v === 'confirmed') return false
+                  if (!v) return false
                   const ev = allKnownEvs.find(e => e.id === Number(id))
                   if (!ev) return false
                   if (ev.expiresAt && ev.expiresAt <= now) return false
