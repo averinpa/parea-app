@@ -2601,7 +2601,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
             <View style={{ gap: 10 }}>
               <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4 }}>Hosting 👑</Text>
               {activeHostedEvents.map((ev: any) => (
-                <TouchableOpacity key={ev.id} activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 2, borderColor: 'rgba(99,102,241,0.25)', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 3 }}>
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 2, borderColor: 'rgba(99,102,241,0.25)', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 3 }}>
                   <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
                   <View style={{ padding: 16, gap: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -2633,12 +2633,12 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                         <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(approvedJoiners[ev.id] || []).length + (hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
                       <View style={{ flex: 1 }} />
-                      <TouchableOpacity activeOpacity={0.8} onPress={(e) => { e.stopPropagation?.(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
+                      <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event →</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </View>
               ))}
               {myEvents.length > 0 && (
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4, marginTop: 4 }}>Attending</Text>
@@ -2704,7 +2704,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                 : isConfirmed ? 'rgba(34,197,94,0.12)' : hasReal ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.15)'
 
               return (
-                <TouchableOpacity key={ev.id} activeOpacity={0.85} onPress={() => onEventDetail?.(ev)} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: isActive ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.08)' }}>
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16, elevation: 0, borderWidth: 1, borderColor: isActive ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.08)' }}>
                   <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
 
                   <View style={{ padding: 16 }}>
@@ -2814,7 +2814,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       <Text style={{ fontSize: 13, fontWeight: '700', color: '#ef4444' }}>😔 Can't make it</Text>
                     </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                </View>
               )
             })
           )}
