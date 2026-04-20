@@ -4103,8 +4103,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
                                       {crewPreview.members.filter((m: any) => m.transport).map((m: any, i: number) => (
                                         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                                          <Text style={{ fontSize: 10 }}>{m.transport === 'car' ? '🚗' : '📍'}</Text>
-                                          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{m.name.split(' ')[0]} · {m.transport === 'car' ? 'has car' : 'meet there'}</Text>
+                                          <Text style={{ fontSize: 10 }}>{m.transport === 'car' ? '🚗' : m.transport === 'lift' ? '🙋' : '📍'}</Text>
+                                          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{m.name.split(' ')[0]} · {m.transport === 'car' ? 'has car' : m.transport === 'lift' ? 'needs lift' : 'meet there'}</Text>
                                         </View>
                                       ))}
                                     </View>
@@ -8438,9 +8438,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
                         {p.transport && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                            <Text style={{ fontSize: 12 }}>{p.transport === 'car' ? '🚗' : '📍'}</Text>
-                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? '#6366F1' : '#64748B', fontWeight: '600' }}>
-                              {p.transport === 'car' ? 'Has a car' : 'Meeting there'}
+                            <Text style={{ fontSize: 12 }}>{p.transport === 'car' ? '🚗' : p.transport === 'lift' ? '🙋' : '📍'}</Text>
+                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? '#6366F1' : p.transport === 'lift' ? '#F59E0B' : '#64748B', fontWeight: '600' }}>
+                              {p.transport === 'car' ? 'Has a car · can give a lift' : p.transport === 'lift' ? 'Needs a lift' : 'Meeting there'}
                             </Text>
                           </View>
                         )}
