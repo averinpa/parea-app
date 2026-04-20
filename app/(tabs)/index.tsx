@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User } from 'lucide-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -1917,14 +1917,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // ── Format & Transport options ────────────────────────────────────────────
   const FORMAT_OPTIONS = [
-    { id: '1+1',   emoji: '🧑‍🤝‍🧑', label: 'Duo',   sub: 'Me + 1 person' },
-    { id: 'squad', emoji: '🫂', label: 'Squad',  sub: 'Me + 4 people' },
-    { id: 'party', emoji: '🎉', label: 'Party',  sub: 'Me + up to 19' },
+    { id: '1+1',   Icon: Users,        label: 'Duo',   sub: 'Me + 1 person',   grad: ['#6366F1','#818CF8'] as [string,string], color: '#818CF8' },
+    { id: 'squad', Icon: UsersRound,   label: 'Squad', sub: 'Me + 4 people',   grad: ['#10B981','#34D399'] as [string,string], color: '#34D399' },
+    { id: 'party', Icon: PartyPopper,  label: 'Party', sub: 'Me + up to 19',   grad: ['#F59E0B','#FBBF24'] as [string,string], color: '#FBBF24' },
   ]
   const TRANSPORT_OPTIONS = [
-    { id: 'car',  emoji: '🚗', label: "I'm driving",    sub: 'Can give a lift' },
-    { id: 'lift', emoji: '🙋', label: 'Need a ride',    sub: "I'll hop in with someone" },
-    { id: 'meet', emoji: '📍', label: 'Meet you there', sub: 'Getting there solo' },
+    { id: 'car',  Icon: Car,         label: "I'm driving",    sub: 'Can give a lift',          grad: ['#3B82F6','#60A5FA'] as [string,string], color: '#60A5FA' },
+    { id: 'lift', Icon: HandHelping, label: 'Need a ride',    sub: "I'll hop in with someone", grad: ['#EC4899','#F472B6'] as [string,string], color: '#F472B6' },
+    { id: 'meet', Icon: MapPin,      label: 'Meet you there', sub: 'Getting there solo',       grad: ['#8B5CF6','#A78BFA'] as [string,string], color: '#A78BFA' },
   ]
 
   const userName = userData?.name?.split(' ')[0] || 'there'
@@ -2410,25 +2410,25 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
           {joinSheet.step === 1 ? (
             <>
-              <Text style={s.joinSheetTitle}>How many people are{'\n'}you looking for? 👥</Text>
+              <Text style={s.joinSheetTitle}>How many people are{'\n'}you looking for?</Text>
               <View style={{ gap: 10, marginTop: 4 }}>
                 {FORMAT_OPTIONS.map(opt => {
                   const active = joinSheet.format === opt.id
                   return (
                     <TouchableOpacity key={opt.id} activeOpacity={0.8}
-                      onPress={() => {
-                        setJoinSheet(prev => ({ ...prev, format: opt.id }))
-                        Haptics.selectionAsync()
-                      }}
-                      style={[s.joinSheetCard, active && s.joinSheetCardOn]}>
-                      <View style={[s.joinSheetIconWrap, active && { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
-                        <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
-                      </View>
+                      onPress={() => { setJoinSheet(prev => ({ ...prev, format: opt.id })); Haptics.selectionAsync() }}
+                      style={[s.joinSheetCard, active && { backgroundColor: 'rgba(255,255,255,0.07)', borderColor: opt.color + '55' }]}>
+                      <LinearGradient
+                        colors={active ? opt.grad : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.04)']}
+                        style={{ width: 52, height: 52, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}
+                        start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}>
+                        <opt.Icon size={24} color={active ? '#fff' : 'rgba(255,255,255,0.35)'} strokeWidth={1.8} />
+                      </LinearGradient>
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}</Text>
+                        <Text style={[s.joinSheetCardLabel, active && { color: opt.color }]}>{opt.label}</Text>
                         <Text style={s.joinSheetCardSub}>{opt.sub}</Text>
                       </View>
-                      {active && <Ionicons name="checkmark-circle" size={22} color="#6366F1" />}
+                      {active && <CheckCircle size={22} color={opt.color} strokeWidth={2} />}
                     </TouchableOpacity>
                   )
                 })}
@@ -2449,25 +2449,25 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>Back</Text>
                 </TouchableOpacity>
               )}
-              <Text style={s.joinSheetTitle}>{joinSheet.ev?.type === 'official' ? 'How are you getting\nthere? 🗺️' : 'How are you getting\nto the event? 🚗'}</Text>
+              <Text style={s.joinSheetTitle}>How are you{'\n'}getting there?</Text>
               <View style={{ gap: 10, marginTop: 4 }}>
                 {TRANSPORT_OPTIONS.map(opt => {
                   const active = joinSheet.transport === opt.id
                   return (
                     <TouchableOpacity key={opt.id} activeOpacity={0.8}
-                      onPress={() => {
-                        setJoinSheet(prev => ({ ...prev, transport: opt.id }))
-                        Haptics.selectionAsync()
-                      }}
-                      style={[s.joinSheetCard, active && s.joinSheetCardOn]}>
-                      <View style={[s.joinSheetIconWrap, active && { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
-                        <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
-                      </View>
+                      onPress={() => { setJoinSheet(prev => ({ ...prev, transport: opt.id })); Haptics.selectionAsync() }}
+                      style={[s.joinSheetCard, active && { backgroundColor: 'rgba(255,255,255,0.07)', borderColor: opt.color + '55' }]}>
+                      <LinearGradient
+                        colors={active ? opt.grad : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.04)']}
+                        style={{ width: 52, height: 52, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}
+                        start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}>
+                        <opt.Icon size={24} color={active ? '#fff' : 'rgba(255,255,255,0.35)'} strokeWidth={1.8} />
+                      </LinearGradient>
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.joinSheetCardLabel, active && { color: '#6366F1' }]}>{opt.label}</Text>
+                        <Text style={[s.joinSheetCardLabel, active && { color: opt.color }]}>{opt.label}</Text>
                         <Text style={s.joinSheetCardSub}>{opt.sub}</Text>
                       </View>
-                      {active && <Ionicons name="checkmark-circle" size={22} color="#6366F1" />}
+                      {active && <CheckCircle size={22} color={opt.color} strokeWidth={2} />}
                     </TouchableOpacity>
                   )
                 })}
