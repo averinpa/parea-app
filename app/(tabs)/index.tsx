@@ -3375,8 +3375,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     const status = joinedEvents?.[e.id]
     if (!status || e.isHosted) return false
     if (e.type === 'community') return status === 'joined'
-    // Official: show if pending/joined OR confirmed but has no active chat (partner left)
-    if (status === 'confirmed') return !officialEventChatMap[e.id]
+    // Official: always show confirmed events so squad can track crew filling up
+    if (status === 'confirmed') return true
     return true
   })
   const myApprovedCommunityEvents: any[] = [] // kept for subtitle logic only
@@ -4050,12 +4050,36 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>We're looking for people going to this event. You'll get notified when someone matches!</Text>
                     </View>
                   )}
-                  {isActive && (
+                  {(isActive || (joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id])) && (
                     <View style={{ gap: 10 }}>
                       {(() => {
+                        const isAlreadyConfirmed = joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id]
                         const crewPreview = !isCommunity && (format === 'squad' || format === 'party') ? crewPreviewMap[ev.id] : null
                         const readyCount = readyCountMap[ev.id] // others ready (excludes self)
                         const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 0 && !crewPreview
+                        if (isAlreadyConfirmed && !crewPreview) {
+                          const confirmedSoFar = (crewPreview?.confirmedCount || 0) + 1 // +1 for self
+                          const maxSize = VIBE_FORMAT_MAX[format] || 5
+                          return (
+                            <View style={{ gap: 10 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.08)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.25)' }}>
+                                <Text style={{ fontSize: 15 }}>✅</Text>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in the crew!</Text>
+                                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+                                    {`Waiting for more · up to ${maxSize} people`}
+                                  </Text>
+                                </View>
+                              </View>
+                              <TouchableOpacity
+                                activeOpacity={0.85}
+                                onPress={() => onGoToMessages?.(ev)}
+                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open chat 💬</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )
+                        }
                         if (crewPreview) {
                           const confirmedCount = crewPreview.confirmedCount || 0
                           const confirmBtnLabel = confirmedCount >= 2
