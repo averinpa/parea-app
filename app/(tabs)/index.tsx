@@ -5117,8 +5117,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
     }
     check()
-    const interval = setInterval(check, 15000)
-    return () => clearInterval(interval)
+    const interval = setInterval(check, 3000)
+    // Realtime: instantly update when someone confirms
+    const rtConfirm = supabase.channel('crew_confirm_rt')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'event_attendees' }, (payload: any) => {
+        if (payload.new?.status === 'confirmed' && waitingIds.includes(payload.new?.event_ref_id)) {
+          check()
+        }
+      })
+      .subscribe()
+    return () => { clearInterval(interval); supabase.removeChannel(rtConfirm) }
   }, [JSON.stringify(readyCountMap), JSON.stringify(crewPreviewMap), userData?.dbId, JSON.stringify(userEventFormat)])
 
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
