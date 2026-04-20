@@ -6951,6 +6951,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const memberProfiles = preview.members
                 setChatList(prev => prev.some(c => c.id === preview.chatId) ? prev : [{
                   id: preview.chatId!, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                  eventRefId: ev.id,
                   members: preview.members.length + 1,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
@@ -6970,12 +6971,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const { data: members } = await supabase
                   .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)')
                   .eq('chat_id', chatId)
+                const { data: attendeesT } = await supabase.from('event_attendees').select('profile_id, transport').eq('event_ref_id', ev.id)
+                const transportMap: Record<number, string> = Object.fromEntries((attendeesT || []).map((a: any) => [a.profile_id, a.transport]))
                 const memberProfiles = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
                   const p = (m as any).profiles || {}
-                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', transport: transportMap[p.id] || null }
                 })
                 setChatList(prev => prev.some(c => c.id === chatId) ? prev : [{
                   id: chatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                  eventRefId: ev.id,
                   members: (members || []).length, avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
                   lastMsg: '🎉 Crew assembled! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
@@ -8119,7 +8123,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ) : (
                   <TouchableOpacity
                     style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 6 }}
-                    onPress={() => { setGroupMembersOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+                    onPress={async () => {
+                      setGroupMembersOpen(true)
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      // Fetch fresh transport for all members
+                      const evRefId = openChat?.eventRefId || Object.entries(officialEventChatMapRef.current).find(([, cId]) => cId === openChat?.id)?.[0]
+                      if (evRefId) {
+                        const { data: att } = await supabase.from('event_attendees').select('profile_id, transport').eq('event_ref_id', Number(evRefId))
+                        if (att) {
+                          const tMap: Record<number, string> = Object.fromEntries(att.map((a: any) => [a.profile_id, a.transport]))
+                          setOpenChat((cur: any) => cur ? { ...cur, memberProfiles: (cur.memberProfiles || []).map((p: any) => ({ ...p, transport: tMap[p.id] || p.transport || null })) } : cur)
+                        }
+                      }
+                    }}
                     activeOpacity={0.7}
                   >
                     <LinearGradient
