@@ -6319,7 +6319,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const handleSend = () => {
     if (!chatInput.trim() || !openChat) return
     const text = chatInput.trim()
-    const newMsg = { from: 'me', text, time: 'now', date: new Date().toISOString().slice(0, 10), replyTo: replyTo || undefined }
+    const _now = new Date()
+    const newMsg = { from: 'me', text, time: _now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), date: _now.toISOString().slice(0, 10), replyTo: replyTo || undefined }
     setChatMessages(prev => ({ ...prev, [openChat.id]: [...(prev[openChat.id] || []), newMsg] }))
     setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: new Date().toISOString() } : c))
     setChatInput('')
