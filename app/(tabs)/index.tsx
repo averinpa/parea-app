@@ -6416,8 +6416,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
         })
     }
-    // Clear stale cache so fresh DB data is always shown when chat opens
-    setChatMessages(prev => ({ ...prev, [chatId]: [] }))
     loadHistory()
     // Polling fallback — catches messages missed while chat was closed or broadcast dropped
     const pollInterval = setInterval(loadHistory, 3000)
