@@ -6428,8 +6428,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           duoBroadcastRef.current = channel
           duoBroadcastQueueRef.current.forEach(p => channel.send(p))
           duoBroadcastQueueRef.current = []
-          // Reload history to catch messages sent during subscription setup
+          // Reload history to catch messages sent before subscription
           loadHistory()
+          // Second load after delay — catches messages whose DB insert was still in-flight
+          setTimeout(loadHistory, 1500)
         }
       })
     return () => { clearInterval(pollInterval); supabase.removeChannel(channel); duoBroadcastRef.current = null; duoBroadcastQueueRef.current = [] }
