@@ -5092,10 +5092,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 0 = only self is ready)
   useEffect(() => {
-    // Also keep polling if crew found but no chat yet (to update confirmedCount)
+    // Poll while waiting for crew OR while crew found but self not yet confirmed
     const waitingIds = Object.keys(readyCountMap).map(Number).filter(id =>
-      (readyCountMap[id] === 0 && !crewPreviewMap[id]) ||
-      (crewPreviewMap[id] && !crewPreviewMap[id]?.chatId)
+      !officialEventChatMap[id] && (
+        (readyCountMap[id] === 0 && !crewPreviewMap[id]) ||
+        !!crewPreviewMap[id]
+      )
     )
     if (waitingIds.length === 0 || !userData?.dbId) return
     const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
@@ -5135,7 +5137,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
       .subscribe()
     return () => { clearInterval(interval); supabase.removeChannel(rtConfirm) }
-  }, [JSON.stringify(readyCountMap), JSON.stringify(crewPreviewMap), userData?.dbId, JSON.stringify(userEventFormat)])
+  }, [JSON.stringify(readyCountMap), JSON.stringify(crewPreviewMap), userData?.dbId, JSON.stringify(userEventFormat), JSON.stringify(officialEventChatMap)])
 
   const [userCreatedEvents, setUserCreatedEvents] = useState<any[]>([])
   const [pendingJoinRequests, setPendingJoinRequests] = useState<Record<number, any[]>>({})
