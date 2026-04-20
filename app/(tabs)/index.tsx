@@ -2865,6 +2865,10 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                       ? <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%' }} />
                       : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
                   </View>
+                ) : chat.eventImage ? (
+                  <View style={{ width: 54, height: 54, borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}>
+                    <Image source={{ uri: chat.eventImage }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  </View>
                 ) : (() => {
                   const photos = (chat.avatars || []).filter(Boolean).slice(0, 2)
                   const cols = (chat.colors || ['#818CF8', '#6366F1'])
@@ -6951,7 +6955,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const memberProfiles = preview.members
                 setChatList(prev => prev.some(c => c.id === preview.chatId) ? prev : [{
                   id: preview.chatId!, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-                  eventRefId: ev.id,
+                  eventRefId: ev.id, eventImage: ev.image_url || null,
                   members: preview.members.length + 1,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
@@ -6979,7 +6983,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 })
                 setChatList(prev => prev.some(c => c.id === chatId) ? prev : [{
                   id: chatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
-                  eventRefId: ev.id,
+                  eventRefId: ev.id, eventImage: ev.image_url || null,
                   members: (members || []).length, avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
                   lastMsg: '🎉 Crew assembled! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
