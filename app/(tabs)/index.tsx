@@ -6442,7 +6442,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     loadHistory()
     // Polling fallback — catches messages missed while chat was closed or broadcast dropped
     const pollInterval = setInterval(loadHistory, 3000)
-    // Party/squad chats have a persistent broadcast channel — reuse it for sending
+    // Party/squad chats: use or create persistent broadcast channel
+    const isPartyChat = Object.values(officialEventChatMapRef.current).includes(chatId)
+    if (isPartyChat && !partyChatBroadcastChannels.current[chatId]) {
+      // Channel not yet created (e.g. app restored from AsyncStorage before useEffect ran)
+      const bcastCh = supabase.channel(`duo_chat_${chatId}`)
+        .on('broadcast', { event: 'message' }, ({ payload }: any) => {
+          if (payload.sender_id === userData.dbId) return
+          const t = new Date(payload.created_at)
+          const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          if (openChatRef.current?.id === chatId) {
+            const sender = (openChatRef.current?.memberProfiles || []).find((p: any) => p.id === payload.sender_id)
+            const newMsg = { from: 'them', text: payload.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || payload.sender_name || '', senderPhoto: sender?.photo || payload.sender_photo || null, senderColor: sender?.color || payload.sender_color || '#818CF8' }
+            setChatMessages((prev: any) => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time } : c))
+            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
+          } else {
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, isNew: true, time: payload.created_at } : c))
+          }
+        })
+        .subscribe()
+      partyChatBroadcastChannels.current[chatId] = bcastCh
+    }
     const persistentChannel = partyChatBroadcastChannels.current[chatId]
     if (persistentChannel) {
       duoBroadcastRef.current = persistentChannel
