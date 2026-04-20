@@ -4090,7 +4090,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                           return (
                             <View style={{ gap: 10 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
-                                <Text style={{ fontSize: 15 }}>🎯</Text>
+                                <Text style={{ fontSize: 15 }}>{transport === 'car' ? '🚗' : '🎯'}</Text>
                                 <View style={{ flex: 1 }}>
                                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>
                                     {confirmedCount >= 2 ? `${confirmedCount} confirmed, chat started!` : 'AI found your crew!'}
@@ -4099,6 +4099,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                     {crewPreview.members.map((m: any) => m.name).join(', ')}
                                     {confirmedCount > 0 ? ` · ${confirmedCount} confirmed` : ''}
                                   </Text>
+                                  {crewPreview.members.some((m: any) => m.transport) && (
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                                      {crewPreview.members.filter((m: any) => m.transport).map((m: any, i: number) => (
+                                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                          <Text style={{ fontSize: 10 }}>{m.transport === 'car' ? '🚗' : '📍'}</Text>
+                                          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{m.name.split(' ')[0]} · {m.transport === 'car' ? 'has car' : 'meet there'}</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  )}
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: -8 }}>
                                   {crewPreview.members.slice(0, 3).map((m: any, i: number) => (
@@ -5110,7 +5120,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }
           const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => {
             const p = r.profiles || {}
-            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', status: r.status }
+            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', status: r.status, transport: r.transport }
           })
           setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId, confirmedCount } }))
         }
