@@ -5002,7 +5002,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
   const acceptingInviteRef = useRef<Set<number>>(new Set())
   const partyChatMemberChannels = useRef<Record<number, any>>({})
-  const partyChatMessageChannels = useRef<Record<number, any>>({})
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
 
@@ -5494,32 +5493,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         .subscribe()
       partyChatMemberChannels.current[chatId] = ch
-      // Background broadcast: receive messages even when chat is not open
-      if (partyChatMessageChannels.current[chatId]) return
-      const msgCh = supabase.channel(`duo_chat_${chatId}`)
-        .on('broadcast', { event: 'message' }, ({ payload }: any) => {
-          if (payload.sender_id === userData.dbId) return
-          setOpenChat((curChat: any) => {
-            if (curChat?.id === chatId) return curChat // openChat useEffect handles real-time append
-            // Chat is closed — mark unread in chatList
-            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, isNew: true, time: payload.created_at } : c))
-            return curChat
-          })
-        })
-        .subscribe()
-      partyChatMessageChannels.current[chatId] = msgCh
     })
     // Unsubscribe from chats no longer in map
     Object.entries(partyChatMemberChannels.current).forEach(([id, ch]) => {
       if (!currentChatIds.includes(Number(id))) {
         supabase.removeChannel(ch)
         delete partyChatMemberChannels.current[Number(id)]
-      }
-    })
-    Object.entries(partyChatMessageChannels.current).forEach(([id, ch]) => {
-      if (!currentChatIds.includes(Number(id))) {
-        supabase.removeChannel(ch)
-        delete partyChatMessageChannels.current[Number(id)]
       }
     })
   }, [officialEventChatMap, userData?.dbId])
