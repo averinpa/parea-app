@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil } from 'lucide-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -7521,49 +7521,69 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                   {/* ── Step 2: Activity with category tabs ── */}
                   {createStep === 2 && (() => {
-                    const CATS: Record<string, { emoji: string; items: { id: string; emoji: string; label: string }[] }> = {
-                      'Sport':  { emoji: '🏃', items: [{ id:'padel', emoji:'🏓', label:'Padel' },{ id:'tennis', emoji:'🎾', label:'Tennis' },{ id:'yoga', emoji:'🧘', label:'Yoga' },{ id:'gym', emoji:'💪', label:'Gym' },{ id:'water', emoji:'🏄', label:'Water Sports' }] },
-                      'Food':   { emoji: '🍽️', items: [{ id:'coffee', emoji:'☕', label:'Coffee' },{ id:'meze', emoji:'🥘', label:'Meze' },{ id:'wine', emoji:'🍷', label:'Wine' },{ id:'brunch', emoji:'🥂', label:'Brunch' },{ id:'sunset', emoji:'🌅', label:'Sunset' }] },
-                      'Work':   { emoji: '💼', items: [{ id:'networking', emoji:'🤝', label:'Networking' },{ id:'crypto', emoji:'🪙', label:'Crypto' },{ id:'cowork', emoji:'💻', label:'Co-working' }] },
-                      'Relax':  { emoji: '🌿', items: [{ id:'beach', emoji:'🏖️', label:'Beach' },{ id:'hiking', emoji:'🥾', label:'Hiking' },{ id:'boat', emoji:'⛵', label:'Boat' },{ id:'boardgames', emoji:'🎲', label:'Board Games' }] },
-                      'Culture':{ emoji: '🎭', items: [{ id:'dance', emoji:'💃', label:'Dance' },{ id:'concert', emoji:'🎤', label:'Concert' },{ id:'theatre', emoji:'🎭', label:'Theatre' },{ id:'music', emoji:'🎸', label:'Music' },{ id:'art', emoji:'🎨', label:'Art' }] },
+                    const CATS: Record<string, { Icon: any; color: string; bg: string; items: { id: string; emoji: string; label: string }[] }> = {
+                      'Sport':   { Icon: Dumbbell,        color: '#3B82F6', bg: '#EFF6FF', items: [{ id:'padel', emoji:'🏓', label:'Padel' },{ id:'tennis', emoji:'🎾', label:'Tennis' },{ id:'yoga', emoji:'🧘', label:'Yoga' },{ id:'gym', emoji:'💪', label:'Gym' },{ id:'water', emoji:'🏄', label:'Water Sports' }] },
+                      'Food':    { Icon: UtensilsCrossed, color: '#EC4899', bg: '#FDF2F8', items: [{ id:'coffee', emoji:'☕', label:'Coffee' },{ id:'meze', emoji:'🥘', label:'Meze' },{ id:'wine', emoji:'🍷', label:'Wine' },{ id:'brunch', emoji:'🥂', label:'Brunch' },{ id:'sunset', emoji:'🌅', label:'Sunset' }] },
+                      'Work':    { Icon: Briefcase,       color: '#8B5CF6', bg: '#F5F3FF', items: [{ id:'networking', emoji:'🤝', label:'Networking' },{ id:'crypto', emoji:'🪙', label:'Crypto' },{ id:'cowork', emoji:'💻', label:'Co-working' }] },
+                      'Relax':   { Icon: Leaf,            color: '#10B981', bg: '#F0FDF4', items: [{ id:'beach', emoji:'🏖️', label:'Beach' },{ id:'hiking', emoji:'🥾', label:'Hiking' },{ id:'boat', emoji:'⛵', label:'Boat' },{ id:'boardgames', emoji:'🎲', label:'Board Games' }] },
+                      'Culture': { Icon: Palette,         color: '#F59E0B', bg: '#FFFBEB', items: [{ id:'dance', emoji:'💃', label:'Dance' },{ id:'concert', emoji:'🎤', label:'Concert' },{ id:'theatre', emoji:'🎭', label:'Theatre' },{ id:'music', emoji:'🎸', label:'Music' },{ id:'art', emoji:'🎨', label:'Art' }] },
                     }
-                    const catItems = [...(CATS[createCategory]?.items || []), { id: 'other', emoji: '✏️', label: 'Other' }]
-                    const cardW = (W - 40 - 20) / 3
+                    const activeCat = CATS[createCategory] || CATS['Sport']
+                    const catItems = [...(activeCat.items || []), { id: 'other', emoji: '', label: 'Other' }]
+                    const cardW = (W - 40 - 10) / 2
                     return (
                       <View>
-                        {/* Category tabs */}
-                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-                          {Object.entries(CATS).map(([cat, { emoji }]) => (
-                            <TouchableOpacity key={cat} onPress={() => setCreateCategory(cat)} activeOpacity={0.8}
-                              style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 14,
-                                backgroundColor: createCategory === cat ? '#6366F1' : '#F1F5F9' }}>
-                              <Text style={{ fontSize: 16 }}>{emoji}</Text>
-                              <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 2, color: createCategory === cat ? '#fff' : '#64748B' }}>{cat}</Text>
-                            </TouchableOpacity>
-                          ))}
+                        {/* Category tabs — Lucide icons */}
+                        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
+                          {Object.entries(CATS).map(([cat, { Icon, color, bg }]) => {
+                            const active = createCategory === cat
+                            return (
+                              <TouchableOpacity key={cat} onPress={() => setCreateCategory(cat)} activeOpacity={0.8}
+                                style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 16,
+                                  backgroundColor: active ? bg : '#F8FAFC',
+                                  borderWidth: 1.5, borderColor: active ? color : 'transparent' }}>
+                                <Icon size={18} color={active ? color : '#94A3B8'} strokeWidth={active ? 2.2 : 1.8} />
+                                <Text style={{ fontSize: 9, fontWeight: '700', marginTop: 4,
+                                  color: active ? color : '#94A3B8', letterSpacing: 0.3 }}>{cat}</Text>
+                              </TouchableOpacity>
+                            )
+                          })}
                         </View>
-                        {/* Activity grid */}
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' }}>
-                          {catItems.map(t => (
-                            <TouchableOpacity key={t.id} onPress={() => { setCreateType(t.id); if (t.id !== 'other') setCreateCustom('') }} activeOpacity={0.8}
-                              style={{ width: cardW, aspectRatio: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-                                backgroundColor: createType === t.id ? '#EEF2FF' : '#F8FAFC',
-                                borderWidth: 2, borderColor: createType === t.id ? '#6366F1' : 'transparent' }}>
-                              <Text style={{ fontSize: 28, marginBottom: 4 }}>{t.emoji}</Text>
-                              <Text style={{ fontSize: 11, fontWeight: createType === t.id ? '700' : '500',
-                                color: createType === t.id ? '#6366F1' : '#64748B', textAlign: 'center' }}>{t.label}</Text>
-                            </TouchableOpacity>
-                          ))}
+                        {/* Activity grid — 2 columns, emoji in colored circle */}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                          {catItems.map(t => {
+                            const sel = createType === t.id
+                            return (
+                              <TouchableOpacity key={t.id} onPress={() => { setCreateType(t.id); if (t.id !== 'other') setCreateCustom('') }} activeOpacity={0.8}
+                                style={{ width: cardW, flexDirection: 'row', alignItems: 'center', gap: 10,
+                                  paddingHorizontal: 12, paddingVertical: 13, borderRadius: 18,
+                                  backgroundColor: sel ? activeCat.bg : '#F8FAFC',
+                                  borderWidth: 1.5, borderColor: sel ? activeCat.color : 'transparent',
+                                  shadowColor: sel ? activeCat.color : 'transparent',
+                                  shadowOpacity: sel ? 0.15 : 0, shadowRadius: 6, elevation: sel ? 3 : 0 }}>
+                                <View style={{ width: 38, height: 38, borderRadius: 12,
+                                  backgroundColor: sel ? activeCat.color : '#fff',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 }}>
+                                  {t.id === 'other'
+                                    ? <Pencil size={16} color={sel ? '#fff' : '#94A3B8'} strokeWidth={2} />
+                                    : <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
+                                  }
+                                </View>
+                                <Text style={{ fontSize: 13, fontWeight: sel ? '800' : '600',
+                                  color: sel ? activeCat.color : '#475569', flex: 1 }}>{t.label}</Text>
+                              </TouchableOpacity>
+                            )
+                          })}
                         </View>
                         {/* Custom name input if Other selected */}
                         {createType === 'other' && (
-                          <View style={{ marginTop: 14, backgroundColor: '#EEF2FF', borderRadius: 18, padding: 16 }}>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1', marginBottom: 10 }}>What are you planning?</Text>
+                          <View style={{ marginTop: 12, backgroundColor: '#F5F3FF', borderRadius: 18, padding: 16 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6', marginBottom: 10 }}>What are you planning?</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
                               backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-                              borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#E2E8F0' }}>
-                              <Feather name="edit-2" size={15} color="#6366F1" />
+                              borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#8B5CF6' : '#E2E8F0' }}>
+                              <Pencil size={15} color="#8B5CF6" strokeWidth={2} />
                               <TextInput value={createCustom} onChangeText={setCreateCustom}
                                 placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
                                 autoFocus returnKeyType="done"
