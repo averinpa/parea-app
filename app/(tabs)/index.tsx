@@ -5053,7 +5053,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 0 = only self is ready)
   useEffect(() => {
-    const waitingIds = Object.keys(readyCountMap).map(Number).filter(id => readyCountMap[id] === 0 && !crewPreviewMap[id])
+    // Also keep polling if crew found but no chat yet (to update confirmedCount)
+    const waitingIds = Object.keys(readyCountMap).map(Number).filter(id =>
+      (readyCountMap[id] === 0 && !crewPreviewMap[id]) ||
+      (crewPreviewMap[id] && !crewPreviewMap[id]?.chatId)
+    )
     if (waitingIds.length === 0 || !userData?.dbId) return
     const FORMAT_SIZES: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
     const check = async () => {
