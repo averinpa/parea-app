@@ -5002,6 +5002,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
   const acceptingInviteRef = useRef<Set<number>>(new Set())
   const partyChatMemberChannels = useRef<Record<number, any>>({})
+  const partyChatMessageChannels = useRef<Record<number, any>>({})
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
 
@@ -5109,15 +5110,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (othersCount >= 1) {
           const otherIds = (readyData || []).map((r: any) => r.profile_id)
           let existingChatId: number | null = null
-          if (otherIds.length > 0) {
-            const { data: memberships } = await supabase.from('chat_members').select('chat_id').in('profile_id', otherIds)
-            if (memberships && memberships.length > 0) {
-              const counts: Record<number, number> = {}
-              memberships.forEach((m: any) => { counts[m.chat_id] = (counts[m.chat_id] || 0) + 1 })
-              const shared = Object.entries(counts).find(([, c]) => c >= 1)?.[0]
-              if (shared) existingChatId = Number(shared)
-            }
-          }
+          const { data: eventChat } = await supabase.from('chats').select('id').eq('event_id', evId).eq('type', 'group').maybeSingle()
+          if (eventChat) existingChatId = eventChat.id
           const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => {
             const p = r.profiles || {}
             return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', status: r.status, transport: r.transport }
@@ -5500,12 +5494,42 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         .subscribe()
       partyChatMemberChannels.current[chatId] = ch
+      // Subscribe to new messages — update chatList badge when chat is not open
+      if (partyChatMessageChannels.current[chatId]) return
+      const msgCh = supabase.channel(`party_msgs_${chatId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload: any) => {
+          const msg = payload.new
+          if (msg.sender_id === userData.dbId) return // own message, already shown
+          setOpenChat((curChat: any) => {
+            if (curChat?.id === chatId) {
+              // Chat is open — append message directly
+              const t = new Date(msg.created_at)
+              const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              const sender = (curChat.memberProfiles || []).find((p: any) => p.id === msg.sender_id)
+              const newMsg = { from: 'them', text: msg.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || '', senderPhoto: sender?.photo || null, senderColor: sender?.color || '#818CF8' }
+              setChatMessages((prev: any) => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
+            } else {
+              // Chat is closed — mark as unread in chatList
+              setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: msg.text, isNew: true, time: msg.created_at } : c))
+            }
+            return curChat
+          })
+        })
+        .subscribe()
+      partyChatMessageChannels.current[chatId] = msgCh
     })
     // Unsubscribe from chats no longer in map
     Object.entries(partyChatMemberChannels.current).forEach(([id, ch]) => {
       if (!currentChatIds.includes(Number(id))) {
         supabase.removeChannel(ch)
         delete partyChatMemberChannels.current[Number(id)]
+      }
+    })
+    Object.entries(partyChatMessageChannels.current).forEach(([id, ch]) => {
+      if (!currentChatIds.includes(Number(id))) {
+        supabase.removeChannel(ch)
+        delete partyChatMessageChannels.current[Number(id)]
       }
     })
   }, [officialEventChatMap, userData?.dbId])
@@ -6820,16 +6844,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 // Check if a crew chat already exists
                 const otherReadyIds = registeredSquadReady.map((r: any) => r.profile_id)
                 let existingChatId: number | null = null
-                if (otherReadyIds.length > 0) {
-                  const { data: otherMemberships } = await supabase
-                    .from('chat_members').select('chat_id').in('profile_id', otherReadyIds)
-                  if (otherMemberships && otherMemberships.length > 0) {
-                    const chatIdCounts: Record<number, number> = {}
-                    otherMemberships.forEach((m: any) => { chatIdCounts[m.chat_id] = (chatIdCounts[m.chat_id] || 0) + 1 })
-                    const sharedChatId = Object.entries(chatIdCounts).find(([, c]) => c >= 1)?.[0]
-                    if (sharedChatId) existingChatId = Number(sharedChatId)
-                  }
-                }
+                const { data: existingEventChat } = await supabase.from('chats').select('id').eq('event_id', ev.id).eq('type', 'group').maybeSingle()
+                if (existingEventChat) existingChatId = existingEventChat.id
                 const memberProfiles = registeredSquadReady.map((r: any) => {
                   const p = r.profiles
                   return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8', transport: r.transport }
