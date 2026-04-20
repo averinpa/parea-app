@@ -5120,7 +5120,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           if (eventChat) existingChatId = eventChat.id
           const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => {
             const p = r.profiles || {}
-            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', status: r.status, transport: r.transport }
+            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍', status: r.status, transport: r.transport }
           })
           setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId, confirmedCount } }))
         }
@@ -6975,13 +6975,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 await supabase.from('chat_members').upsert({ chat_id: chatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
                 await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                 const { data: members } = await supabase
-                  .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)')
+                  .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, goal)')
                   .eq('chat_id', chatId)
                 const { data: attendeesT } = await supabase.from('event_attendees').select('profile_id, transport').eq('event_ref_id', ev.id)
                 const transportMap: Record<number, string> = Object.fromEntries((attendeesT || []).map((a: any) => [a.profile_id, a.transport]))
                 const memberProfiles = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
                   const p = (m as any).profiles || {}
-                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', transport: transportMap[p.id] || null }
+                  return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍', transport: transportMap[p.id] || null }
                 })
                 setChatList(prev => prev.some(c => c.id === chatId) ? prev : [{
                   id: chatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
