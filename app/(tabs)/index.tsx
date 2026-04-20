@@ -6752,7 +6752,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       .filter((m: any) => m.profile_id !== userData?.dbId && (m as any).profiles?.name && (m as any).profiles?.id && activeIds.has(m.profile_id))
                       .map((m: any) => {
                         const p = (m as any).profiles
-                        return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                        return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8', transport: (activeAttendees || []).find((a: any) => a.profile_id === p.id)?.transport }
                       })
                     // Only navigate to chat if others are already there
                     const hasOthers = otherMembers.length > 0
@@ -6794,7 +6794,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   // Others are ready — show Join button
                   const memberProfiles = registeredReady.map((r: any) => {
                     const p = r.profiles
-                    return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                    return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8', transport: r.transport }
                   })
                   setCrewPreviewMap(prev => ({ ...prev, [ev.id]: { members: memberProfiles, chatId: null } }))
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -6832,7 +6832,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 }
                 const memberProfiles = registeredSquadReady.map((r: any) => {
                   const p = r.profiles
-                  return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+                  return { id: p.id, name: p.name, photo: p.photos?.[0] || null, color: p.color || '#818CF8', transport: r.transport }
                 })
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: { members: memberProfiles, chatId: existingChatId } }))
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -8436,6 +8436,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           )}
                         </View>
                         <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
+                        {p.transport && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <Text style={{ fontSize: 12 }}>{p.transport === 'car' ? '🚗' : '📍'}</Text>
+                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? '#6366F1' : '#64748B', fontWeight: '600' }}>
+                              {p.transport === 'car' ? 'Has a car' : 'Meeting there'}
+                            </Text>
+                          </View>
+                        )}
                         <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
                           {(p.langs || []).map((l: string) => (
                             <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌐'}</Text>
