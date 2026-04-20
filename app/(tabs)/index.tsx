@@ -4057,20 +4057,29 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         const readyCount = readyCountMap[ev.id] // others ready (excludes self)
                         const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 0 && !crewPreview
                         if (crewPreview) {
+                          const confirmedCount = crewPreview.confirmedCount || 0
+                          const confirmBtnLabel = confirmedCount >= 2
+                            ? `Join ${confirmedCount} confirmed 🎉`
+                            : confirmedCount === 1
+                            ? 'Join — 1 already confirmed ✓'
+                            : 'Be first to confirm! 🚀'
                           return (
                             <View style={{ gap: 10 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
                                 <Text style={{ fontSize: 15 }}>🎯</Text>
                                 <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>{format === 'party' ? 'Party crew ready!' : 'Crew found!'}</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>
+                                    {confirmedCount >= 2 ? `${confirmedCount} confirmed, chat started!` : 'AI found your crew!'}
+                                  </Text>
                                   <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
-                                    {format === 'party' ? `${crewPreview.members.length} people ready to go` : crewPreview.members.map((m: any) => m.name).join(', ')}
+                                    {crewPreview.members.map((m: any) => m.name).join(', ')}
+                                    {confirmedCount > 0 ? ` · ${confirmedCount} confirmed` : ''}
                                   </Text>
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: -8 }}>
                                   {crewPreview.members.slice(0, 3).map((m: any, i: number) => (
-                                    m.photo ? <Image key={i} source={{ uri: m.photo }} style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: '#0A0812', marginLeft: i > 0 ? -8 : 0 }} /> :
-                                    <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#0A0812', marginLeft: i > 0 ? -8 : 0 }}><Text style={{ fontSize: 10 }}>👤</Text></View>
+                                    m.photo ? <Image key={i} source={{ uri: m.photo }} style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: m.status === 'confirmed' ? '#43E97B' : '#0A0812', marginLeft: i > 0 ? -8 : 0 }} /> :
+                                    <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: m.status === 'confirmed' ? '#43E97B' : '#0A0812', marginLeft: i > 0 ? -8 : 0 }}><Text style={{ fontSize: 10 }}>👤</Text></View>
                                   ))}
                                 </View>
                               </View>
@@ -4078,7 +4087,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                 activeOpacity={0.85}
                                 onPress={() => onJoinCrew?.(ev)}
                                 style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>{format === 'party' ? 'Join party chat 🎉' : 'Join crew 🚀'}</Text>
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>{confirmBtnLabel}</Text>
                               </TouchableOpacity>
                             </View>
                           )
@@ -5053,16 +5062,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const [userMin, userMax] = FORMAT_SIZES[format] || [3, 5]
         const { data: readyData } = await supabase
           .from('event_attendees').select('*, profiles(*)')
-          .eq('event_ref_id', evId).eq('status', 'ready')
+          .eq('event_ref_id', evId).in('status', ['ready', 'confirmed'])
           .neq('profile_id', userData.dbId)
           .lte('group_size_min', userMax).gte('group_size_max', userMin)
         const othersCount = readyData?.length || 0
+        const confirmedCount = (readyData || []).filter((r: any) => r.status === 'confirmed').length
         setReadyCountMap(prev => ({ ...prev, [evId]: othersCount }))
         if (othersCount >= 1) {
-          const otherReadyIds = (readyData || []).map((r: any) => r.profile_id)
+          const otherIds = (readyData || []).map((r: any) => r.profile_id)
           let existingChatId: number | null = null
-          if (otherReadyIds.length > 0) {
-            const { data: memberships } = await supabase.from('chat_members').select('chat_id').in('profile_id', otherReadyIds)
+          if (otherIds.length > 0) {
+            const { data: memberships } = await supabase.from('chat_members').select('chat_id').in('profile_id', otherIds)
             if (memberships && memberships.length > 0) {
               const counts: Record<number, number> = {}
               memberships.forEach((m: any) => { counts[m.chat_id] = (counts[m.chat_id] || 0) + 1 })
@@ -5072,9 +5082,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }
           const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => {
             const p = r.profiles || {}
-            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8' }
+            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', status: r.status }
           })
-          setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId } }))
+          setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId, confirmedCount } }))
         }
       }
     }
@@ -6844,20 +6854,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
                 setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: preview.chatId! }))
-                showToast('Check your Messages tab for the chat', 'Joined the crew! 🎉', '✅')
+                showToast('Say hi to the crew!', 'Joined the chat! 🎉', '✅')
               } else {
                 // Atomic get-or-create party/squad chat
                 const { data: chatId, error: rpcErr } = await supabase.rpc('get_or_create_party_chat', { p_event_id: ev.id, p_title: ev.title }).single()
                 if (!chatId) { console.error('get_or_create_party_chat error:', rpcErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
-                // Add self
+                // Add only self — others join when they tap confirm from vibe check
                 await supabase.from('chat_members').upsert({ chat_id: chatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
                 await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
-                // Add all crew members from preview so they also get the chat
-                if (preview.members.length > 0) {
-                  const otherRows = preview.members.map((p: any) => ({ chat_id: chatId, profile_id: p.id }))
-                  await supabase.from('chat_members').upsert(otherRows, { onConflict: 'chat_id,profile_id' })
-                  await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).in('profile_id', preview.members.map((p: any) => p.id))
-                }
                 const { data: members } = await supabase
                   .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)')
                   .eq('chat_id', chatId)
@@ -6874,7 +6878,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
                 setCrewPreviewMap(prev => ({ ...prev, [ev.id]: null }))
                 setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatId as number }))
-                showToast('Check your Messages tab for the group chat', 'Crew assembled! 🎉', '🎉')
+                showToast('Others can still join from vibe check', 'Chat created! Waiting for crew 🎉', '💬')
               }
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
               setMessagesInitialSubTab('messages'); setActiveTab('messages')
