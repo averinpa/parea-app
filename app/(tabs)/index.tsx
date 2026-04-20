@@ -5494,25 +5494,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         .subscribe()
       partyChatMemberChannels.current[chatId] = ch
-      // Subscribe to new messages — update chatList badge when chat is not open
+      // Background broadcast: receive messages even when chat is not open
       if (partyChatMessageChannels.current[chatId]) return
-      const msgCh = supabase.channel(`party_msgs_${chatId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload: any) => {
-          const msg = payload.new
-          if (msg.sender_id === userData.dbId) return // own message, already shown
+      const msgCh = supabase.channel(`duo_chat_${chatId}`)
+        .on('broadcast', { event: 'message' }, ({ payload }: any) => {
+          if (payload.sender_id === userData.dbId) return
           setOpenChat((curChat: any) => {
-            if (curChat?.id === chatId) {
-              // Chat is open — append message directly
-              const t = new Date(msg.created_at)
-              const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              const sender = (curChat.memberProfiles || []).find((p: any) => p.id === msg.sender_id)
-              const newMsg = { from: 'them', text: msg.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || '', senderPhoto: sender?.photo || null, senderColor: sender?.color || '#818CF8' }
-              setChatMessages((prev: any) => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
-              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
-            } else {
-              // Chat is closed — mark as unread in chatList
-              setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: msg.text, isNew: true, time: msg.created_at } : c))
-            }
+            if (curChat?.id === chatId) return curChat // openChat useEffect handles real-time append
+            // Chat is closed — mark unread in chatList
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, isNew: true, time: payload.created_at } : c))
             return curChat
           })
         })
