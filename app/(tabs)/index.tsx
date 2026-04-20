@@ -7394,7 +7394,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
 
                 {/* Header row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12 }}>
                   <TouchableOpacity
                     onPress={() => {
                       if (createStep > 1) {
@@ -7406,12 +7406,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                       }
                     }}
-                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="chevron-left" size={18} color="#64748B" />
+                    style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+                    <Feather name="chevron-left" size={18} color="#475569" />
                   </TouchableOpacity>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1.2, textTransform: 'uppercase', flex: 1, textAlign: 'center' }}>
-                    {['Who\'s coming?','What activity?','When & where?','Last details'][createStep - 1]}
-                  </Text>
+                  {/* Step counter pill */}
+                  <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
+                    {[1,2,3,4].map(i => (
+                      <View key={i} style={{ height: 6, borderRadius: 99,
+                        width: i === createStep ? 22 : 6,
+                        backgroundColor: i < createStep ? '#6366F1' : i === createStep ? '#6366F1' : '#E2E8F0' }} />
+                    ))}
+                  </View>
                   <TouchableOpacity
                     onPress={() => {
                       setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
@@ -7419,17 +7424,29 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
                       setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                     }}
-                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="x" size={16} color="#64748B" />
+                    style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+                    <Feather name="x" size={16} color="#475569" />
                   </TouchableOpacity>
                 </View>
 
-                {/* Progress dots */}
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 20, paddingHorizontal: 20 }}>
-                  {[1,2,3,4].map(i => (
-                    <View key={i} style={{ height: 4, borderRadius: 99, flex: i === createStep ? 2 : 1,
-                      backgroundColor: i <= createStep ? '#6366F1' : '#E2E8F0' }} />
-                  ))}
+                {/* Big step title + subtitle */}
+                <View style={{ paddingHorizontal: 22, paddingBottom: 20 }}>
+                  <Text style={{ fontSize: 26, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>
+                    {[
+                      { title: "Who's coming?", emoji: '' },
+                      { title: "What's the plan?", emoji: '' },
+                      { title: "When & where?", emoji: '' },
+                      { title: "Final touches", emoji: '' },
+                    ][createStep - 1].title}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 5, fontWeight: '500', lineHeight: 20 }}>
+                    {[
+                      'Choose the format that fits your vibe',
+                      'Pick the activity for your event',
+                      'Set the date, time and place',
+                      'Almost there — set the mood',
+                    ][createStep - 1]}
+                  </Text>
                 </View>
 
                 {/* Step content in ScrollView */}
@@ -7441,30 +7458,58 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                   {/* ── Step 1: Pod Size ── */}
                   {createStep === 1 && (
-                    <View style={{ gap: 10 }}>
+                    <View style={{ gap: 12 }}>
                       {[
-                        { id: 'duo',   emoji: '👥', label: 'Duo',   sub: '1-on-1 — most personal', color: '#EEF2FF', accent: '#6366F1' },
-                        { id: 'squad', emoji: '🫂', label: 'Squad', sub: 'Small group vibe, up to 5', color: '#F0FDF4', accent: '#22c55e' },
-                        { id: 'party', emoji: '🎉', label: 'Party', sub: 'Large gathering, up to 20', color: '#FFF7ED', accent: '#f97316' },
-                      ].map(opt => (
-                        <TouchableOpacity key={opt.id} onPress={() => setCreateSize(opt.id)} activeOpacity={0.8}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 20,
-                            backgroundColor: createSize === opt.id ? opt.color : '#F8FAFC',
-                            borderWidth: 2, borderColor: createSize === opt.id ? opt.accent : 'transparent' }}>
-                          <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: createSize === opt.id ? '#fff' : '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 17, fontWeight: '800', color: '#1E1B4B' }}>{opt.label}</Text>
-                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{opt.sub}</Text>
-                          </View>
-                          <View style={{ width: 22, height: 22, borderRadius: 11,
-                            backgroundColor: createSize === opt.id ? opt.accent : '#E2E8F0',
-                            alignItems: 'center', justifyContent: 'center' }}>
-                            {createSize === opt.id && <Feather name="check" size={12} color="#fff" />}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
+                        {
+                          id: 'duo', emoji: '👫', label: 'Duo', tag: '2 people',
+                          sub: 'Most personal — just you and one other person',
+                          bg: ['#EEF2FF', '#E0E7FF'], accent: '#6366F1', tagBg: '#C7D2FE',
+                        },
+                        {
+                          id: 'squad', emoji: '🫂', label: 'Squad', tag: 'up to 5',
+                          sub: 'Small group energy — tight circle, good vibes',
+                          bg: ['#F0FDF4', '#DCFCE7'], accent: '#16a34a', tagBg: '#BBF7D0',
+                        },
+                        {
+                          id: 'party', emoji: '🎉', label: 'Party', tag: 'up to 20',
+                          sub: 'Open gathering — the more the merrier',
+                          bg: ['#FFF7ED', '#FFEDD5'], accent: '#ea580c', tagBg: '#FED7AA',
+                        },
+                      ].map(opt => {
+                        const sel = createSize === opt.id
+                        return (
+                          <TouchableOpacity key={opt.id} onPress={() => setCreateSize(opt.id)} activeOpacity={0.85}
+                            style={{ borderRadius: 24, overflow: 'hidden', borderWidth: 2.5,
+                              borderColor: sel ? opt.accent : 'rgba(0,0,0,0)',
+                              shadowColor: sel ? opt.accent : '#000',
+                              shadowOpacity: sel ? 0.22 : 0.05, shadowRadius: sel ? 14 : 4, elevation: sel ? 6 : 1 }}>
+                            <View style={{ backgroundColor: sel ? opt.bg[0] : '#fff', paddingHorizontal: 18, paddingVertical: 16 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                                <View style={{ width: 58, height: 58, borderRadius: 18,
+                                  backgroundColor: sel ? '#fff' : '#F1F5F9',
+                                  alignItems: 'center', justifyContent: 'center' }}>
+                                  <Text style={{ fontSize: 30 }}>{opt.emoji}</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                    <Text style={{ fontSize: 19, fontWeight: '900', color: sel ? opt.accent : '#1E1B4B' }}>{opt.label}</Text>
+                                    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
+                                      backgroundColor: sel ? opt.tagBg : '#F1F5F9' }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: sel ? opt.accent : '#94A3B8' }}>{opt.tag}</Text>
+                                    </View>
+                                  </View>
+                                  <Text style={{ fontSize: 13, color: sel ? '#475569' : '#94A3B8', lineHeight: 18, fontWeight: '500' }}>{opt.sub}</Text>
+                                </View>
+                                <View style={{ width: 26, height: 26, borderRadius: 13,
+                                  backgroundColor: sel ? opt.accent : '#E2E8F0',
+                                  alignItems: 'center', justifyContent: 'center' }}>
+                                  {sel && <Feather name="check" size={14} color="#fff" />}
+                                </View>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        )
+                      })}
                     </View>
                   )}
 
@@ -7594,7 +7639,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </View>
 
                         {/* Time chips */}
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Time</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Time</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
                           {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => {
                             const isToday = createDay === new Date().toISOString().split('T')[0]
@@ -7612,7 +7657,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </View>
 
                         {/* Location */}
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>Location</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Location</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
                           paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1.5,
                           borderColor: createLocation.length > 0 ? '#6366F1' : 'transparent' }}>
@@ -7693,18 +7738,23 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                 {/* Bottom button — pinned to bottom */}
                 <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom + 16, 48), backgroundColor: 'transparent' }}>
-                  {createStep < 4 ? (
+                  {createStep < 4 ? (() => {
+                    const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
+                    const btnLabel = isDisabled
+                      ? ['Pick a format', 'Pick an activity', 'Choose date & time', ''][createStep - 1]
+                      : ['Next: Activity →', 'Next: Date & time →', 'Next: Final step →', ''][createStep - 1]
+                    return (
                     <TouchableOpacity
-                      style={[s.btnPrimary,
-                        (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
-                          ? { opacity: 0.35, backgroundColor: '#6366F1' }
+                      style={[s.btnPrimary, isDisabled
+                          ? { opacity: 0.4, backgroundColor: '#94A3B8' }
                           : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
                       ]}
-                      disabled={(createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))}
+                      disabled={isDisabled}
                       onPress={() => setCreateStep(cs => cs + 1)}>
-                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue →</Text>
+                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>{btnLabel}</Text>
                     </TouchableOpacity>
-                  ) : (
+                    )
+                  })() : (
                     <TouchableOpacity
                       style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
                       onPress={async () => {
