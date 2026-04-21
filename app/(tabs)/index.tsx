@@ -1,11 +1,12 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal } from 'lucide-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
 import { BlurView } from 'expo-blur'
+import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
@@ -50,7 +51,7 @@ const LANDING_SLIDES = [
     title: 'Your city,\nyour crew.',
     sub: 'Events are happening around you right now. Find people who want to go together.',
     bg: ['#F5F3FF', '#EDE9FE', '#DDD6FE'],
-    accent: '#6366F1', titleColor: '#1E1B4B', subColor: '#475569',
+    accent: '#6366F1',
     imgScale: 0.78,
   },
   {
@@ -2555,41 +2556,55 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   const isToday = (t: string) => !!t?.startsWith('Today') || !!t?.startsWith(todayIso)
   const isTomorrow = (t: string) => !!t?.startsWith('Tomorrow') || !!t?.startsWith(tomorrowIso)
 
+  const PLANS_COLOR = '#F59E0B'
+  const CHATS_COLOR = '#EC4899'
+  const tabAccent = subTab === 'going' ? PLANS_COLOR : CHATS_COLOR
+
   return (
     <View style={{ flex: 1 }}>
       {/* Header */}
-      <View style={{ paddingTop: 16, paddingHorizontal: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 20 }}>{subTab === 'going' ? '🗓' : '💬'}</Text>
-            </View>
-            <View>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>
+      <View style={{ paddingTop: 18, paddingHorizontal: 20 }}>
+        <View style={{ marginBottom: 22 }}>
+          <MaskedView maskElement={
+            <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, backgroundColor: 'transparent' }}>
+              {subTab === 'going' ? 'My Plans' : 'Chats'}
+            </Text>
+          }>
+            <LinearGradient
+              colors={subTab === 'going' ? ['#F59E0B', '#FBBF24'] : ['#EC4899', '#F472B6']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, opacity: 0 }}>
                 {subTab === 'going' ? 'My Plans' : 'Chats'}
               </Text>
-              <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500', marginTop: 1 }}>
-                {subTab === 'going'
-                  ? `${myEvents.length + activeHostedEvents.length} upcoming`
-                  : `${chatList.length} conversation${chatList.length !== 1 ? 's' : ''}`}
-              </Text>
-            </View>
-          </View>
+            </LinearGradient>
+          </MaskedView>
+          <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '500', marginTop: 8 }}>
+            {subTab === 'going'
+              ? `${myEvents.length + activeHostedEvents.length} upcoming`
+              : `${chatList.length} conversation${chatList.length !== 1 ? 's' : ''}`}
+          </Text>
         </View>
 
-        {/* Pill switcher */}
-        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 99, padding: 4, marginBottom: 16 }}>
-          {([
-            { id: 'going',    label: `🎪 Plans${myEvents.length + activeHostedEvents.length > 0 ? ` (${myEvents.length + activeHostedEvents.length})` : ''}` },
-            { id: 'messages', label: `💬 Chats${chatList.length > 0 ? ` (${chatList.length})` : ''}` },
-          ] as const).map(t => (
-            <TouchableOpacity key={t.id} activeOpacity={0.8}
-              onPress={() => { setSubTab(t.id); Haptics.selectionAsync(); if (t.id === 'going') onPlansOpen?.() }}
-              style={{ flex: 1, paddingVertical: 9, borderRadius: 99, alignItems: 'center',
-                backgroundColor: subTab === t.id ? '#6366F1' : 'transparent' }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: subTab === t.id ? '#fff' : '#64748B' }}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Tab switcher */}
+        <View style={{ flexDirection: 'row', backgroundColor: 'rgba(99,102,241,0.07)', borderRadius: 14, padding: 4, marginBottom: 18, gap: 4 }}>
+          {(['going', 'messages'] as const).map(id => {
+            const isActive = subTab === id
+            const label = id === 'going'
+              ? `Plans${myEvents.length + activeHostedEvents.length > 0 ? ` · ${myEvents.length + activeHostedEvents.length}` : ''}`
+              : `Chats${chatList.length > 0 ? ` · ${chatList.length}` : ''}`
+            return (
+              <TouchableOpacity key={id} activeOpacity={0.8}
+                onPress={() => { setSubTab(id); Haptics.selectionAsync(); if (id === 'going') onPlansOpen?.() }}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+                  backgroundColor: isActive ? (id === 'going' ? PLANS_COLOR : CHATS_COLOR) : 'transparent',
+                  shadowColor: id === 'going' ? PLANS_COLOR : CHATS_COLOR, shadowOpacity: isActive ? 0.3 : 0, shadowRadius: 8, elevation: isActive ? 4 : 0 }}>
+                {id === 'going'
+                  ? <CalendarDays size={14} color={isActive ? '#fff' : '#94A3B8'} />
+                  : <MessageCircle size={14} color={isActive ? '#fff' : '#94A3B8'} />}
+                <Text style={{ fontSize: 13, fontWeight: '800', color: isActive ? '#fff' : '#94A3B8' }}>{label}</Text>
+              </TouchableOpacity>
+            )
+          })}
         </View>
       </View>
 
@@ -2599,56 +2614,70 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
           {/* Hosted events section */}
           {activeHostedEvents.length > 0 && (
             <View style={{ gap: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4 }}>Hosting 👑</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 }}>
+                <Crown size={12} color={PLANS_COLOR} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: PLANS_COLOR, letterSpacing: 1, textTransform: 'uppercase' }}>Hosting</Text>
+              </View>
               {activeHostedEvents.map((ev: any) => (
-                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 2, borderColor: 'rgba(99,102,241,0.25)', shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 12, elevation: 3 }}>
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.2)', shadowColor: PLANS_COLOR, shadowOpacity: 0.12, shadowRadius: 16, elevation: 4 }}>
                   <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
                   <View style={{ padding: 16, gap: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.1)' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#6366F1' }}>Host 👑</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.1)' }}>
+                          <Crown size={10} color={PLANS_COLOR} />
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: PLANS_COLOR }}>Host</Text>
                         </View>
                         <TouchableOpacity
                           onPress={(e) => {
                             e.stopPropagation?.()
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                             Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event and its chat.', [
-                              { text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
+                              { text: 'Cancel Event', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
                               { text: 'Keep', style: 'cancel' },
                             ])
                           }}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center' }}
                         >
-                          <Feather name="trash-2" size={16} color="#ef4444" />
+                          <Trash2 size={15} color="#ef4444" />
                         </TouchableOpacity>
                       </View>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>📅 {ev.time}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
+                        <CalendarDays size={12} color="#64748B" />
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{ev.time}</Text>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>👥 {(approvedJoiners[ev.id] || []).length + (hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
+                        <Users size={12} color="#64748B" />
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{(approvedJoiners[ev.id] || []).length + (hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
                       <View style={{ flex: 1 }} />
-                      <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event →</Text>
+                      <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event</Text>
+                        <ChevronRight size={14} color="#fff" />
                       </TouchableOpacity>
                     </View>
                   </View>
                 </View>
               ))}
               {myEvents.length > 0 && (
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4, marginTop: 4 }}>Attending</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginTop: 4 }}>
+                  <CheckCircle size={12} color={PLANS_COLOR} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: PLANS_COLOR, letterSpacing: 1, textTransform: 'uppercase' }}>Attending</Text>
+                </View>
               )}
             </View>
           )}
           {/* Expired hosted events — show only for cleanup */}
           {expiredHostedEvents.length > 0 && (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, textTransform: 'uppercase', paddingHorizontal: 4 }}>Expired 🗂️</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 }}>
+                <Clock size={12} color="#94A3B8" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, textTransform: 'uppercase' }}>Expired</Text>
+              </View>
               {expiredHostedEvents.map((ev: any) => (
                 <View key={ev.id} style={{ borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
@@ -2664,10 +2693,12 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
           )}
           {myEvents.length === 0 && activeHostedEvents.length === 0 && expiredHostedEvents.length === 0 ? (
             <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 }}>
-              <Text style={{ fontSize: 44, marginBottom: 14 }}>🎪</Text>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 8 }}>No plans yet</Text>
-              <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22 }}>
-                Go join something 👀{'\n'}Your events will show up here
+              <LinearGradient colors={['#6366F1', '#818CF8']} style={{ width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <CalendarDays size={32} color="#fff" />
+              </LinearGradient>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', marginBottom: 8, letterSpacing: -0.5 }}>No plans yet</Text>
+              <Text style={{ fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22 }}>
+                Go join something —{'\n'}your events will show up here
               </Text>
             </View>
           ) : (
@@ -2719,7 +2750,10 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                               <Text style={{ fontSize: 11, fontWeight: '800', color: '#ef4444' }}>TODAY</Text>
                             </View>
                           )}
-                          <Text style={{ fontSize: 12, color: '#64748B' }}>⏰ {ev.date_label ? `${ev.date_label}${ev.time_label ? ' · ' + ev.time_label : ''}` : ev.time || '—'}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Clock size={11} color="#94A3B8" />
+                            <Text style={{ fontSize: 12, color: '#64748B' }}>{ev.date_label ? `${ev.date_label}${ev.time_label ? ' · ' + ev.time_label : ''}` : ev.time || '—'}</Text>
+                          </View>
                         </View>
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -2730,8 +2764,8 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                             Alert.alert(ev.title, 'What do you want to do?', [
-                              { text: '✏️  Update my plans', onPress: () => onUpdatePlans?.(ev) },
-                              { text: '😔  Can\'t make it', style: 'destructive', onPress: () => {
+                              { text: 'Update my plans', onPress: () => onUpdatePlans?.(ev) },
+                              { text: "Can't make it", style: 'destructive', onPress: () => {
                                 Alert.alert('Leave event?', `Your spot will be freed and${ev.type === 'community' ? ' the group will be notified' : ' your details will be removed'}.`, [
                                   { text: 'Yes, leave', style: 'destructive', onPress: () => onLeaveEvent?.(ev) },
                                   { text: 'Cancel', style: 'cancel' },
@@ -2740,8 +2774,8 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                               { text: 'Cancel', style: 'cancel' },
                             ])
                           }}
-                          style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(100,116,139,0.1)', alignItems: 'center', justifyContent: 'center' }}>
-                          <Feather name="more-horizontal" size={16} color="#64748B" />
+                          style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(100,116,139,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+                          <MoreHorizontal size={16} color="#94A3B8" />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -2769,9 +2803,16 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     {/* Crew avatars + counter + button */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       {isCommunity ? (
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                          {isConfirmed ? '✅ You\'re in the group' : joinedEvents[ev.id] === 'pending' ? '⏳ Waiting for host approval' : '✓ Host approved you'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          {isConfirmed
+                            ? <CheckCircle size={14} color="#16a34a" />
+                            : joinedEvents[ev.id] === 'pending'
+                            ? <Clock size={14} color="#d97706" />
+                            : <Check size={14} color="#16a34a" />}
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: isConfirmed ? '#16a34a' : joinedEvents[ev.id] === 'pending' ? '#d97706' : '#16a34a' }}>
+                            {isConfirmed ? 'You\'re in the group' : joinedEvents[ev.id] === 'pending' ? 'Waiting for host' : 'Host approved you'}
+                          </Text>
+                        </View>
                       ) : (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                           <View style={{ flexDirection: 'row' }}>
@@ -2795,8 +2836,9 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                           onEventDetail?.(ev)
                         }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#6366F1', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event →</Text>
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event</Text>
+                        <ChevronRight size={14} color="#fff" />
                       </TouchableOpacity>
                     </View>
 
@@ -2810,8 +2852,9 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           { text: 'Keep my plans', style: 'cancel' },
                         ])
                       }}
-                      style={{ marginTop: 10, paddingVertical: 10, borderRadius: 12, alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.06)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.15)' }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#ef4444' }}>😔 Can't make it</Text>
+                      style={{ marginTop: 10, paddingVertical: 10, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.12)' }}>
+                      <X size={13} color="#ef4444" />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#ef4444' }}>Can't make it</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2825,10 +2868,12 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
       {subTab === 'messages' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, gap: 10, paddingBottom: 32 }}>
           {chatList.length === 0 && (
-            <View style={{ alignItems: 'center', paddingTop: 60 }}>
-              <Text style={{ fontSize: 40, marginBottom: 12 }}>💬</Text>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#334155' }}>No chats yet</Text>
-              <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>Join an event to find your crew!</Text>
+            <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 }}>
+              <LinearGradient colors={['#43E97B', '#22c55e']} style={{ width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <MessageCircle size={32} color="#fff" />
+              </LinearGradient>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', marginBottom: 8, letterSpacing: -0.5 }}>No chats yet</Text>
+              <Text style={{ fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22 }}>Join an event to find your crew!</Text>
             </View>
           )}
           {chatList.map(chat => (
@@ -2846,17 +2891,16 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                   ]
                 )
               }}
-              activeOpacity={0.88}
-              style={{ borderRadius: 18, overflow: 'hidden' }}>
-              {/* Card background — gradient tint for unread, plain for read */}
+              activeOpacity={0.85}
+              style={{ borderRadius: 20, overflow: 'hidden' }}>
               <LinearGradient
                 colors={chat.isNew
-                  ? ['#EEF2FF', '#F5F0FF']
-                  : ['#fff', '#FAFAFA']}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10,
+                  ? ['#EEF2FF', '#F0EBFF']
+                  : ['#ffffff', '#F8F9FF']}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 13, padding: 12,
                   borderWidth: chat.isNew ? 1.5 : 1,
-                  borderColor: chat.isNew ? 'rgba(99,102,241,0.25)' : 'rgba(0,0,0,0.05)',
-                  borderRadius: 18 }}>
+                  borderColor: chat.isNew ? 'rgba(236,72,153,0.2)' : 'rgba(0,0,0,0.04)',
+                  borderRadius: 20 }}>
 
                 {/* Avatar */}
                 {chat.type === 'duo' ? (
@@ -2864,7 +2908,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     shadowColor: chat.color, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 }}>
                     {chat.photo
                       ? <Image source={{ uri: chat.photo }} style={{ width: '100%', height: '100%' }} />
-                      : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                      : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><User size={22} color="#fff" /></View>}
                   </View>
                 ) : chat.eventImage ? (
                   <View style={{ width: 54, height: 54, borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}>
@@ -2928,19 +2972,19 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                 {/* Text content */}
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: chat.isNew ? '#4338CA' : '#1E1B4B', letterSpacing: -0.2, flex: 1 }} numberOfLines={1}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.2, flex: 1 }} numberOfLines={1}>
                       {chat.type === 'duo' ? `${chat.name}, ${chat.age}` : chat.event}
                     </Text>
-                    <Text style={{ fontSize: 11, color: chat.isNew ? '#818CF8' : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8, flexShrink: 0 }}>{formatChatTime(chat.time)}</Text>
+                    <Text style={{ fontSize: 11, color: chat.isNew ? CHATS_COLOR : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8, flexShrink: 0 }}>{formatChatTime(chat.time)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                     <Text style={{ fontSize: 13 }}>{chat.eventEmoji || '📍'}</Text>
-                    <Text style={{ fontSize: 11, color: '#818CF8', fontWeight: '600' }} numberOfLines={1}>
+                    <Text style={{ fontSize: 11, color: CHATS_COLOR, fontWeight: '600' }} numberOfLines={1}>
                       {chat.type === 'duo' ? chat.event : `${chat.members} members`}
                     </Text>
                     {chat.chatExpiresAt && Math.ceil((chat.chatExpiresAt - Date.now()) / 3600000) <= 6 && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
-                        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#EF4444' }} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
+                        <Clock size={9} color="#EF4444" />
                         <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>Expiring</Text>
                       </View>
                     )}
@@ -2950,8 +2994,8 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 
                 {/* Unread dot */}
                 {chat.isNew && (
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#6366F1',
-                    shadowColor: '#6366F1', shadowOpacity: 0.6, shadowRadius: 4, elevation: 3 }} />
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: CHATS_COLOR,
+                    shadowColor: CHATS_COLOR, shadowOpacity: 0.6, shadowRadius: 4, elevation: 3 }} />
                 )}
               </LinearGradient>
             </TouchableOpacity>
@@ -4530,7 +4574,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 const on = draftLangs.includes(l.code)
                 return (
                   <TouchableOpacity key={l.code} onPress={() => { setDraftLangs(prev => on ? prev.filter(x => x !== l.code) : [...prev, l.code]); Haptics.selectionAsync() }}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : '#E2E8F0' }}>
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#F3EEFF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#8B5CF6' : '#E2E8F0' }}>
                     <Text style={{ fontSize: 22 }}>{l.flag}</Text>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#4338CA' : '#64748B' }}>{l.label}</Text>
                   </TouchableOpacity>
@@ -4565,8 +4609,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                     const on = draftInterests.includes(item)
                     return (
                       <TouchableOpacity key={item} onPress={() => { setDraftInterests(prev => on ? prev.filter(x => x !== item) : [...prev, item]); Haptics.selectionAsync() }}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? '#EEF2FF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#6366F1' : '#E2E8F0' }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#4338CA' : '#64748B' }}>{item}</Text>
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? '#F3EEFF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#8B5CF6' : '#E2E8F0' }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#7C3AED' : '#64748B' }}>{item}</Text>
                       </TouchableOpacity>
                     )
                   })}
@@ -4597,14 +4641,14 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Interests</Text>
               <TouchableOpacity onPress={() => { setDraftInterests(userData?.interests || []); setEditProfileOpen(false); setTimeout(() => setInterestsEditOpen(true), 300) }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Edit →</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Edit →</Text>
               </TouchableOpacity>
             </View>
             {(userData?.interests || []).length > 0 ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 {(userData.interests as string[]).map((item: string) => (
-                  <View key={item} style={{ backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
-                    <Text style={{ fontSize: 13, color: '#4338CA', fontWeight: '600' }}>{item}</Text>
+                  <View key={item} style={{ backgroundColor: '#F3EEFF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
+                    <Text style={{ fontSize: 13, color: '#7C3AED', fontWeight: '600' }}>{item}</Text>
                   </View>
                 ))}
               </View>
@@ -4619,7 +4663,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Languages</Text>
               <TouchableOpacity onPress={() => { setDraftLangs(userData?.langs || []); setEditProfileOpen(false); setTimeout(() => setLangEditOpen(true), 300) }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Edit →</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Edit →</Text>
               </TouchableOpacity>
             </View>
             {(userData?.langs || []).length > 0 ? (
@@ -4663,9 +4707,9 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
           <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>My Profile</Text>
           <TouchableOpacity
             onPress={() => { setProfilePreviewOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
-            <Feather name="eye" size={14} color="#6366F1" />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>Preview</Text>
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: '#F3EEFF' }}>
+            <Feather name="eye" size={14} color="#8B5CF6" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Preview</Text>
           </TouchableOpacity>
         </View>
 
@@ -4724,7 +4768,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
           <TouchableOpacity
             onPress={() => { setEditProfileOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', borderRadius: 16, paddingVertical: 14 }}>
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#8B5CF6', borderRadius: 16, paddingVertical: 14 }}>
             <Feather name="edit-2" size={16} color="#fff" />
             <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Edit Profile</Text>
           </TouchableOpacity>
@@ -4733,7 +4777,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         {/* Actions */}
         <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
           {[
-            { icon: 'settings',   label: 'Settings',        iconColor: '#6366F1', bg: '#EEF2FF' },
+            { icon: 'settings',   label: 'Settings',        iconColor: '#8B5CF6', bg: '#F3EEFF' },
             { icon: 'shield',     label: 'Privacy Policy',  iconColor: '#3B82F6', bg: '#EFF6FF' },
             { icon: 'file-text',  label: 'Terms of Service',iconColor: '#F59E0B', bg: '#FFFBEB' },
             { icon: 'log-out',    label: 'Log Out',         iconColor: '#EF4444', bg: '#FEF2F2' },
@@ -7367,7 +7411,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           </TouchableOpacity>
           <TouchableOpacity style={s.navItem} onPress={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}>
             <View style={{ position: 'relative' }}>
-              <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#6366F1' : '#94A3B8'} />
+              <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#43E97B' : '#94A3B8'} />
               {(() => {
                 const allKnownEvs = [...feedOfficialDbEvents, ...dbCommunityEvents, ...userCreatedEvents]
                 const now = Date.now()
@@ -7390,7 +7434,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 return <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: hasPending ? '#FFD700' : '#43E97B', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               })()}
             </View>
-            <Text style={[s.navLabel, activeTab === 'vibecheck' && { color: '#6366F1' }]}>Vibe</Text>
+            <Text style={[s.navLabel, activeTab === 'vibecheck' && { color: '#43E97B' }]}>Vibe</Text>
           </TouchableOpacity>
 
           {/* Center create button */}
@@ -7402,16 +7446,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
           <TouchableOpacity style={s.navItem} onPress={() => { setMessagesInitialSubTab('messages'); setActiveTab('messages') }}>
             <View style={{ position: 'relative' }}>
-              <Feather name="message-circle" size={22} color={activeTab === 'messages' ? '#6366F1' : '#94A3B8'} />
+              <Feather name="message-circle" size={22} color={activeTab === 'messages' ? '#EC4899' : '#94A3B8'} />
               {chatList.some((c: any) => c.isNew) && activeTab !== 'messages' && (
-                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366F1', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EC4899', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
-            <Text style={[s.navLabel, activeTab === 'messages' && { color: '#6366F1' }]}>Chats</Text>
+            <Text style={[s.navLabel, activeTab === 'messages' && { color: '#EC4899' }]}>Chats</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('profile')}>
-            <Feather name="user" size={22} color={activeTab === 'profile' ? '#6366F1' : '#94A3B8'} />
-            <Text style={[s.navLabel, activeTab === 'profile' && { color: '#6366F1' }]}>Profile</Text>
+            <Feather name="user" size={22} color={activeTab === 'profile' ? '#8B5CF6' : '#94A3B8'} />
+            <Text style={[s.navLabel, activeTab === 'profile' && { color: '#8B5CF6' }]}>Profile</Text>
           </TouchableOpacity>
         </View>
 
@@ -7826,7 +7870,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         }
                         const SIZE_MAX: Record<string, number> = { duo: 2, squad: 5, party: 20 }
                         const GRAD_POOL: [string,string][] = [
-                          ['#6366F1','#8B5CF6'],['#EC4899','#F43F5E'],
+                          [placeholder','#F43F5E'],
                           ['#10B981','#059669'],['#F59E0B','#F97316'],
                         ]
                         const tempId = Date.now()
@@ -8626,7 +8670,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         {p.transport && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                             <Text style={{ fontSize: 12 }}>{p.transport === 'car' ? '🚗' : p.transport === 'lift' ? '🙋' : '📍'}</Text>
-                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? '#6366F1' : p.transport === 'lift' ? '#F59E0B' : '#64748B', fontWeight: '600' }}>
+                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? placeholderB', fontWeight: '600' }}>
                               {p.transport === 'car' ? 'Has a car · can give a lift' : p.transport === 'lift' ? 'Needs a lift' : 'Meeting there'}
                             </Text>
                           </View>
@@ -8735,7 +8779,7 @@ export default function App() {
   const [authCredential, setAuthCredential] = useState('')
   const [authUserId, setAuthUserId] = useState<string | null>(null)
 
-  const PROFILE_COLORS = ['#6366F1','#EC4899','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
+  const PROFILE_COLORS = [placeholder','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
 
   const loadProfileForUser = async (userId: string) => {
     const { data: profile } = await supabase
