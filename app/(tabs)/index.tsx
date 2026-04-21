@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight } from 'lucide-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -3496,9 +3496,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                 opacity: radar2.interpolate({ inputRange: [0,0.5,1], outputRange: [0.8,0.3,0] }),
                 transform: [{ scale: radar2.interpolate({ inputRange: [0,1], outputRange: [0.4,1] }) }],
               }} />
-              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.4)', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 32 }}>✨</Text>
-              </View>
+              <LinearGradient colors={['#6366F1', '#818CF8']} style={{ width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={34} color="#fff" fill="#fff" />
+              </LinearGradient>
             </View>
             <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', textAlign: 'center', letterSpacing: -0.5, marginBottom: 10 }}>Your crew awaits</Text>
             <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 22, marginBottom: 36 }}>
@@ -3527,16 +3527,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
       <AuroraBg />
       <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 22, paddingTop: topInset + 12, paddingBottom: 20 }}>
-          {/* Label pill */}
-          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.18)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(99,102,241,0.35)' }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#818CF8' }} />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8', letterSpacing: 1.2, textTransform: 'uppercase' }}>Live</Text>
+        <View style={{ paddingHorizontal: 22, paddingTop: topInset + 16, paddingBottom: 26 }}>
+          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.13)', borderRadius: 99, paddingHorizontal: 13, paddingVertical: 6, marginBottom: 18, borderWidth: 1, borderColor: 'rgba(99,102,241,0.28)' }}>
+            <Radio size={10} color="#818CF8" />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8', letterSpacing: 1.5, textTransform: 'uppercase' }}>Live</Text>
           </View>
-          {/* Title */}
-          <Text style={{ fontSize: 36, fontWeight: '900', color: '#fff', letterSpacing: -1.5, lineHeight: 40 }}>Vibe{'\n'}Check</Text>
-          {/* Subtitle */}
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 8, letterSpacing: 0.1 }}>{subtitle}</Text>
+          <Text style={{ fontSize: 46, fontWeight: '900', color: '#fff', letterSpacing: -2.5, lineHeight: 48 }}>Vibe{'\n'}Check</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12 }}>
+            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: hasHostActivity ? '#FBBF24' : myEvents.length > 0 ? '#43E97B' : 'rgba(255,255,255,0.25)' }} />
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.48)' }}>{subtitle}</Text>
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 16, paddingBottom: 100 }}>
@@ -3556,27 +3556,28 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
               .slice(0, 12)
             const autoFillCount = Math.min(slotsLeft, scored.length)
             return (
-              <View key={`host-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' }}>
-                <LinearGradient colors={ev.gradient as any} style={{ height: 5 }} />
+              <View key={`host-${ev.id}`} style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.22)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 7 }} />
                 <View style={{ padding: 16, gap: 12 }}>
                   {/* Header */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.4)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST 👑</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(255,215,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.35)' }}>
+                      <Crown size={10} color="#FFD700" />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFD700' }}>HOST</Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                         Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event.', [
-                          { text: 'Cancel Event 🗑️', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
+                          { text: 'Cancel Event', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
                           { text: 'Keep', style: 'cancel' },
                         ])
                       }}
                       activeOpacity={0.7}
-                      style={{ padding: 6 }}
+                      style={{ padding: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)' }}
                     >
-                      <Text style={{ fontSize: 16 }}>🗑️</Text>
+                      <Trash2 size={15} color="rgba(255,255,255,0.4)" />
                     </TouchableOpacity>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -3647,12 +3648,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         {/* Action buttons */}
                         <View style={{ gap: 6 }}>
                           <TouchableOpacity onPress={() => onApproveJoiner?.(ev.id, req)} activeOpacity={0.8}
-                            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(67,233,123,0.2)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ fontSize: 18 }}>✓</Text>
+                            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
+                            <Check size={18} color="#43E97B" />
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => onPassJoiner?.(ev.id, req)} activeOpacity={0.8}
-                            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(148,163,184,0.12)', borderWidth: 1.5, borderColor: 'rgba(148,163,184,0.3)', alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>–</Text>
+                            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(148,163,184,0.08)', borderWidth: 1.5, borderColor: 'rgba(148,163,184,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Minus size={16} color="rgba(255,255,255,0.4)" />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -3665,8 +3666,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   )}
                   {/* Waiting for approved joiner to confirm */}
                   {approvedCount > 0 && allRequests.length === 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.1)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' }}>
-                      <Text style={{ fontSize: 20 }}>⏳</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.25)' }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(251,191,36,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' }}>
+                        <Clock size={17} color="#FBBF24" />
+                      </View>
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#FBBF24' }}>Waiting for {approvedCount === 1 ? (approvedJoiners?.[ev.id]?.[0]?.name || 'them') : `${approvedCount} people`} to confirm...</Text>
                         <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>They need to open the app and accept</Text>
@@ -3676,8 +3679,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   {/* Group full state — only when joiner actually confirmed */}
                   {slotsLeft <= 0 && confirmedCount > 0 && approvedCount === 0 && (
                     <View style={{ gap: 10, paddingTop: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.12)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)' }}>
-                        <Text style={{ fontSize: 22 }}>🎉</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
+                        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(67,233,123,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                          <PartyPopper size={18} color="#43E97B" />
+                        </View>
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 14, fontWeight: '800', color: '#43E97B' }}>All {slotsTotal} spots filled!</Text>
                           <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Your social is complete. Time to chat!</Text>
@@ -3686,8 +3691,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       <TouchableOpacity
                         onPress={() => onGoToMessages?.()}
                         activeOpacity={0.85}
-                        style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Go to group chat 💬</Text>
+                        style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                        <MessageCircle size={16} color="#052e16" />
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Go to group chat</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -3713,8 +3719,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
           {incomingCrewInvites.filter((invite: any) => !myEvents.some((ev: any) => ev.id === invite.event_ref_id)).map((invite: any) => {
             const inviter = invite.inviter || {}
             return (
-              <View key={invite.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.45)' }}>
-                <LinearGradient colors={['#6366F1', '#818CF8']} style={{ height: 4 }} />
+              <View key={invite.id} style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.35)' }}>
+                <LinearGradient colors={['#6366F1', '#818CF8']} style={{ height: 6 }} />
                 <View style={{ padding: 18 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                     {inviter.photos?.[0] ? (
@@ -3730,11 +3736,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(invite)} style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
+                    <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(invite)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 5 }}>
+                      <Zap size={14} color="#052e16" fill="#052e16" />
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(invite)} style={{ flex: 1, borderRadius: 99, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(invite)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -3774,10 +3781,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             return (
               <View key={ev.id} style={{
                 borderRadius: 28, overflow: 'hidden',
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderWidth: 1, borderColor: isActive ? 'rgba(67,233,123,0.35)' : 'rgba(255,255,255,0.09)',
+                backgroundColor: 'rgba(255,255,255,0.055)',
+                borderWidth: 1, borderColor: isActive ? 'rgba(67,233,123,0.3)' : 'rgba(255,255,255,0.08)',
               }}>
-                <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+                <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
 
                 <View style={{ padding: 20 }}>
                   {/* Title + status */}
@@ -3821,19 +3828,19 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
                   {/* Progress */}
                   <View style={{ marginBottom: 18 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '700', letterSpacing: 0.5 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', fontWeight: '700', letterSpacing: 0.6 }}>
                         {isCommunity ? 'GROUP MEMBERS' : isParty ? 'PARTY · OPEN TO JOIN' : 'CREW FOUND'}
                       </Text>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor }}>
                         {isCommunity ? `${ev.participantsCount || cap} going` : `${found} / ${cap}`}
                       </Text>
                     </View>
-                    <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
+                    <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
                       <LinearGradient
                         colors={isActive ? ['#43E97B','#22c55e'] : ['#6366F1','#818CF8']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                        style={{ height: 3, borderRadius: 99, width: `${(found / cap) * 100}%` as any }}
+                        style={{ height: 6, borderRadius: 99, width: `${(found / cap) * 100}%` as any }}
                       />
                     </View>
                     {isParty && (
@@ -3852,8 +3859,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         <TouchableOpacity
                           activeOpacity={0.85}
                           onPress={() => onGoToMessages?.()}
-                          style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                          <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat 💬</Text>
+                          style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                          <MessageCircle size={16} color="#052e16" />
+                          <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat</Text>
                         </TouchableOpacity>
                       )
                     }
@@ -3869,9 +3877,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     if (!currentPerson && !anyIncoming) {
                       // No matches yet
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' }}>
-                          <Text style={{ fontSize: 18 }}>🔍</Text>
-                          <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>Looking for people going to this event. You'll be notified when someone matches!</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(251,191,36,0.07)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.18)' }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(251,191,36,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Search size={16} color="#FBBF24" />
+                          </View>
+                          <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.48)', lineHeight: 18 }}>Looking for people going to this event. You'll be notified when someone matches!</Text>
                         </View>
                       )
                     }
@@ -3895,11 +3905,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             </View>
                           </View>
                           <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
-                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 5 }}>
+                              <Zap size={14} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -3941,11 +3952,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         {incomingFromCurrent ? (
                           // B sees A pressed Let's go → show Accept / Decline
                           <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Accept 🚀</Text>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                              <Zap size={15} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Accept</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
                             </TouchableOpacity>
                           </View>
                         ) : inviteSent ? (
@@ -3964,8 +3976,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             <TouchableOpacity
                               activeOpacity={0.85}
                               onPress={() => { onConfirm?.(ev, [currentPerson], format); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
-                              style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Let's go! 🚀</Text>
+                              style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                              <Zap size={15} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Let's go!</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               activeOpacity={0.8}
@@ -4050,9 +4063,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     </View>
                   )}
                   {!isActive && !isCommunity && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.2)' }}>
-                      <Text style={{ fontSize: 18 }}>🔍</Text>
-                      <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>We're looking for people going to this event. You'll get notified when someone matches!</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(251,191,36,0.07)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.18)' }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(251,191,36,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                        <Search size={16} color="#FBBF24" />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.48)', lineHeight: 18 }}>We're looking for people going to this event. You'll get notified when someone matches!</Text>
                     </View>
                   )}
                   {(isActive || (joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id])) && (
@@ -4067,8 +4082,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                           const maxSize = VIBE_FORMAT_MAX[format] || 5
                           return (
                             <View style={{ gap: 10 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.08)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.25)' }}>
-                                <Text style={{ fontSize: 15 }}>✅</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
+                                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(67,233,123,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                                  <CheckCircle size={16} color="#43E97B" />
+                                </View>
                                 <View style={{ flex: 1 }}>
                                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in the crew!</Text>
                                   <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
@@ -4079,8 +4096,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                               <TouchableOpacity
                                 activeOpacity={0.85}
                                 onPress={() => onGoToMessages?.(ev)}
-                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open chat 💬</Text>
+                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                                <MessageCircle size={16} color="#052e16" />
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat</Text>
                               </TouchableOpacity>
                             </View>
                           )
@@ -4136,9 +4154,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             activeOpacity={isWaiting || inviteSentToAll ? 1 : 0.85}
                             disabled={isWaiting || inviteSentToAll}
                             onPress={() => onConfirm?.(ev, partners, format)}
-                            style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: isWaiting ? 'rgba(251,191,36,0.2)' : inviteSentToAll ? 'rgba(67,233,123,0.25)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: isWaiting || inviteSentToAll ? 0 : 0.4, shadowRadius: 12, elevation: isWaiting || inviteSentToAll ? 0 : 6 }}>
+                            style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: isWaiting ? 'rgba(251,191,36,0.18)' : inviteSentToAll ? 'rgba(67,233,123,0.2)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: isWaiting || inviteSentToAll ? 0 : 0.4, shadowRadius: 14, elevation: isWaiting || inviteSentToAll ? 0 : 6 }}>
+                            {!isWaiting && !inviteSentToAll && (isCommunity ? <MessageCircle size={15} color="#052e16" /> : <Zap size={15} color="#052e16" fill="#052e16" />)}
+                            {isWaiting && <Clock size={15} color="#FBBF24" />}
+                            {inviteSentToAll && <CheckCircle size={15} color="#43E97B" />}
                             <Text style={{ fontSize: 15, fontWeight: '900', color: isWaiting ? '#FBBF24' : inviteSentToAll ? '#43E97B' : '#052e16' }}>
-                              {isCommunity ? 'Confirm & Open Chat 🚀' : isWaiting ? 'You\'re ready · waiting for crew ⏳' : inviteSentToAll ? 'Invite sent ✓' : "Let's go! 🚀"}
+                              {isCommunity ? 'Confirm & Open Chat' : isWaiting ? 'You\'re ready · waiting for crew' : inviteSentToAll ? 'Invite sent' : "Let's go!"}
                             </Text>
                           </TouchableOpacity>
                         )
@@ -4169,8 +4190,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const compatLabel = compatScore >= 70 ? 'Great match' : compatScore >= 50 ? 'Good fit' : 'Low match'
             const interestMatch = (userData?.interests || []).includes(ev.category)
             return (
-              <View key={`community-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.35)' : 'rgba(67,233,123,0.35)' }}>
-                <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+              <View key={`community-${ev.id}`} style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: isPending ? 'rgba(245,158,11,0.25)' : 'rgba(67,233,123,0.28)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
                 <View style={{ padding: 20 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
@@ -4217,18 +4238,24 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   </View>
 
                   {isPending ? (
-                    <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 14, gap: 6 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>⏳ Waiting for host approval</Text>
-                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>
-                        {compatScore >= 60 ? 'Your match score looks great — good chances! 🔥' : 'The host reviews all requests by compatibility score.'}{'\n'}You'll get a notification when they respond.
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)' }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(245,158,11,0.15)', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                        <Clock size={16} color="#FCD34D" />
+                      </View>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
+                        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', lineHeight: 18 }}>
+                          {compatScore >= 60 ? 'Your match score looks great — good chances!' : 'The host reviews all requests by compatibility score.'}{'\n'}You'll get a notification when they respond.
+                        </Text>
+                      </View>
                     </View>
                   ) : (
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={() => onConfirm?.(ev, [], 'community')}
-                      style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat 💬</Text>
+                      style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                      <MessageCircle size={16} color="#052e16" />
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat</Text>
                     </TouchableOpacity>
                   )}
 
@@ -4254,8 +4281,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const compatColor = compatScore >= 70 ? '#43E97B' : compatScore >= 50 ? '#FBBF24' : '#94A3B8'
             const compatLabel = compatScore >= 70 ? 'Strong match' : compatScore >= 50 ? 'Good fit' : 'Different vibes'
             return (
-              <View key={`hosted-pending-${ev.id}`} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                <LinearGradient colors={ev.gradient as any} style={{ height: 4 }} />
+              <View key={`hosted-pending-${ev.id}`} style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.22)' }}>
+                <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
                 <View style={{ padding: 20 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
@@ -4263,22 +4290,25 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 5 }}>
-                      <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.15)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#F59E0B' }}>👤 SOCIAL</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.13)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)' }}>
+                        <User size={9} color="#F59E0B" />
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#F59E0B' }}>SOCIAL</Text>
                       </View>
                       <View style={{ paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: `${compatColor}18`, borderWidth: 1, borderColor: `${compatColor}40` }}>
                         <Text style={{ fontSize: 10, fontWeight: '800', color: compatColor }}>{compatScore}% · {compatLabel}</Text>
                       </View>
                     </View>
                   </View>
-                  <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.2)', gap: 6 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={{ fontSize: 18 }}>⏳</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.18)' }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(245,158,11,0.15)', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                      <Clock size={16} color="#FCD34D" />
                     </View>
-                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>
-                      {langMatch ? 'The host speaks your language — great sign! 🌍' : 'The organizer reviews requests manually.'}{'\n'}You'll be notified as soon as they respond.
-                    </Text>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FCD34D' }}>Waiting for host approval</Text>
+                      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.48)', lineHeight: 18 }}>
+                        {langMatch ? 'The host speaks your language — great sign!' : 'The organizer reviews requests manually.'}{'\n'}You'll be notified as soon as they respond.
+                      </Text>
+                    </View>
                   </View>
                   <TouchableOpacity
                     onPress={() => onLeave?.(ev)}
