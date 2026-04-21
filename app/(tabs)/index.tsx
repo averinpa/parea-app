@@ -6376,10 +6376,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }
 
   const handleJoinConfirmed = (ev: any, format: string, transport: string) => {
-    const FORMAT_EMOJI: Record<string, string> = { '1+1': '👥', squad: '🫂', party: '🎉' }
-    const TRANSPORT_EMOJI: Record<string, string> = { car: '🚗', lift: '🙋', meet: '📍' }
-    const parts = [FORMAT_EMOJI[format] || '👥', TRANSPORT_EMOJI[transport] || '📍'].filter(Boolean)
-    showToast(`${parts.join(' · ')}`, 'Finding your crew...', '🔍')
+    const FORMAT_LABEL: Record<string, string> = { '1+1': '1+1', squad: 'Squad', party: 'Party' }
+    const TRANSPORT_LABEL: Record<string, string> = { car: 'Can give a lift', lift: 'Needs a lift', meet: 'Meeting there' }
+    const parts = [FORMAT_LABEL[format], TRANSPORT_LABEL[transport]].filter(Boolean)
+    showToast(parts.join(' · '), 'Finding your crew...')
     // Clear stale invite/pass state from previous sessions for this event
     setSentCrewInvites(prev => {
       const next = { ...prev }
@@ -8928,9 +8928,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             <View style={{ borderRadius: 24, overflow: 'hidden', shadowColor: grad[0], shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 18 }}>
               <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <ToastIcon size={20} color="#fff" weight="duotone" />
-                </View>
+                {toast.emoji && (
+                  <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ToastIcon size={20} color="#fff" weight="duotone" />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: 'ClashDisplay-Semibold', fontSize: 15, color: '#fff', letterSpacing: -0.2 }}>{toast.title || toast.text}</Text>
                   {toast.title ? <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 }} numberOfLines={1}>{toast.text}</Text> : null}
