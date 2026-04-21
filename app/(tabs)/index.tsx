@@ -1823,11 +1823,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   ]
 
   // Official: DB events only (no mock fallback to avoid flicker)
-  const officialAll: any[] = officialDbLoading ? [] : (officialDbEvents.length > 0
-    ? officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
-        .filter((e: any) => !isEventPast(e.date_label || e.time || ''))
-    : MOCK_EVENTS.filter(e => e.type === 'official' && (!e.city || e.city === city))
-  ).sort((a: any, b: any) => {
+  const officialAll: any[] = officialDbLoading ? [] : [
+    ...MOCK_EVENTS.filter(e => e.type === 'official' && (!e.city || e.city === city)),
+    ...officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
+      .filter((e: any) => !isEventPast(e.date_label || e.time || '')),
+  ].sort((a: any, b: any) => {
     if (a.is_promoted && !b.is_promoted) return -1
     if (!a.is_promoted && b.is_promoted) return 1
     const da = parseEventDate(a.date_label || a.time || '')
