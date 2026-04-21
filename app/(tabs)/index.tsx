@@ -2420,20 +2420,19 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           {/* Alcohol */}
           <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-            {[{ id: "Don't drink", label: "Don't drink", Icon: Scales }, { id: 'Rarely', label: 'Rarely', Icon: Wine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
+            {[{ id: "Don't drink", label: "Don't drink", Icon: Scales }, { id: 'Rarely', label: 'Rarely', Icon: PhWine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
               const on = draftVibe?.drinks === opt.id
               return (
-                <TouchableOpacity key={opt.id} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt.id }))} style={{ flex: 1 }}>
+                <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
                   {on ? (
                     <LinearGradient colors={['#EEF2FF','#C7D2FE']}
-                      style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
-                        shadowColor: '#6366F1', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>
-                      <opt.Icon size={20} color="#6366F1" weight="duotone" />
+                      style={{ alignItems: 'center', paddingVertical: 12, gap: 5 }}>
+                      <opt.Icon size={20} color="#6366F1" weight="bold" />
                       <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{opt.label}</Text>
                     </LinearGradient>
                   ) : (
-                    <View style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
-                      backgroundColor: 'rgba(248,250,252,0.9)', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
+                    <View style={{ alignItems: 'center', paddingVertical: 12, gap: 5,
+                      backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 16 }}>
                       <opt.Icon size={20} color="#CBD5E1" weight="regular" />
                       <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>{opt.label}</Text>
                     </View>
@@ -2449,17 +2448,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             {[{ id: 'Non-smoker', label: 'Non-smoker', Icon: HouseLine }, { id: 'Social', label: 'Social', Icon: Butterfly }, { id: 'Smoker', label: 'Smoker', Icon: Couch }].map(opt => {
               const on = draftVibe?.smoking === opt.id
               return (
-                <TouchableOpacity key={opt.id} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt.id }))} style={{ flex: 1 }}>
+                <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
                   {on ? (
                     <LinearGradient colors={['#EEF2FF','#C7D2FE']}
-                      style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
-                        shadowColor: '#6366F1', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>
-                      <opt.Icon size={20} color="#6366F1" weight="duotone" />
+                      style={{ alignItems: 'center', paddingVertical: 12, gap: 5 }}>
+                      <opt.Icon size={20} color="#6366F1" weight="bold" />
                       <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{opt.label}</Text>
                     </LinearGradient>
                   ) : (
                     <View style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
-                      backgroundColor: 'rgba(248,250,252,0.9)', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
+                      backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
                       <opt.Icon size={20} color="#CBD5E1" weight="regular" />
                       <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>{opt.label}</Text>
                     </View>
