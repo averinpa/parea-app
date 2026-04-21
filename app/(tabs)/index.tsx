@@ -7832,19 +7832,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                         {/* Cover image */}
                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Cover Photo <Text style={{ fontSize: 11, fontWeight: '500', textTransform: 'none' }}>(optional)</Text></Text>
-                        <TouchableOpacity activeOpacity={0.8} onPress={async () => {
-                          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-                          if (status !== 'granted') return
-                          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, exif: false })
-                          if (!result.canceled && result.assets[0]) {
-                            const asset = result.assets[0]
-                            // Basic size guard — reject suspiciously small images (often thumbnails of inappropriate content)
-                            if ((asset.width || 0) < 50 || (asset.height || 0) < 50) {
-                              Alert.alert('Invalid image', 'Please choose a proper photo.')
-                              return
+                        <TouchableOpacity activeOpacity={0.8} onPress={() => {
+                          const pickImage = async () => {
+                            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+                            if (status !== 'granted') return
+                            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, exif: false })
+                            if (!result.canceled && result.assets[0]) {
+                              const asset = result.assets[0]
+                              if ((asset.width || 0) < 50 || (asset.height || 0) < 50) { Alert.alert('Invalid image', 'Please choose a proper photo.'); return }
+                              setCreateImage({ uri: asset.uri, base64: asset.base64 || '' })
                             }
-                            setCreateImage({ uri: asset.uri, base64: asset.base64 || '' })
                           }
+                          Alert.alert(
+                            'Community Guidelines',
+                            'By uploading a photo you confirm it does not contain nudity, violence, or inappropriate content. Violations may result in account suspension.',
+                            [{ text: 'Cancel', style: 'cancel' }, { text: 'I agree', onPress: pickImage }]
+                          )
                         }}
                           style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: createImage ? '#6366F1' : '#E2E8F0', borderStyle: createImage ? 'solid' : 'dashed', marginBottom: 16, alignItems: 'center', justifyContent: 'center' }}>
                           {createImage ? (
