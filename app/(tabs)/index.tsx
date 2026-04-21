@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Alert, Animated, AppState, Dimensions, Image, Keyboard, Linking,
+  ActivityIndicator, Alert, Animated, AppState, Dimensions, Image, Keyboard, Linking, Share,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, Pressable,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
@@ -6667,6 +6667,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => sub.remove()
   }, [])
 
+  // Deep link handler: pareaapp://event/:id
+  useEffect(() => {
+    const handleUrl = ({ url }: { url: string }) => {
+      const match = url.match(/pareaapp:\/\/event\/(\d+)/)
+      if (match) {
+        const id = parseInt(match[1])
+        const allKnown = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents]
+        const found = allKnown.find(e => e.id === id || e._dbId === id)
+        if (found) setEventDetail(found)
+      }
+    }
+    Linking.getInitialURL().then(url => { if (url) handleUrl({ url }) })
+    const sub = Linking.addEventListener('url', handleUrl)
+    return () => sub.remove()
+  }, [dbCommunityEvents, feedOfficialDbEvents, userCreatedEvents])
+
   // Realtime чат для community events (и для хоста через hostEventId)
   useEffect(() => {
     if (realtimeChatRef.current) {
@@ -8117,6 +8133,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </LinearGradient>
                     <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { position: 'absolute', top: 52, left: 20 }]}>
                       <Ionicons name="chevron-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const deepLink = `pareaapp://event/${eventDetail.id}`
+                        const text = `${eventDetail.title}\n📅 ${eventDetail.time || ''}\n📍 ${eventDetail.location || eventDetail.city || ''}\n\nJoin me on Parea 👉 ${deepLink}`
+                        Share.share({ message: text, title: eventDetail.title })
+                      }}
+                      style={{ position: 'absolute', top: 52, right: 20, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Feather name="share-2" size={17} color="#fff" />
                     </TouchableOpacity>
                   </View>
 
