@@ -305,7 +305,7 @@ async function aiMatchCompanions(
   }
 
   try {
-    const energyLabel = { homebody: 'Homebody', chill: 'Chill vibes', balanced: 'Balanced', social: 'Social butterfly', party: 'Party animal' }
+    const energyLabel = { homebody: 'Homebody', chill: 'Chill vibes', balanced: 'Balanced', social: 'Extrovert', party: 'Party animal' }
     const candidatesList = eligible.map((c, i) =>
       `${i + 1}. ${c.name} (${c.age}yo): interests=[${c.interests.join(', ')}], music=[${(c.musicGenres || []).join(', ') || 'any'}], drinks=${c.drinksPref || '?'}, smoking=${c.smokingPref || '?'}, bio="${c.bio}", langs=[${c.langs.join(', ')}]`
     ).join('\n')
@@ -326,7 +326,7 @@ User profile (tonight's vibe):
 - Music taste: ${(user.musicGenres || []).join(', ') || 'any'}
 - Drinks: ${user.drinksPref || 'not specified'}
 - Smoking: ${user.smokingPref || 'not specified'}
-- Social energy right now: ${(energyLabel as any)[user.socialEnergy || ''] || 'balanced'}
+- Tonight's energy: ${(energyLabel as any)[user.socialEnergy || ''] || 'balanced'}
 - Languages: ${user.langs.join(', ') || 'en'}
 - Bio: "${user.bio || 'no bio'}"
 
@@ -2414,56 +2414,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               return isParty && on
                 ? <Animated.View key={e.id} style={{ transform: [{ scale: pulseAnim }] }}>{btn}</Animated.View>
                 : btn
-            })}
-          </View>
-
-          {/* Alcohol */}
-          <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-            {[{ id: "Don't drink", label: "Don't drink", Icon: Prohibit }, { id: 'Rarely', label: 'Rarely', Icon: PhWine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
-              const on = draftVibe?.drinks === opt.id
-              return (
-                <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
-                  {on ? (
-                    <LinearGradient colors={['#EEF2FF','#C7D2FE']}
-                      style={{ alignItems: 'center', paddingVertical: 12, gap: 5 }}>
-                      <opt.Icon size={20} color="#6366F1" weight="bold" />
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{opt.label}</Text>
-                    </LinearGradient>
-                  ) : (
-                    <View style={{ alignItems: 'center', paddingVertical: 12, gap: 5,
-                      backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 16 }}>
-                      <opt.Icon size={20} color="#CBD5E1" weight="regular" />
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>{opt.label}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-
-          {/* Smoking */}
-          <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Smoking</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
-            {[{ id: 'Non-smoker', label: 'Non-smoker', Icon: Prohibit }, { id: 'Social', label: 'Social', Icon: Wind }, { id: 'Smoker', label: 'Smoker', Icon: Fire }].map(opt => {
-              const on = draftVibe?.smoking === opt.id
-              return (
-                <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
-                  {on ? (
-                    <LinearGradient colors={['#EEF2FF','#C7D2FE']}
-                      style={{ alignItems: 'center', paddingVertical: 12, gap: 5 }}>
-                      <opt.Icon size={20} color="#6366F1" weight="bold" />
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{opt.label}</Text>
-                    </LinearGradient>
-                  ) : (
-                    <View style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
-                      backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
-                      <opt.Icon size={20} color="#CBD5E1" weight="regular" />
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>{opt.label}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              )
             })}
           </View>
 
