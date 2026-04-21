@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -2420,7 +2420,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           {/* Alcohol */}
           <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-            {[{ id: "Don't drink", label: "Don't drink", Icon: Scales }, { id: 'Rarely', label: 'Rarely', Icon: PhWine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
+            {[{ id: "Don't drink", label: "Don't drink", Icon: Drop }, { id: 'Rarely', label: 'Rarely', Icon: PhWine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
               const on = draftVibe?.drinks === opt.id
               return (
                 <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
@@ -2445,7 +2445,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           {/* Smoking */}
           <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Smoking</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
-            {[{ id: 'Non-smoker', label: 'Non-smoker', Icon: HouseLine }, { id: 'Social', label: 'Social', Icon: Butterfly }, { id: 'Smoker', label: 'Smoker', Icon: Couch }].map(opt => {
+            {[{ id: 'Non-smoker', label: 'Non-smoker', Icon: Prohibit }, { id: 'Social', label: 'Social', Icon: Wind }, { id: 'Smoker', label: 'Smoker', Icon: Fire }].map(opt => {
               const on = draftVibe?.smoking === opt.id
               return (
                 <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
