@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -810,12 +810,19 @@ const MUSIC_GENRES = [
 ]
 
 const SOCIAL_ENERGY = [
-  { id: 'homebody',   label: 'Homebody',         emoji: '🌙' },
-  { id: 'chill',      label: 'Chill vibes',       emoji: '🛋️' },
-  { id: 'balanced',   label: 'Balanced',          emoji: '😊' },
-  { id: 'social',     label: 'Social butterfly',  emoji: '🎉' },
-  { id: 'party',      label: 'Party animal',      emoji: '🔥' },
+  { id: 'homebody',  label: 'Homebody',        Icon: HouseLine, color: '#8B5CF6', grad: ['#EDE9FE','#C4B5FD'] as [string,string] },
+  { id: 'chill',     label: 'Chill vibes',     Icon: Couch,     color: '#06B6D4', grad: ['#E0F2FE','#7DD3FC'] as [string,string] },
+  { id: 'balanced',  label: 'Balanced',        Icon: Scales,    color: '#10B981', grad: ['#D1FAE5','#6EE7B7'] as [string,string] },
+  { id: 'social',    label: 'Social butterfly',Icon: Butterfly, color: '#F59E0B', grad: ['#FEF3C7','#FCD34D'] as [string,string] },
+  { id: 'party',     label: 'Party animal',    Icon: Confetti,  color: '#EF4444', grad: ['#FEE2E2','#FCA5A5'] as [string,string] },
 ]
+const VIBE_CATS: Record<string, string[]> = {
+  homebody:  ['coffee', 'culture', 'gaming'],
+  chill:     ['coffee', 'wine', 'food'],
+  balanced:  [],
+  social:    ['food', 'wine', 'outdoors', 'sports'],
+  party:     ['music', 'wine', 'dance', 'food'],
+}
 
 const DEALBREAKERS = [
   { id: 'no_smoking',   emoji: '🚭', label: 'No smoking',        desc: "Can't be around smoke" },
@@ -1679,6 +1686,19 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
+  const pulseAnim = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    if (draftVibe?.energy === 'party') {
+      Animated.loop(Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.12, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])).start()
+    } else {
+      pulseAnim.stopAnimation()
+      pulseAnim.setValue(1)
+    }
+  }, [draftVibe?.energy])
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [searchQuery, setSearchQuery] = useState('')
   const [officialDbEvents, setOfficialDbEvents] = useState<any[]>([])
@@ -1820,10 +1840,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return true
   })
 
-  // Sort community: interest-matched first
-  const communityEvents = userCategories.length > 0
-    ? [...communityFiltered].sort((a, b) => (userCategories.includes(b.category) ? 1 : 0) - (userCategories.includes(a.category) ? 1 : 0))
-    : communityFiltered
+  // Sort community: vibe-matched first, then interest-matched
+  const vibeCats = tonightVibe?.energy ? (VIBE_CATS[tonightVibe.energy] || []) : []
+  const communityEvents = [...communityFiltered].sort((a, b) => {
+    const aVibe = vibeCats.includes(a.category) ? 2 : 0
+    const bVibe = vibeCats.includes(b.category) ? 2 : 0
+    const aInt = userCategories.includes(a.category) ? 1 : 0
+    const bInt = userCategories.includes(b.category) ? 1 : 0
+    return (bVibe + bInt) - (aVibe + aInt)
+  })
 
   // Apply search + date filter to official
   const officialEvents = officialAll.filter(ev => {
@@ -1984,8 +2009,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 {tonightVibe ? (() => {
                   const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
                   return <>
-                    <Text style={{ fontSize: 12 }}>{energyInfo.emoji}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{energyInfo.label}</Text>
+                    <energyInfo.Icon size={12} color={energyInfo.color} weight="duotone" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: energyInfo.color }}>{energyInfo.label}</Text>
                     <CaretDown size={11} color="#94A3B8" weight="bold" />
                   </>
                 })() : <>
@@ -2360,49 +2385,95 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 }}>
           <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
-          <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B', marginBottom: 16 }}>Tonight's vibe</Text>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+          <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 26, color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 20 }}>Tonight's vibe</Text>
+
+          {/* Social energy */}
+          <Text style={{ fontFamily: 'ClashDisplay-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Social Energy</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
             {SOCIAL_ENERGY.map(e => {
               const on = draftVibe?.energy === e.id
+              const isParty = e.id === 'party'
+              const btn = (
+                <TouchableOpacity key={e.id} onPress={() => setDraftVibe((v: any) => ({ ...v, energy: e.id }))} activeOpacity={0.8}>
+                  {on ? (
+                    <LinearGradient colors={e.grad}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20,
+                        shadowColor: e.color, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
+                      <e.Icon size={18} color={e.color} weight="duotone" />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: e.color }}>{e.label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20,
+                      backgroundColor: 'rgba(248,250,252,0.9)', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
+                      <e.Icon size={18} color="#CBD5E1" weight="regular" />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>{e.label}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )
+              return isParty && on
+                ? <Animated.View key={e.id} style={{ transform: [{ scale: pulseAnim }] }}>{btn}</Animated.View>
+                : btn
+            })}
+          </View>
+
+          {/* Alcohol */}
+          <Text style={{ fontFamily: 'ClashDisplay-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+            {[{ id: "Don't drink", label: "Don't drink", Icon: Scales }, { id: 'Rarely', label: 'Rarely', Icon: Wine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
+              const on = draftVibe?.drinks === opt.id
               return (
-                <TouchableOpacity key={e.id} onPress={() => setDraftVibe((v: any) => ({ ...v, energy: e.id }))}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 16 }}>{e.emoji}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{e.label}</Text>
+                <TouchableOpacity key={opt.id} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt.id }))} style={{ flex: 1 }}>
+                  {on ? (
+                    <LinearGradient colors={['#EEF2FF','#C7D2FE']}
+                      style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
+                        shadowColor: '#6366F1', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>
+                      <opt.Icon size={20} color="#6366F1" weight="duotone" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{opt.label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
+                      backgroundColor: 'rgba(248,250,252,0.9)', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
+                      <opt.Icon size={20} color="#CBD5E1" weight="regular" />
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>{opt.label}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )
             })}
           </View>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Alcohol</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-            {["Don't drink", 'Rarely', 'Social drinker'].map(opt => {
-              const on = draftVibe?.drinks === opt
-              return (
-                <TouchableOpacity key={opt} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt }))}
-                  style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt === "Don't drink" ? '🚫' : opt === 'Rarely' ? '🥤' : '🥂'}</Text>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3 }}>{opt}</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Smoking</Text>
+
+          {/* Smoking */}
+          <Text style={{ fontFamily: 'ClashDisplay-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Smoking</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
-            {['Non-smoker', 'Social', 'Smoker'].map(opt => {
-              const on = draftVibe?.smoking === opt
+            {[{ id: 'Non-smoker', label: 'Non-smoker', Icon: HouseLine }, { id: 'Social', label: 'Social', Icon: Butterfly }, { id: 'Smoker', label: 'Smoker', Icon: Couch }].map(opt => {
+              const on = draftVibe?.smoking === opt.id
               return (
-                <TouchableOpacity key={opt} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt }))}
-                  style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F1F5F9', borderWidth: on ? 0 : 1, borderColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt === 'Non-smoker' ? '🚭' : opt === 'Social' ? '🌬️' : '🚬'}</Text>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: on ? 'rgba(255,255,255,0.85)' : '#94A3B8', marginTop: 3 }}>{opt}</Text>
+                <TouchableOpacity key={opt.id} onPress={() => setDraftVibe((v: any) => ({ ...v, smoking: opt.id }))} style={{ flex: 1 }}>
+                  {on ? (
+                    <LinearGradient colors={['#EEF2FF','#C7D2FE']}
+                      style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
+                        shadowColor: '#6366F1', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>
+                      <opt.Icon size={20} color="#6366F1" weight="duotone" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366F1' }}>{opt.label}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={{ alignItems: 'center', paddingVertical: 12, borderRadius: 16, gap: 5,
+                      backgroundColor: 'rgba(248,250,252,0.9)', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
+                      <opt.Icon size={20} color="#CBD5E1" weight="regular" />
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>{opt.label}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )
             })}
           </View>
+
           <TouchableOpacity onPress={() => { setTonightVibe(draftVibe); setVibeEditOpen(false) }}
-            style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save vibe</Text>
+            style={{ borderRadius: 16, paddingVertical: 15, alignItems: 'center', overflow: 'hidden' }}>
+            <LinearGradient colors={['#6366F1','#818CF8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+            <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff' }}>Save vibe</Text>
           </TouchableOpacity>
         </View>
       </Modal>
