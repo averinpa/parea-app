@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle, Warning, Clock, Trash, ChatTeardrop, HandWaving, Crosshair } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -8901,34 +8901,45 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
 
       {/* Toast notification */}
-      {toast.visible && (
-        <Animated.View pointerEvents="none" style={{
-          position: 'absolute', top: 56, left: 20, right: 20, zIndex: 9999,
-          opacity: toastAnim,
-          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }],
-        }}>
-          <View style={{ borderRadius: 24, overflow: 'hidden', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 18 }}>
-            <LinearGradient colors={['#6366F1', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 }}>
-              {/* Icon bubble */}
-              <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Text style={{ fontSize: 20 }}>{toast.emoji || '✨'}</Text>
-              </View>
-              {/* Text */}
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'ClashDisplay-Semibold', fontSize: 15, color: '#fff', letterSpacing: -0.2 }}>{toast.title || toast.text}</Text>
-                {toast.title ? <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 2 }} numberOfLines={1}>{toast.text}</Text> : null}
-              </View>
-              {/* Decorative dots */}
-              <View style={{ gap: 4, opacity: 0.35 }}>
-                <View style={{ width: 5, height: 5, borderRadius: 99, backgroundColor: '#fff' }} />
-                <View style={{ width: 5, height: 5, borderRadius: 99, backgroundColor: '#fff' }} />
-                <View style={{ width: 5, height: 5, borderRadius: 99, backgroundColor: '#fff' }} />
-              </View>
-            </LinearGradient>
-          </View>
-        </Animated.View>
-      )}
+      {toast.visible && (() => {
+        const TOAST_ICON: Record<string, any> = {
+          '🔍': MagnifyingGlass, '✅': CheckCircle, '🎉': Confetti,
+          '💬': ChatTeardrop, '⏳': Clock, '⚠️': Warning,
+          '👋': HandWaving, '🎯': Crosshair, '📅': CalendarBlank,
+          '🗑️': Trash, '✨': Sparkle,
+        }
+        const TOAST_GRAD: Record<string, [string,string]> = {
+          '🔍': ['#6366F1','#7C3AED'], '✅': ['#10B981','#059669'],
+          '🎉': ['#F59E0B','#EF4444'], '💬': ['#06B6D4','#0EA5E9'],
+          '⏳': ['#F59E0B','#F97316'], '⚠️': ['#EF4444','#DC2626'],
+          '👋': ['#64748B','#475569'], '🎯': ['#8B5CF6','#6366F1'],
+          '📅': ['#6366F1','#4F46E5'], '🗑️': ['#EF4444','#DC2626'],
+          '✨': ['#6366F1','#7C3AED'],
+        }
+        const key = toast.emoji || '✨'
+        const ToastIcon = TOAST_ICON[key] || Sparkle
+        const grad = TOAST_GRAD[key] || ['#6366F1','#7C3AED']
+        return (
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', top: 56, left: 20, right: 20, zIndex: 9999,
+            opacity: toastAnim,
+            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }],
+          }}>
+            <View style={{ borderRadius: 24, overflow: 'hidden', shadowColor: grad[0], shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 18 }}>
+              <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ToastIcon size={20} color="#fff" weight="duotone" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: 'ClashDisplay-Semibold', fontSize: 15, color: '#fff', letterSpacing: -0.2 }}>{toast.title || toast.text}</Text>
+                  {toast.title ? <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 }} numberOfLines={1}>{toast.text}</Text> : null}
+                </View>
+              </LinearGradient>
+            </View>
+          </Animated.View>
+        )
+      })()}
     </LinearGradient>
   )
 }
