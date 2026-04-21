@@ -8903,16 +8903,29 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {/* Toast notification */}
       {toast.visible && (
         <Animated.View pointerEvents="none" style={{
-          position: 'absolute', top: 60, left: 24, right: 24, zIndex: 9999,
+          position: 'absolute', top: 56, left: 20, right: 20, zIndex: 9999,
           opacity: toastAnim,
-          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
+          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }), scale: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }],
         }}>
-          <View style={{ backgroundColor: '#1E1B4B', borderRadius: 20, paddingHorizontal: 22, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20, elevation: 16 }}>
-            <Text style={{ fontSize: 22 }}>{toast.emoji || '✨'}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{toast.title || toast.text}</Text>
-              {toast.title ? <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 1 }}>{toast.text}</Text> : null}
-            </View>
+          <View style={{ borderRadius: 24, overflow: 'hidden', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 18 }}>
+            <LinearGradient colors={['#6366F1', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 }}>
+              {/* Icon bubble */}
+              <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Text style={{ fontSize: 20 }}>{toast.emoji || '✨'}</Text>
+              </View>
+              {/* Text */}
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'ClashDisplay-Semibold', fontSize: 15, color: '#fff', letterSpacing: -0.2 }}>{toast.title || toast.text}</Text>
+                {toast.title ? <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 12, color: 'rgba(255,255,255,0.72)', marginTop: 2 }} numberOfLines={1}>{toast.text}</Text> : null}
+              </View>
+              {/* Decorative dots */}
+              <View style={{ gap: 4, opacity: 0.35 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 99, backgroundColor: '#fff' }} />
+                <View style={{ width: 5, height: 5, borderRadius: 99, backgroundColor: '#fff' }} />
+                <View style={{ width: 5, height: 5, borderRadius: 99, backgroundColor: '#fff' }} />
+              </View>
+            </LinearGradient>
           </View>
         </Animated.View>
       )}
