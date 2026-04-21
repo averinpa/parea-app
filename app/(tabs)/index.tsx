@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
 import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
