@@ -1532,8 +1532,8 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                                 borderWidth: 1.5, borderColor: on ? '#818CF8' : 'rgba(255,255,255,0.85)',
                                 boxShadow: on ? '0 4px 14px rgba(129,140,248,0.55)' : 'none',
                               } as any}>
-                              <Text style={{ fontSize: 18, marginBottom: 3 }}>{e.emoji}</Text>
-                              <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center' }}>{e.label}</Text>
+                              <e.Icon size={18} color={on ? '#fff' : '#94A3B8'} weight="duotone" />
+                              <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center', marginTop: 3 }}>{e.label}</Text>
                             </TouchableOpacity>
                           )
                         })}
@@ -4612,8 +4612,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
                 return (
                   <TouchableOpacity key={e.id} onPress={() => setDraft((v: any) => ({ ...v, socialEnergy: e.id }))}
                     style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
-                    <Text style={{ fontSize: 18, marginBottom: 3 }}>{e.emoji}</Text>
-                    <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center' }}>{e.label}</Text>
+                    <e.Icon size={18} color={on ? '#fff' : '#94A3B8'} weight="duotone" />
+                    <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center', marginTop: 3 }}>{e.label}</Text>
                   </TouchableOpacity>
                 )
               })}
