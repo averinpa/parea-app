@@ -1944,7 +1944,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <View style={{ paddingTop: Platform.OS === 'android' ? 10 : 16, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
             {/* Row 1: greeting + bell */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>Hi, {userName} 👋</Text>
+              <View>
+                <MaskedView maskElement={
+                  <Text style={{ fontSize: 40, fontWeight: '900', letterSpacing: -2, lineHeight: 44, backgroundColor: 'transparent' }}>Discover</Text>
+                }>
+                  <LinearGradient colors={['#6366F1', '#818CF8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                    <Text style={{ fontSize: 40, fontWeight: '900', letterSpacing: -2, lineHeight: 44, opacity: 0 }}>Discover</Text>
+                  </LinearGradient>
+                </MaskedView>
+                <Text style={{ fontSize: 13, fontWeight: '500', color: '#94A3B8', marginTop: 1 }}>Hi, {userName} — what's on tonight?</Text>
+              </View>
               <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
@@ -2557,7 +2566,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
   const isTomorrow = (t: string) => !!t?.startsWith('Tomorrow') || !!t?.startsWith(tomorrowIso)
 
   const PLANS_COLOR = '#F59E0B'
-  const CHATS_COLOR = '#EC4899'
+  const CHATS_COLOR = '#06B6D4'
   const tabAccent = subTab === 'going' ? PLANS_COLOR : CHATS_COLOR
 
   return (
@@ -2571,7 +2580,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
             </Text>
           }>
             <LinearGradient
-              colors={subTab === 'going' ? ['#F59E0B', '#FBBF24'] : ['#EC4899', '#F472B6']}
+              colors={subTab === 'going' ? ['#F59E0B', '#FBBF24'] : ['#06B6D4', '#22D3EE']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, opacity: 0 }}>
                 {subTab === 'going' ? 'My Plans' : 'Chats'}
@@ -4550,7 +4559,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
               </View>
             ))}
             <TouchableOpacity onPress={() => { onUpdateUserData?.(draft); setVibeEditOpen(false) }}
-              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
+              style={{ backgroundColor: '#7C3AED', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save changes</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -4582,7 +4591,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
               })}
             </View>
             <TouchableOpacity onPress={() => { onUpdateUserData?.({ langs: draftLangs }); setLangEditOpen(false) }}
-              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+              style={{ backgroundColor: '#7C3AED', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save{draftLangs.length > 0 ? ` (${draftLangs.length})` : ''}</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -4618,7 +4627,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
               </View>
             ))}
             <TouchableOpacity onPress={() => { onUpdateUserData?.({ interests: draftInterests }); setInterestsEditOpen(false) }}
-              style={{ backgroundColor: '#3730A3', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
+              style={{ backgroundColor: '#7C3AED', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save{draftInterests.length > 0 ? ` (${draftInterests.length})` : ''}</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -4703,14 +4712,22 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
       <View style={{ flex: 1 }}>
 
         {/* Header */}
-        <View style={{ paddingTop: Platform.OS === 'ios' ? 16 : Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 24, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>My Profile</Text>
-          <TouchableOpacity
-            onPress={() => { setProfilePreviewOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: '#F3EEFF' }}>
-            <Feather name="eye" size={14} color="#8B5CF6" />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Preview</Text>
-          </TouchableOpacity>
+        <View style={{ paddingTop: Platform.OS === 'ios' ? 16 : Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+            <MaskedView maskElement={
+              <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, backgroundColor: 'transparent' }}>Profile</Text>
+            }>
+              <LinearGradient colors={['#8B5CF6', '#C4B5FD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, opacity: 0 }}>Profile</Text>
+              </LinearGradient>
+            </MaskedView>
+            <TouchableOpacity
+              onPress={() => { setProfilePreviewOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: '#F3EEFF' }}>
+              <Feather name="eye" size={14} color="#8B5CF6" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Preview</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}>
@@ -7446,12 +7463,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
           <TouchableOpacity style={s.navItem} onPress={() => { setMessagesInitialSubTab('messages'); setActiveTab('messages') }}>
             <View style={{ position: 'relative' }}>
-              <Feather name="message-circle" size={22} color={activeTab === 'messages' ? '#EC4899' : '#94A3B8'} />
+              <Feather name="message-circle" size={22} color={activeTab === 'messages' ? '#06B6D4' : '#94A3B8'} />
               {chatList.some((c: any) => c.isNew) && activeTab !== 'messages' && (
-                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EC4899', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
+                <View style={{ position: 'absolute', top: -3, right: -5, width: 8, height: 8, borderRadius: 4, backgroundColor: '#06B6D4', borderWidth: 1.5, borderColor: '#F8F7FF' }} />
               )}
             </View>
-            <Text style={[s.navLabel, activeTab === 'messages' && { color: '#EC4899' }]}>Chats</Text>
+            <Text style={[s.navLabel, activeTab === 'messages' && { color: '#06B6D4' }]}>Chats</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.navItem} onPress={() => setActiveTab('profile')}>
             <Feather name="user" size={22} color={activeTab === 'profile' ? '#8B5CF6' : '#94A3B8'} />
