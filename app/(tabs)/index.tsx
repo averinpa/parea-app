@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -120,6 +120,9 @@ const INTEREST_TO_CATEGORY: Record<string, string> = {
 }
 
 const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵', dance: '💃' }
+const CATEGORY_ICON: Record<string, any> = { coffee: Coffee, sports: Dumbbell, wine: Wine, gaming: Gamepad2, tech: Cpu, outdoors: Leaf, food: UtensilsCrossed, culture: Palette, music: Music, dance: Drama }
+const CATEGORY_COLOR: Record<string, string> = { coffee: '#92400E', sports: '#1D4ED8', wine: '#7C2D12', gaming: '#5B21B6', tech: '#0369A1', outdoors: '#166534', food: '#9A3412', culture: '#B45309', music: '#6D28D9', dance: '#BE185D' }
+const CATEGORY_BG: Record<string, [string,string]> = { coffee: ['#FEF3C7','#FDE68A'], sports: ['#DBEAFE','#BFDBFE'], wine: ['#FEE2E2','#FECACA'], gaming: ['#EDE9FE','#DDD6FE'], tech: ['#E0F2FE','#BAE6FD'], outdoors: ['#DCFCE7','#BBF7D0'], food: ['#FFEDD5','#FED7AA'], culture: ['#FEF9C3','#FEF08A'], music: ['#F3E8FF','#E9D5FF'], dance: ['#FCE7F3','#FBCFE8'] }
 
 const BENTO_SONGS = ['Pop 🎤', 'Hip-Hop 🎧', 'R&B / Soul 🎶', 'Electronic / House 🎛️', 'Indie / Alternative 🎸', 'Jazz / Blues 🎷', 'Classical 🎻', 'Rock / Metal 🤘', 'Reggaeton / Latin 💃', 'Afrobeats 🥁', 'K-Pop 🌸', 'Lo-fi / Chillhop 🌙', 'Country 🤠', 'Funk / Disco 🕺']
 const BENTO_FLAGS = ['Spontaneous plans 🟢', 'Great listener 🟢', 'Dog lover 🟢', 'Always on time 🟢', 'Foodie 🟢', 'Late replies 🚩', "Cancels last minute 🚩", 'No sense of humour 🚩', "Can't make plans 🚩"]
@@ -1767,14 +1770,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const userCategories = (userInterests as string[]).map((i: string) => INTEREST_TO_CATEGORY[i]).filter(Boolean)
 
   const CAT_FILTERS = [
-    { id: 'outdoors', label: '🌿 Outdoors' },
-    { id: 'coffee',   label: '☕ Coffee' },
-    { id: 'food',     label: '🍕 Food' },
-    { id: 'culture',  label: '🎨 Culture' },
-    { id: 'sports',   label: '🎾 Sports' },
-    { id: 'wine',     label: '🍷 Wine' },
-    { id: 'tech',     label: '💻 Tech' },
-    { id: 'gaming',   label: '🎲 Gaming' },
+    { id: 'outdoors', label: 'Outdoors' },
+    { id: 'coffee',   label: 'Coffee' },
+    { id: 'food',     label: 'Food' },
+    { id: 'culture',  label: 'Culture' },
+    { id: 'sports',   label: 'Sports' },
+    { id: 'wine',     label: 'Wine' },
+    { id: 'tech',     label: 'Tech' },
+    { id: 'gaming',   label: 'Gaming' },
   ]
 
   // Official: DB events only (no mock fallback to avoid flicker)
@@ -2149,8 +2152,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   {ev.image_url ? (
                     <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
                   ) : (
-                    <LinearGradient colors={ev.gradient as any || ['#667eea','#764ba2']} style={{ width: '100%', height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 40 }}>{CATEGORY_EMOJI[ev.category] || '🎉'}</Text>
+                    <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: '100%', height: 100, alignItems: 'center', justifyContent: 'center' }}>
+                      {(() => { const CatIcon = CATEGORY_ICON[ev.category] || MapPin; return <CatIcon size={36} color={CATEGORY_COLOR[ev.category] || '#4338CA'} /> })()}
                     </LinearGradient>
                   )}
                   <View style={{ position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(30,27,75,0.65)' }}>
@@ -2211,8 +2214,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       {ev.image_url ? (
                         <Image source={{ uri: ev.image_url }} style={{ width: 90, height: 90 }} resizeMode="cover" />
                       ) : (
-                        <LinearGradient colors={ev.gradient as any || ['#667eea','#764ba2']} style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 30 }}>{CATEGORY_EMOJI[ev.category] || '🎉'}</Text>
+                        <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
+                          {(() => { const CatIcon = CATEGORY_ICON[ev.category] || MapPin; return <CatIcon size={30} color={CATEGORY_COLOR[ev.category] || '#4338CA'} /> })()}
                         </LinearGradient>
                       )}
                       <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
@@ -2245,7 +2248,10 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {/* ── COMMUNITY ── */}
         {communityAll.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
-          <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>👥 Community</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Users size={18} color="#6366F1" />
+            <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Community</Text>
+          </View>
           <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>{communityEvents.length} events</Text>
         </View>
         )}
@@ -2280,10 +2286,17 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
                   {/* Top row: avatar + title + badge */}
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
-                    <LinearGradient colors={ev.gradient as any || ['#6366F1','#818CF8']}
-                      style={{ width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Text style={{ fontSize: 22 }}>{CATEGORY_EMOJI[ev.category] || '📍'}</Text>
-                    </LinearGradient>
+                    {(() => {
+                      const CatIcon = CATEGORY_ICON[ev.category] || MapPin
+                      const bgColors = CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']
+                      const iconColor = CATEGORY_COLOR[ev.category] || '#4338CA'
+                      return (
+                        <LinearGradient colors={bgColors}
+                          style={{ width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <CatIcon size={22} color={iconColor} />
+                        </LinearGradient>
+                      )
+                    })()}
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                         <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
@@ -2306,7 +2319,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     </View>
                     {ev.hostTransport === 'car' && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 }}>
-                        <Text style={{ fontSize: 11 }}>🚗</Text>
+                        <Car size={11} color="#6366F1" />
                         <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '600' }}>Host can give a lift</Text>
                       </View>
                     )}
