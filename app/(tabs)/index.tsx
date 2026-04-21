@@ -7870,7 +7870,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         }
                         const SIZE_MAX: Record<string, number> = { duo: 2, squad: 5, party: 20 }
                         const GRAD_POOL: [string,string][] = [
-                          [placeholder','#F43F5E'],
+                          ['#6366F1','#F43F5E'],
                           ['#10B981','#059669'],['#F59E0B','#F97316'],
                         ]
                         const tempId = Date.now()
@@ -8670,7 +8670,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         {p.transport && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                             <Text style={{ fontSize: 12 }}>{p.transport === 'car' ? '🚗' : p.transport === 'lift' ? '🙋' : '📍'}</Text>
-                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? placeholderB', fontWeight: '600' }}>
+                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? '#6366F1' : '#64748B', fontWeight: '600' }}>
                               {p.transport === 'car' ? 'Has a car · can give a lift' : p.transport === 'lift' ? 'Needs a lift' : 'Meeting there'}
                             </Text>
                           </View>
@@ -8779,7 +8779,7 @@ export default function App() {
   const [authCredential, setAuthCredential] = useState('')
   const [authUserId, setAuthUserId] = useState<string | null>(null)
 
-  const PROFILE_COLORS = [placeholder','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
+  const PROFILE_COLORS = ['#6366F1','#10B981','#F59E0B','#3B82F6','#8B5CF6','#EF4444','#14B8A6']
 
   const loadProfileForUser = async (userId: string) => {
     const { data: profile } = await supabase
