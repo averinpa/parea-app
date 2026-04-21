@@ -5416,6 +5416,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const isDuo = chatData?.type === 'duo' || members.length === 2
         const partner = otherMembers[0]
         const eventTitle = inviteData?.event_title || dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || 'Crew Chat'
+        const foundEv = dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id) || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)
+        const evChatExpiry = (foundEv?.expiresAt > 0 ? foundEv.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
         const newChat = isDuo ? {
           id: chatId, type: 'duo',
           name: partner?.name || 'Your crew',
@@ -5423,7 +5425,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           color: partner?.color || '#818CF8',
           photo: partner?.photo || '',
           lastMsg: '🎉 Crew confirmed! Say hi',
-          time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+          time: new Date().toISOString(), isNew: true, chatExpiresAt: evChatExpiry,
           event: eventTitle, eventEmoji: '🎉',
           partnerProfile: partner,
         } : {
@@ -5434,7 +5436,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           colors: otherMembers.map((p: any) => p.color),
           memberProfiles: otherMembers,
           lastMsg: '🎉 You\'re in the crew! Say hi 👋',
-          time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+          time: new Date().toISOString(), isNew: true, chatExpiresAt: evChatExpiry,
         }
         // Don't re-add if user explicitly left this event
         if (chatData?.event_id && cancelledEventIdsRef.current.has(chatData.event_id)) return
@@ -6787,7 +6789,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       setChatList(prev => prev.some(c => c.id === chatData.id) ? prev : [{
                         id: chatData.id, type: 'duo', name: partner.name || 'Your crew',
                         age: partner.age || '', color: partner.color || '#818CF8', photo: partner.photo || '',
-                        lastMsg: '🎉 Mutual match! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+                        lastMsg: '🎉 Mutual match! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: (ev.expiresAt > 0 ? ev.expiresAt : Date.now()) + 24 * 60 * 60 * 1000,
                         event: ev.title, eventEmoji: '🎉', partnerProfile: partner,
                       }, ...prev])
                       setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
