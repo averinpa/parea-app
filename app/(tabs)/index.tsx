@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle, Warning, Clock, Trash, ChatTeardrop, HandWaving, Crosshair } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -8903,10 +8903,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       {/* Toast notification */}
       {toast.visible && (() => {
         const TOAST_ICON: Record<string, any> = {
-          '🔍': MagnifyingGlass, '✅': CheckCircle, '🎉': Confetti,
-          '💬': ChatTeardrop, '⏳': Clock, '⚠️': Warning,
+          '🔍': MagnifyingGlass, '✅': PhCheckCircle, '🎉': Confetti,
+          '💬': ChatTeardrop, '⏳': PhClock, '⚠️': Warning,
           '👋': HandWaving, '🎯': Crosshair, '📅': CalendarBlank,
-          '🗑️': Trash, '✨': Sparkle,
+          '🗑️': PhTrash, '✨': Sparkle,
         }
         const TOAST_GRAD: Record<string, [string,string]> = {
           '🔍': ['#6366F1','#7C3AED'], '✅': ['#10B981','#059669'],
