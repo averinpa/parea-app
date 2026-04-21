@@ -2388,7 +2388,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 26, color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 20 }}>Tonight's vibe</Text>
 
           {/* Social energy */}
-          <Text style={{ fontFamily: 'ClashDisplay-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Social Energy</Text>
+          <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Social Energy</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
             {SOCIAL_ENERGY.map(e => {
               const on = draftVibe?.energy === e.id
@@ -2418,7 +2418,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           </View>
 
           {/* Alcohol */}
-          <Text style={{ fontFamily: 'ClashDisplay-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
+          <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
             {[{ id: "Don't drink", label: "Don't drink", Icon: Scales }, { id: 'Rarely', label: 'Rarely', Icon: Wine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
               const on = draftVibe?.drinks === opt.id
@@ -2444,7 +2444,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           </View>
 
           {/* Smoking */}
-          <Text style={{ fontFamily: 'ClashDisplay-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Smoking</Text>
+          <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Smoking</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28 }}>
             {[{ id: 'Non-smoker', label: 'Non-smoker', Icon: HouseLine }, { id: 'Social', label: 'Social', Icon: Butterfly }, { id: 'Smoker', label: 'Smoker', Icon: Couch }].map(opt => {
               const on = draftVibe?.smoking === opt.id
