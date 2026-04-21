@@ -8905,7 +8905,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         <Animated.View pointerEvents="none" style={{
           position: 'absolute', top: 56, left: 20, right: 20, zIndex: 9999,
           opacity: toastAnim,
-          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }), scale: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }],
+          transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }],
         }}>
           <View style={{ borderRadius: 24, overflow: 'hidden', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 18 }}>
             <LinearGradient colors={['#6366F1', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
