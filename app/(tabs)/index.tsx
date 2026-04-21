@@ -2547,7 +2547,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 disabled={!joinSheet.transport}
                 onPress={confirmJoin}>
                 <Text style={s.joinSheetNextTxt}>
-                  {joinSheet.ev?.type === 'official' ? "I'm Going 🎉" : "Send Request →"}
+                  {joinSheet.ev?.type === 'official' ? "I'm Going" : "Send Request →"}
                 </Text>
               </TouchableOpacity>
             </>
