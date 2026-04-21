@@ -1,6 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
+import { UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -120,7 +121,7 @@ const INTEREST_TO_CATEGORY: Record<string, string> = {
 }
 
 const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵', dance: '💃' }
-const CATEGORY_ICON: Record<string, any> = { coffee: Coffee, sports: Dumbbell, wine: Wine, gaming: Gamepad2, tech: Cpu, outdoors: Leaf, food: UtensilsCrossed, culture: Palette, music: Music, dance: Drama }
+const CATEGORY_ICON: Record<string, any> = { coffee: PhCoffee, sports: Barbell, wine: PhWine, gaming: GameController, tech: PhCpu, outdoors: PhLeaf, food: ForkKnife, culture: PhPalette, music: MusicNotes, dance: MusicNotes }
 const CATEGORY_COLOR: Record<string, string> = { coffee: '#92400E', sports: '#1D4ED8', wine: '#7C2D12', gaming: '#5B21B6', tech: '#0369A1', outdoors: '#166534', food: '#9A3412', culture: '#B45309', music: '#6D28D9', dance: '#BE185D' }
 const CATEGORY_BG: Record<string, [string,string]> = { coffee: ['#FEF3C7','#FDE68A'], sports: ['#DBEAFE','#BFDBFE'], wine: ['#FEE2E2','#FECACA'], gaming: ['#EDE9FE','#DDD6FE'], tech: ['#E0F2FE','#BAE6FD'], outdoors: ['#DCFCE7','#BBF7D0'], food: ['#FFEDD5','#FED7AA'], culture: ['#FEF9C3','#FEF08A'], music: ['#F3E8FF','#E9D5FF'], dance: ['#FCE7F3','#FBCFE8'] }
 
@@ -1952,7 +1953,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
                     shadowColor: '#6366F1', shadowOpacity: 0.1, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 }}>
-                  <Ionicons name="notifications-outline" size={19} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} />
+                  <PhBell size={19} color={unreadCount > 0 ? '#6366F1' : '#94A3B8'} weight={unreadCount > 0 ? 'duotone' : 'regular'} />
                 </TouchableOpacity>
                 {unreadCount > 0 && (
                   <View style={{ position: 'absolute', top: -3, right: -3, minWidth: 16, height: 16, borderRadius: 8,
@@ -1968,7 +1969,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               {/* City */}
               <TouchableOpacity onPress={() => setCityOpen(true)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
-                <Text style={{ fontSize: 11 }}>📍</Text>
+                <PhMapPin size={12} color="#4338CA" weight="duotone" />
                 <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city}</Text>
               </TouchableOpacity>
 
@@ -1985,12 +1986,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   return <>
                     <Text style={{ fontSize: 12 }}>{energyInfo.emoji}</Text>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{energyInfo.label}</Text>
-                    <Feather name="chevron-down" size={11} color="#94A3B8" />
+                    <CaretDown size={11} color="#94A3B8" weight="bold" />
                   </>
                 })() : <>
-                  <Text style={{ fontSize: 12 }}>✨</Text>
+                  <Sparkle size={12} color="#94A3B8" weight="duotone" />
                   <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8' }}>My Vibe</Text>
-                  <Feather name="chevron-down" size={11} color="#94A3B8" />
+                  <CaretDown size={11} color="#94A3B8" weight="bold" />
                 </>}
               </TouchableOpacity>
 
@@ -2001,7 +2002,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               <TouchableOpacity onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
                   backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#F1F5F9' }}>
-                <Feather name="calendar" size={13} color={calendarOpen || selectedDate ? '#fff' : '#64748B'} />
+                <CalendarBlank size={13} color={calendarOpen || selectedDate ? '#fff' : '#64748B'} weight="duotone" />
                 <Text style={{ fontSize: 12, fontWeight: '600', color: calendarOpen || selectedDate ? '#fff' : '#64748B' }}>
                   {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
                 </Text>
@@ -2020,7 +2021,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             <TouchableOpacity onPress={() => setForYouFilter(true)} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4,
               backgroundColor: forYouFilter ? '#fff' : 'transparent',
               shadowColor: forYouFilter ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: forYouFilter ? 2 : 0 }}>
-              <Text style={{ fontSize: 13 }}>✨</Text>
+              <Sparkle size={13} color={forYouFilter ? '#EC4899' : '#94A3B8'} weight="duotone" />
               <Text style={{ fontSize: 13, fontWeight: '700', color: forYouFilter ? '#EC4899' : '#94A3B8' }}>For You</Text>
             </TouchableOpacity>
           </View>
@@ -2029,7 +2030,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, height: 44, gap: 10,
               shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-              <Feather name="search" size={16} color="#94A3B8" />
+              <MagnifyingGlass size={16} color="#94A3B8" weight="regular" />
               <TextInput
                 placeholder="Find an event..."
                 placeholderTextColor="#94A3B8"
@@ -2039,7 +2040,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Feather name="x" size={15} color="#94A3B8" />
+                  <X size={15} color="#94A3B8" />
                 </TouchableOpacity>
               )}
             </View>
@@ -2060,12 +2061,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <TouchableOpacity onPress={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) } else setCalMonth(m => m - 1) }}
                     style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="chevron-left" size={16} color="#475569" />
+                    <CaretLeft size={16} color="#475569" weight="bold" />
                   </TouchableOpacity>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B' }}>{monthName}</Text>
                   <TouchableOpacity onPress={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) } else setCalMonth(m => m + 1) }}
                     style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="chevron-right" size={16} color="#475569" />
+                    <CaretRight size={16} color="#475569" weight="bold" />
                   </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: 'row', marginBottom: 6 }}>
@@ -2119,7 +2120,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {officialDbLoading && (
           <>
             <View style={{ paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
               {[1, 2].map(i => (
@@ -2138,7 +2139,10 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {!officialDbLoading && officialEvents.length > 0 && (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <PhStar size={18} color="#F59E0B" weight="duotone" />
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
+              </View>
               {officialEvents.length > 3 && (
                 <TouchableOpacity onPress={() => setShowAllOfficialModal(true)}>
                   <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700' }}>See all {officialEvents.length} →</Text>
@@ -2153,7 +2157,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
                   ) : (
                     <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: '100%', height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                      {(() => { const CatIcon = CATEGORY_ICON[ev.category] || MapPin; return <CatIcon size={36} color={CATEGORY_COLOR[ev.category] || '#4338CA'} /> })()}
+                      {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={36} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
                     </LinearGradient>
                   )}
                   <View style={{ position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(30,27,75,0.65)' }}>
@@ -2161,17 +2165,17 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   </View>
                   {ev.is_promoted && (
                     <View style={{ position: 'absolute', top: 10, right: 10, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#f59e0b' }}>
-                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>📌 FEATURED</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><PushPin size={9} color="#fff" weight="duotone" /><Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>FEATURED</Text></View>
                     </View>
                   )}
                   <View style={{ padding: 12 }}>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6, minHeight: 36 }} numberOfLines={2}>{ev.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Feather name="calendar" size={11} color="#94A3B8" />
+                      <CalendarBlank size={11} color="#94A3B8" weight="regular" />
                       <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3, height: 16 }}>
-                      <Feather name="map-pin" size={11} color={ev.location || ev.distance ? '#94A3B8' : 'transparent'} />
+                      <PhMapPin size={11} color={ev.location || ev.distance ? '#94A3B8' : 'transparent'} weight="regular" />
                       <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance || ''}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
@@ -2192,7 +2196,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               {officialEvents.length > 3 && (
                 <TouchableOpacity onPress={() => setShowAllOfficialModal(true)} activeOpacity={0.85}
                   style={{ width: 90, borderRadius: 22, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 22 }}>🎟</Text>
+                  <PhTicket size={26} color="#6366F1" weight="duotone" />
                   <Text style={{ fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'center' }}>+{officialEvents.length - 3}{'\n'}more</Text>
                 </TouchableOpacity>
               )}
@@ -2202,9 +2206,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             <Modal visible={showAllOfficialModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAllOfficialModal(false)}>
               <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F7FF' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#EEF2FF' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>✦ Official Events</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
                   <TouchableOpacity onPress={() => setShowAllOfficialModal(false)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="x" size={18} color="#6366F1" />
+                    <X size={18} color="#6366F1" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
@@ -2215,22 +2219,22 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         <Image source={{ uri: ev.image_url }} style={{ width: 90, height: 90 }} resizeMode="cover" />
                       ) : (
                         <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
-                          {(() => { const CatIcon = CATEGORY_ICON[ev.category] || MapPin; return <CatIcon size={30} color={CATEGORY_COLOR[ev.category] || '#4338CA'} /> })()}
+                          {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={30} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
                         </LinearGradient>
                       )}
                       <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                           <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', flex: 1, marginRight: 8 }} numberOfLines={2}>{ev.title}</Text>
-                          {ev.is_promoted && <Text style={{ fontSize: 9, fontWeight: '800', color: '#f59e0b' }}>📌</Text>}
+                          {ev.is_promoted && <PushPin size={12} color="#f59e0b" weight="duotone" />}
                         </View>
                         <View style={{ gap: 3, marginTop: 4 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Feather name="calendar" size={11} color="#94A3B8" />
+                            <CalendarBlank size={11} color="#94A3B8" weight="regular" />
                             <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
                           </View>
                           {(ev.location || (ev.distance && ev.distance !== '0km')) && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <Feather name="map-pin" size={11} color="#94A3B8" />
+                              <PhMapPin size={11} color="#94A3B8" weight="regular" />
                               <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance}</Text>
                             </View>
                           )}
@@ -2249,7 +2253,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {communityAll.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Users size={18} color="#6366F1" />
+            <UsersThree size={18} color="#6366F1" weight="duotone" />
             <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Community</Text>
           </View>
           <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>{communityEvents.length} events</Text>
@@ -2293,7 +2297,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       return (
                         <LinearGradient colors={bgColors}
                           style={{ width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <CatIcon size={22} color={iconColor} />
+                          <CatIcon size={22} color={iconColor} weight="duotone" />
                         </LinearGradient>
                       )
                     })()}
@@ -2310,16 +2314,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   {/* Date + location row */}
                   <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Feather name="calendar" size={12} color="#94A3B8" />
+                      <CalendarBlank size={12} color="#94A3B8" weight="regular" />
                       <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.time}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Feather name="map-pin" size={12} color="#94A3B8" />
+                      <PhMapPin size={12} color="#94A3B8" weight="regular" />
                       <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.location || 'See details'}</Text>
                     </View>
                     {ev.hostTransport === 'car' && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 }}>
-                        <Car size={11} color="#6366F1" />
+                        <PhCar size={11} color="#6366F1" weight="duotone" />
                         <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '600' }}>Host can give a lift</Text>
                       </View>
                     )}
