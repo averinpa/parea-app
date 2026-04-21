@@ -4945,6 +4945,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createCategory, setCreateCategory] = useState<string>('Sport')
   const [createVibe, setCreateVibe] = useState<string | null>(null)
   const [createCustom, setCreateCustom] = useState('')
+  const [createImage, setCreateImage] = useState<{ uri: string; base64: string } | null>(null)
   const [city, setCity] = useState('Limassol')
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
@@ -7534,7 +7535,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         <Modal visible={createOpen} animationType="slide" onRequestClose={() => {
           setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
           setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
-          setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+          setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
           setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
         }}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
@@ -7550,7 +7551,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       } else {
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
-                        setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+                        setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                       }
                     }}
@@ -7569,7 +7570,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     onPress={() => {
                       setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                       setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
-                      setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+                      setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
                       setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                     }}
                     style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
@@ -7829,6 +7830,38 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           })}
                         </View>
 
+                        {/* Cover image */}
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Cover Photo <Text style={{ fontSize: 11, fontWeight: '500', textTransform: 'none' }}>(optional)</Text></Text>
+                        <TouchableOpacity activeOpacity={0.8} onPress={async () => {
+                          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+                          if (status !== 'granted') return
+                          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, exif: false })
+                          if (!result.canceled && result.assets[0]) {
+                            const asset = result.assets[0]
+                            // Basic size guard — reject suspiciously small images (often thumbnails of inappropriate content)
+                            if ((asset.width || 0) < 50 || (asset.height || 0) < 50) {
+                              Alert.alert('Invalid image', 'Please choose a proper photo.')
+                              return
+                            }
+                            setCreateImage({ uri: asset.uri, base64: asset.base64 || '' })
+                          }
+                        }}
+                          style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: createImage ? '#6366F1' : '#E2E8F0', borderStyle: createImage ? 'solid' : 'dashed', marginBottom: 16, alignItems: 'center', justifyContent: 'center' }}>
+                          {createImage ? (
+                            <>
+                              <Image source={{ uri: createImage.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                              <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
+                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Change</Text>
+                              </View>
+                            </>
+                          ) : (
+                            <View style={{ alignItems: 'center', gap: 8 }}>
+                              <Feather name="image" size={28} color="#94A3B8" />
+                              <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '600' }}>Add a cover photo</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+
                         {/* Location */}
                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Location</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
@@ -7957,6 +7990,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           expiresAt = d.getTime()
                         }
 
+                        // Upload cover image if selected
+                        let imageUrl: string | null = null
+                        if (createImage?.base64 && userData?.dbId) {
+                          try {
+                            const path = `events/${userData.dbId}_${Date.now()}.jpg`
+                            const byteChars = atob(createImage.base64)
+                            const byteArr = new Uint8Array(byteChars.length)
+                            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i)
+                            const { error: upErr } = await supabase.storage.from('avatars').upload(path, byteArr, { upsert: true, contentType: 'image/jpeg' })
+                            if (!upErr) {
+                              const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+                              imageUrl = urlData.publicUrl
+                            }
+                          } catch (e) { console.warn('Event image upload failed:', e) }
+                        }
+
                         // Save to Supabase, use DB id
                         let newId = tempId
                         try {
@@ -7972,6 +8021,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               max_participants: SIZE_MAX[createSize || 'squad'] || 5,
                               gradient: grad,
                               host_transport: createDriving ? 'car' : null,
+                              image_url: imageUrl,
                             }).select().single()
                             if (dbErr) console.warn('community_events insert error:', dbErr.message)
                             if (dbEv?.id) newId = dbEv.id
@@ -8002,13 +8052,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           hostVibe: createVibe,
                           expiresAt,
                           createdAt: Date.now(),
+                          image_url: imageUrl,
                         }
                         setUserCreatedEvents(prev => [...prev, newEvent])
 
                         // Reset form
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
-                        setCreateLangs([]); setCreateVibe(null); setCreateCustom('');
+                        setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                         showToast('Others can find it in the feed now', 'Your social is live! 🎉', '🎉')
                       }}>
