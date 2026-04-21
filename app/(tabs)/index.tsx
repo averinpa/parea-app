@@ -1885,6 +1885,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       if (!evDate || evDate.toDateString() !== selectedDate.toDateString()) return false
     }
     return true
+  }).sort((a, b) => {
+    const aVibe = vibeCats.includes(a.category) ? 2 : 0
+    const bVibe = vibeCats.includes(b.category) ? 2 : 0
+    const aInt = userCategories.includes(a.category) ? 1 : 0
+    const bInt = userCategories.includes(b.category) ? 1 : 0
+    return (bVibe + bInt) - (aVibe + aInt)
   })
 
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
