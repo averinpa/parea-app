@@ -2579,14 +2579,14 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
       <View style={{ paddingTop: 18, paddingHorizontal: 20 }}>
         <View style={{ marginBottom: 22 }}>
           <MaskedView maskElement={
-            <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, backgroundColor: 'transparent' }}>
+            <Text style={{ fontSize: 44, fontFamily: 'ClashDisplay-Bold', letterSpacing: -1, lineHeight: 50, backgroundColor: 'transparent' }}>
               {subTab === 'going' ? 'My Plans' : 'Chats'}
             </Text>
           }>
             <LinearGradient
               colors={subTab === 'going' ? ['#F59E0B', '#FBBF24'] : ['#06B6D4', '#22D3EE']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, opacity: 0 }}>
+              <Text style={{ fontSize: 44, fontFamily: 'ClashDisplay-Bold', letterSpacing: -1, lineHeight: 50, opacity: 0 }}>
                 {subTab === 'going' ? 'My Plans' : 'Chats'}
               </Text>
             </LinearGradient>
@@ -3589,7 +3589,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             <Radio size={10} color="#818CF8" />
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8', letterSpacing: 1.5, textTransform: 'uppercase' }}>Live</Text>
           </View>
-          <Text style={{ fontSize: 46, fontWeight: '900', color: '#fff', letterSpacing: -2.5, lineHeight: 48 }}>Vibe{'\n'}Check</Text>
+          <Text style={{ fontSize: 46, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -1.5, lineHeight: 52 }}>Vibe{'\n'}Check</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12 }}>
             <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: hasHostActivity ? '#FBBF24' : myEvents.length > 0 ? '#43E97B' : 'rgba(255,255,255,0.25)' }} />
             <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.48)' }}>{subtitle}</Text>
@@ -4719,10 +4719,10 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
         <View style={{ paddingTop: Platform.OS === 'ios' ? 16 : Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
             <MaskedView maskElement={
-              <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, backgroundColor: 'transparent' }}>Profile</Text>
+              <Text style={{ fontSize: 44, fontFamily: 'ClashDisplay-Bold', letterSpacing: -1, lineHeight: 50, backgroundColor: 'transparent' }}>Profile</Text>
             }>
               <LinearGradient colors={['#8B5CF6', '#C4B5FD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Text style={{ fontSize: 44, fontWeight: '900', letterSpacing: -2, lineHeight: 48, opacity: 0 }}>Profile</Text>
+                <Text style={{ fontSize: 44, fontFamily: 'ClashDisplay-Bold', letterSpacing: -1, lineHeight: 50, opacity: 0 }}>Profile</Text>
               </LinearGradient>
             </MaskedView>
             <TouchableOpacity
@@ -7529,7 +7529,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                 {/* Big step title + subtitle */}
                 <View style={{ paddingHorizontal: 22, paddingBottom: 20 }}>
-                  <Text style={{ fontSize: 26, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.5 }}>
+                  <Text style={{ fontSize: 28, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.5 }}>
                     {[
                       { title: "Who's coming?", emoji: '' },
                       { title: "What's the plan?", emoji: '' },
@@ -7860,7 +7860,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 </ScrollView>
 
                 {/* Bottom button — pinned to bottom */}
-                <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom + 16, 48), backgroundColor: 'transparent' }}>
+                <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, backgroundColor: 'transparent' }}>
                   {createStep < 4 ? (() => {
                     const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
                     const btnLabel = isDisabled
@@ -9023,7 +9023,7 @@ const s = StyleSheet.create({
   progressTrack: { height: 4, backgroundColor: 'rgba(255,255,255,0.5)', marginHorizontal: 20, borderRadius: 99, marginBottom: 6 },
   progressFill: { height: 4, backgroundColor: '#818CF8', borderRadius: 99 },
   stepScroll: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 },
-  stepTitle: { fontSize: 26, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.4, marginBottom: 6 },
+  stepTitle: { fontSize: 28, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.4, marginBottom: 6 },
   stepSub: { fontSize: 14, color: '#64748B', lineHeight: 20, marginBottom: 28 },
   label: { fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   input: { backgroundColor: 'rgba(255,255,255,0.6)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#334155', marginBottom: 20 },
