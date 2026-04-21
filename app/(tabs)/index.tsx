@@ -813,7 +813,7 @@ const SOCIAL_ENERGY = [
   { id: 'homebody',  label: 'Homebody',        Icon: HouseLine, color: '#8B5CF6', grad: ['#EDE9FE','#C4B5FD'] as [string,string] },
   { id: 'chill',     label: 'Chill vibes',     Icon: Couch,     color: '#06B6D4', grad: ['#E0F2FE','#7DD3FC'] as [string,string] },
   { id: 'balanced',  label: 'Balanced',        Icon: Scales,    color: '#10B981', grad: ['#D1FAE5','#6EE7B7'] as [string,string] },
-  { id: 'social',    label: 'Social butterfly',Icon: Butterfly, color: '#F59E0B', grad: ['#FEF3C7','#FCD34D'] as [string,string] },
+  { id: 'social',    label: 'Extrovert',        Icon: Butterfly, color: '#F59E0B', grad: ['#FEF3C7','#FCD34D'] as [string,string] },
   { id: 'party',     label: 'Party animal',    Icon: Confetti,  color: '#EF4444', grad: ['#FEE2E2','#FCA5A5'] as [string,string] },
 ]
 const VIBE_CATS: Record<string, string[]> = {
@@ -2420,7 +2420,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           {/* Alcohol */}
           <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Alcohol</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-            {[{ id: "Don't drink", label: "Don't drink", Icon: Drop }, { id: 'Rarely', label: 'Rarely', Icon: PhWine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
+            {[{ id: "Don't drink", label: "Don't drink", Icon: Prohibit }, { id: 'Rarely', label: 'Rarely', Icon: PhWine }, { id: 'Social drinker', label: 'Social', Icon: Confetti }].map(opt => {
               const on = draftVibe?.drinks === opt.id
               return (
                 <TouchableOpacity key={opt.id} activeOpacity={0.85} onPress={() => setDraftVibe((v: any) => ({ ...v, drinks: opt.id }))} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
