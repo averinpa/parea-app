@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, HandHelping, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
 import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
@@ -1980,7 +1980,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   ]
   const TRANSPORT_OPTIONS = [
     { id: 'car',  Icon: Car,         label: "I'm driving",    sub: 'Can give a lift',          grad: ['#3B82F6','#60A5FA'] as [string,string], color: '#60A5FA' },
-    { id: 'lift', Icon: HandHelping, label: 'Need a ride',    sub: "I'll hop in with someone", grad: ['#EC4899','#F472B6'] as [string,string], color: '#F472B6' },
+    { id: 'lift', Icon: ThumbsUp,    label: 'Need a ride',    sub: "I'll hop in with someone", grad: ['#EC4899','#F472B6'] as [string,string], color: '#F472B6' },
     { id: 'meet', Icon: MapPin,      label: 'Meet you there', sub: 'Getting there solo',       grad: ['#8B5CF6','#A78BFA'] as [string,string], color: '#A78BFA' },
   ]
 
