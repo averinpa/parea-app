@@ -4436,7 +4436,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
-function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
+function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }: { userData: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void; city?: string; setCityOpen?: (v: boolean) => void }) {
   const insets = useSafeAreaInsets()
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
@@ -4531,6 +4531,12 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
 
   const [profilePreviewOpen, setProfilePreviewOpen] = useState(false)
   const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [visibleInVibeCheck, setVisibleInVibeCheck] = useState(true)
+  const [blockedUsers, setBlockedUsers] = useState<{ id: string; name: string; photo?: string }[]>([])
+  const [faqOpen, setFaqOpen] = useState(false)
+  const [settingsSection, setSettingsSection] = useState<string | null>(null)
 
   return (
     <View style={{ flex: 1 }}>
@@ -4835,70 +4841,238 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut }: { userData: any; o
           ) : null}
         </View>
 
-        {/* Edit Profile button */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+        {/* Settings button */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 32 }}>
           <TouchableOpacity
-            onPress={() => { setEditProfileOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+            onPress={() => { setSettingsOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#8B5CF6', borderRadius: 16, paddingVertical: 14 }}>
-            <Feather name="edit-2" size={16} color="#fff" />
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Edit Profile</Text>
+            <Feather name="settings" size={16} color="#fff" />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Settings</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Actions */}
-        <View style={{ marginHorizontal: 20, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
-          {[
-            { icon: 'settings',   label: 'Settings',        iconColor: '#8B5CF6', bg: '#F3EEFF' },
-            { icon: 'shield',     label: 'Privacy Policy',  iconColor: '#3B82F6', bg: '#EFF6FF' },
-            { icon: 'file-text',  label: 'Terms of Service',iconColor: '#F59E0B', bg: '#FFFBEB' },
-            { icon: 'log-out',    label: 'Log Out',         iconColor: '#EF4444', bg: '#FEF2F2' },
-            { icon: 'trash-2',    label: 'Delete Account',  iconColor: '#EF4444', bg: '#FEF2F2' },
-          ].map((item, idx, arr) => (
-            <React.Fragment key={item.label}>
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}
-                onPress={() => {
-                  if (item.label === 'Log Out') { onLogOut?.(); return }
-                  if (item.label === 'Delete Account') {
-                    Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: async () => {
-                        try {
-                          const { data: { session } } = await supabase.auth.getSession()
-                          if (!session?.access_token) throw new Error('Not logged in')
-                          const resp = await fetch(
-                            `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
-                            {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${session.access_token}`,
-                                'Content-Type': 'application/json',
-                                'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-                              },
-                            }
-                          )
-                          const json = await resp.json()
-                          if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`)
-                        } catch (e: any) {
-                          Alert.alert('Error', String(e?.message || e))
-                          return
-                        }
-                        await supabase.auth.signOut()
-                        onLogOut?.()
-                      }},
-                    ])
-                  }
-                }}>
-                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                  <Feather name={item.icon as any} size={17} color={item.iconColor} />
+        {/* Settings Modal */}
+        <Modal visible={settingsOpen} animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
+          <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+                <TouchableOpacity onPress={() => setSettingsOpen(false)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+                  <Feather name="x" size={18} color="#475569" />
+                </TouchableOpacity>
+                <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 22, color: '#1E1B4B', marginLeft: 14 }}>Settings</Text>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 24 }}>
+
+                {/* Profile section */}
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Profile</Text>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                    {[
+                      { icon: 'edit-2', label: 'Edit Profile', iconColor: '#8B5CF6', bg: '#F3EEFF' },
+                      { icon: 'map-pin', label: 'City', iconColor: '#6366F1', bg: '#EEF2FF', value: city },
+                    ].map((item, idx) => (
+                      <React.Fragment key={item.label}>
+                        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
+                          onPress={() => {
+                            if (item.label === 'Edit Profile') { setSettingsOpen(false); setTimeout(() => setEditProfileOpen(true), 300) }
+                            if (item.label === 'City') { setSettingsOpen(false); setTimeout(() => setCityOpen?.(true), 300) }
+                          }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                            <Feather name={item.icon as any} size={17} color={item.iconColor} />
+                          </View>
+                          <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>{item.label}</Text>
+                          {'value' in item && <Text style={{ fontSize: 13, color: '#94A3B8', marginRight: 6 }}>{item.value}</Text>}
+                          <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                        </TouchableOpacity>
+                        {idx === 0 && <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />}
+                      </React.Fragment>
+                    ))}
+                  </View>
                 </View>
-                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: item.label === 'Log Out' || item.label === 'Delete Account' ? '#EF4444' : '#1E1B4B' }}>{item.label}</Text>
-                <Feather name="chevron-right" size={15} color="#CBD5E1" />
-              </TouchableOpacity>
-              {idx < arr.length - 1 && <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />}
-            </React.Fragment>
-          ))}
-        </View>
+
+                {/* Preferences */}
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Preferences</Text>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                        <Feather name="bell" size={17} color="#F59E0B" />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>Push Notifications</Text>
+                      <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ false: '#E2E8F0', true: '#8B5CF6' }} thumbColor="#fff" />
+                    </View>
+                    <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                        <Feather name="eye" size={17} color="#10B981" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>Visible in VibeCheck</Text>
+                        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 1 }}>Others can find you as a match</Text>
+                      </View>
+                      <Switch value={visibleInVibeCheck} onValueChange={setVisibleInVibeCheck} trackColor={{ false: '#E2E8F0', true: '#10B981' }} thumbColor="#fff" />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Privacy & Safety */}
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Privacy & Safety</Text>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
+                      onPress={() => setSettingsSection('blocked')}>
+                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                        <Feather name="slash" size={17} color="#EF4444" />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>Blocked Users</Text>
+                      {blockedUsers.length > 0 && <Text style={{ fontSize: 13, color: '#94A3B8', marginRight: 6 }}>{blockedUsers.length}</Text>}
+                      <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Support & Legal */}
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Support & Legal</Text>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                    {[
+                      { icon: 'help-circle', label: 'Help & FAQ',        iconColor: '#6366F1', bg: '#EEF2FF', action: 'faq' },
+                      { icon: 'mail',        label: 'Contact Support',   iconColor: '#06B6D4', bg: '#E0F2FE', action: 'support' },
+                      { icon: 'shield',      label: 'Privacy Policy',    iconColor: '#3B82F6', bg: '#EFF6FF', action: 'privacy' },
+                      { icon: 'file-text',   label: 'Terms of Service',  iconColor: '#F59E0B', bg: '#FFFBEB', action: 'terms' },
+                    ].map((item, idx, arr) => (
+                      <React.Fragment key={item.label}>
+                        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
+                          onPress={() => {
+                            if (item.action === 'faq') setSettingsSection('faq')
+                            if (item.action === 'support') Linking.openURL('mailto:support@parea.app?subject=Support Request')
+                            if (item.action === 'privacy') Linking.openURL('https://parea.app/privacy')
+                            if (item.action === 'terms') Linking.openURL('https://parea.app/terms')
+                          }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                            <Feather name={item.icon as any} size={17} color={item.iconColor} />
+                          </View>
+                          <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>{item.label}</Text>
+                          <Feather name="chevron-right" size={15} color="#CBD5E1" />
+                        </TouchableOpacity>
+                        {idx < arr.length - 1 && <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />}
+                      </React.Fragment>
+                    ))}
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#CBD5E1', textAlign: 'center', marginTop: 10 }}>Parea v1.0.0</Text>
+                </View>
+
+                {/* Account */}
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Account</Text>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
+                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
+                      onPress={() => { setSettingsOpen(false); setTimeout(() => onLogOut?.(), 300) }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                        <Feather name="log-out" size={17} color="#EF4444" />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#EF4444' }}>Log Out</Text>
+                    </TouchableOpacity>
+                    <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />
+                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
+                      onPress={() => Alert.alert('Delete Account', 'This will permanently delete your profile and all your data. This cannot be undone.', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: async () => {
+                          try {
+                            const { data: { session } } = await supabase.auth.getSession()
+                            if (!session?.access_token) throw new Error('Not logged in')
+                            const resp = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`, {
+                              method: 'POST',
+                              headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json', 'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY! },
+                            })
+                            const json = await resp.json()
+                            if (!resp.ok) throw new Error(json.error || `HTTP ${resp.status}`)
+                          } catch (e: any) { Alert.alert('Error', String(e?.message || e)); return }
+                          await supabase.auth.signOut(); onLogOut?.()
+                        }},
+                      ])}>
+                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                        <Feather name="trash-2" size={17} color="#EF4444" />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#EF4444' }}>Delete Account</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+              </ScrollView>
+
+              {/* Sub-screens */}
+
+              {/* Blocked Users */}
+              {settingsSection === 'blocked' && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#F5F3FF' }}>
+                  <SafeAreaView style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+                      <TouchableOpacity onPress={() => setSettingsSection(null)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="chevron-left" size={20} color="#475569" />
+                      </TouchableOpacity>
+                      <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 20, color: '#1E1B4B', marginLeft: 14 }}>Blocked Users</Text>
+                    </View>
+                    {blockedUsers.length === 0 ? (
+                      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <Feather name="slash" size={40} color="#CBD5E1" />
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#94A3B8' }}>No blocked users</Text>
+                        <Text style={{ fontSize: 13, color: '#CBD5E1' }}>Block someone from their profile</Text>
+                      </View>
+                    ) : (
+                      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+                        {blockedUsers.map(u => (
+                          <View key={u.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 14, gap: 12 }}>
+                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                              {u.photo ? <Image source={{ uri: u.photo }} style={{ width: 44, height: 44, borderRadius: 22 }} /> : <Feather name="user" size={20} color="#6366F1" />}
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>{u.name}</Text>
+                            <TouchableOpacity onPress={() => setBlockedUsers(prev => prev.filter(b => b.id !== u.id))}
+                              style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, backgroundColor: '#FEF2F2' }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: '#EF4444' }}>Unblock</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    )}
+                  </SafeAreaView>
+                </View>
+              )}
+
+              {/* FAQ */}
+              {settingsSection === 'faq' && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#F5F3FF' }}>
+                  <SafeAreaView style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+                      <TouchableOpacity onPress={() => setSettingsSection(null)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="chevron-left" size={20} color="#475569" />
+                      </TouchableOpacity>
+                      <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 20, color: '#1E1B4B', marginLeft: 14 }}>Help & FAQ</Text>
+                    </View>
+                    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 40 }}>
+                      {[
+                        { q: 'How does VibeCheck work?', a: 'VibeCheck uses AI to match you with people who share your interests, lifestyle, and tonight\'s energy. Swipe right to invite someone to your event, left to pass. When both of you match — you\'re connected.' },
+                        { q: 'What is Tonight\'s Vibe?', a: 'It\'s your mood for the evening — from Homebody to Party Animal. Setting your vibe helps us sort relevant events to the top of your feed and improves your VibeCheck matches.' },
+                        { q: 'How do I join an event?', a: 'Tap any event card, then press "I\'m Going" (official events) or "Request to Join" (community events). For community events, the host approves your request.' },
+                        { q: 'How do I create an event?', a: 'Tap the + button at the bottom of the screen. Choose the format (duo, squad, party), type, date/time, and location. You can also add a cover photo.' },
+                        { q: 'Can I share an event with a friend?', a: 'Yes — open any event and tap the share button in the top right corner. Your friend will get a link that opens the event directly if they have Parea installed.' },
+                        { q: 'How does the crew chat work?', a: 'Once you and your match both confirm attendance at the same event, a crew chat is automatically created. You\'ll find it in the Messages tab.' },
+                        { q: 'How do I block someone?', a: 'Open their profile and scroll to the bottom — you\'ll find a "Block" option. Blocked users won\'t appear in your VibeCheck and can\'t see your profile.' },
+                        { q: 'Is Parea free?', a: 'Yes, Parea is free to use. We may introduce premium features in the future, but the core experience will always be free.' },
+                      ].map((item, idx) => (
+                        <View key={idx} style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16 }}>
+                          <Text style={{ fontFamily: 'Outfit-SemiBold', fontSize: 14, color: '#1E1B4B', marginBottom: 8 }}>{item.q}</Text>
+                          <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 13, color: '#64748B', lineHeight: 20 }}>{item.a}</Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </SafeAreaView>
+                </View>
+              )}
+
+            </SafeAreaView>
+          </LinearGradient>
+        </Modal>
 
         </ScrollView>
       </View>
@@ -7487,7 +7661,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           />
           </View>
           <View style={{ flex: 1, display: activeTab === 'profile' ? 'flex' : 'none' }}>
-            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} />
+            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} city={city} setCityOpen={setCityOpen} />
           </View>
         </View>
 
