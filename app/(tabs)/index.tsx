@@ -8064,8 +8064,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               <Pencil size={15} color="#8B5CF6" strokeWidth={2} />
                               <TextInput value={createCustom} onChangeText={setCreateCustom}
                                 placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
-                                autoFocus returnKeyType="done"
-                                style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
+                                returnKeyType="done"
+                                style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} />
                               {createCustom.length > 0 && (
                                 <TouchableOpacity onPress={() => setCreateCustom('')}>
                                   <Feather name="x-circle" size={16} color="#94A3B8" />
