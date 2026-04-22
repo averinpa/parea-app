@@ -4766,11 +4766,16 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
             </View>
             {(userData?.interests || []).length > 0 ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {(userData.interests as string[]).map((item: string) => (
-                  <View key={item} style={{ backgroundColor: '#F3EEFF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6 }}>
-                    <Text style={{ fontSize: 13, color: '#7C3AED', fontWeight: '600' }}>{item}</Text>
-                  </View>
-                ))}
+                {(userData.interests as string[]).map((item: string) => {
+                  const Icon = INTEREST_ICON_MAP[item] || Sparkle
+                  const label = item.indexOf(' ') !== -1 ? item.slice(item.indexOf(' ') + 1) : item
+                  return (
+                    <View key={item} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F3EEFF', borderRadius: 99, paddingHorizontal: 11, paddingVertical: 6 }}>
+                      <Icon size={13} color="#8B5CF6" weight="duotone" />
+                      <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: '#7C3AED' }}>{label}</Text>
+                    </View>
+                  )
+                })}
               </View>
             ) : (
               <TouchableOpacity onPress={() => { setDraftInterests([]); setEditProfileOpen(false); setTimeout(() => setInterestsEditOpen(true), 300) }}
@@ -4810,7 +4815,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Vibe</Text>
               <TouchableOpacity onPress={() => { setDraft({ musicGenres: userData?.musicGenres || [], socialEnergy: userData?.socialEnergy, drinksPref: userData?.drinksPref, smokingPref: userData?.smokingPref }); setEditProfileOpen(false); setTimeout(() => setVibeEditOpen(true), 300) }}
                 style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, gap: 10 }}>
-                <Text style={{ fontSize: 20 }}>✨</Text>
+                <Sparkle size={20} color="#8B5CF6" weight="duotone" />
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569', flex: 1 }}>Music, energy, drinks & smoking</Text>
                 <Feather name="chevron-right" size={16} color="#CBD5E1" />
               </TouchableOpacity>
