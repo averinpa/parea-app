@@ -3315,15 +3315,19 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
           <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
 
           {/* Transport + goal */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>
-                {profile.transport === 'car' ? '🚗 Driving' : profile.transport === 'lift' ? '🙋 Needs lift' : '📍 Meet there'}
-              </Text>
-            </View>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>{GOAL_LABEL[profile.goal] || '😌 Chill'}</Text>
-            </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+            {[
+              profile.transport === 'car'  ? { Icon: PhCar,    label: 'Driving'     } :
+              profile.transport === 'lift' ? { Icon: ThumbsUp, label: 'Needs a ride'} :
+                                             { Icon: PhMapPin,  label: 'Meeting there'},
+              { Icon: profile.goal === 'networking' ? UsersThree : profile.goal === 'activity' ? Barbell : Couch,
+                label: profile.goal === 'networking' ? 'Networking' : profile.goal === 'activity' ? 'Activity' : 'Chill' },
+            ].map(({ Icon, label }) => (
+              <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                <Icon size={13} color="rgba(255,255,255,0.5)" weight="duotone" />
+                <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.6)' }}>{label}</Text>
+              </View>
+            ))}
           </View>
 
           {/* Languages */}
@@ -3346,7 +3350,7 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
           {/* AI Match badge */}
           {profile.aiScore != null && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, padding: 12, borderRadius: 16, backgroundColor: 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: 'rgba(129,140,248,0.25)' }}>
-              <Text style={{ fontSize: 18 }}>🤖</Text>
+              <Sparkle size={20} color="#818CF8" weight="duotone" />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '800', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
                   {profile.aiScore}% AI Match
@@ -3361,13 +3365,21 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
           {/* Interests */}
           {(profile.interests || []).length > 0 && (
             <>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>INTERESTS</Text>
+              <Text style={{ fontSize: 10, fontFamily: 'ClashDisplay-Semibold', color: 'rgba(255,255,255,0.3)', letterSpacing: 1.2, marginBottom: 10 }}>INTERESTS</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {(profile.interests || []).map((tag: string, i: number) => (
-                  <View key={i} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: `${c0}22`, borderWidth: 1, borderColor: `${c0}44` }}>
-                    <Text style={{ fontSize: 12, color: c0, fontWeight: '700' }}>{tag}</Text>
-                  </View>
-                ))}
+                {(profile.interests || []).map((tag: string, i: number) => {
+                  const Icon = INTEREST_ICON_MAP[tag] || Sparkle
+                  const label = tag.indexOf(' ') !== -1 ? tag.slice(tag.indexOf(' ') + 1) : tag
+                  const cat = INTERESTS_BY_CATEGORY.find(c => c.items.includes(tag))
+                  const palette = cat ? INTEREST_CATEGORY_PALETTE[cat.id as keyof typeof INTEREST_CATEGORY_PALETTE] : null
+                  const iconColor = palette?.text || c0
+                  return (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: `${iconColor}18`, borderWidth: 1, borderColor: `${iconColor}35` }}>
+                      <Icon size={14} color={iconColor} weight="duotone" />
+                      <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: iconColor }}>{label}</Text>
+                    </View>
+                  )
+                })}
               </View>
             </>
           )}
