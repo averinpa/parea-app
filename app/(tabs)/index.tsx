@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -87,6 +87,23 @@ const INTERESTS_BY_CATEGORY = [
   { id: 'creative',label: 'Creative',           emoji: '🎨', items: ['🎨 Art', '✂️ Crafts', '📷 Photography', '🎸 Music', '📚 Books'] },
   { id: 'tech',    label: 'Tech & Culture',     emoji: '💡', items: ['💻 IT', '🎮 Gaming', '🎬 Movies', '🎭 Theatre', '🎲 Board Games'] },
 ]
+
+const INTEREST_ICON_MAP: Record<string, any> = {
+  '☕ Coffee': PhCoffee, '🍷 Wine': PhWine, '🎾 Tennis': TennisBall, '🎬 Movies': FilmSlate,
+  '🥾 Hiking': Mountains, '🍕 Foodie': ForkKnife, '🧘 Yoga': YinYang, '🎨 Art': PhPalette,
+  '🎸 Music': MusicNotes, '✈️ Travel': AirplaneTilt, '💃 Dance': MusicNotes, '📚 Books': Books,
+  '💻 IT': PhCpu, '🎮 Gaming': GameController, '📷 Photography': PhCamera, '🎭 Theatre': MaskHappy,
+  '🏖️ Beach': Umbrella, '🎲 Board Games': GameController, '🎤 Concerts': MicrophoneStage,
+  '🏊 Swimming': PersonSimpleSwim, '🏓 Padel': TennisBall, '✂️ Crafts': PhScissors,
+  '👗 Fashion': TShirt, '🏄 Water Sports': WaveSine,
+}
+
+const INTEREST_CATEGORY_PALETTE = {
+  social:   { bg: '#FFF0F6', selectedBg: '#FCE7F3', border: '#FBCFE8', selectedBorder: '#DB2777', iconColor: '#F472B6', text: '#BE185D' },
+  active:   { bg: '#F0FDF4', selectedBg: '#DCFCE7', border: '#BBF7D0', selectedBorder: '#16A34A', iconColor: '#4ADE80', text: '#15803D' },
+  creative: { bg: '#FFFBEB', selectedBg: '#FEF3C7', border: '#FDE68A', selectedBorder: '#D97706', iconColor: '#FBBF24', text: '#B45309' },
+  tech:     { bg: '#EEF2FF', selectedBg: '#E0E7FF', border: '#C7D2FE', selectedBorder: '#4338CA', iconColor: '#818CF8', text: '#3730A3' },
+} as const
 
 const LANGUAGES_LIST = [
   { code: 'en', flag: '🇬🇧', label: 'English' },
@@ -854,6 +871,41 @@ const DEALBREAKERS = [
   { id: 'no_kids',      emoji: '👶', label: 'Adults only',        desc: 'No kids around' },
 ]
 
+function AnimatedInterestChip({ item, isOn, onPress, palette }: {
+  item: string
+  isOn: boolean
+  onPress: () => void
+  palette: typeof INTEREST_CATEGORY_PALETTE[keyof typeof INTEREST_CATEGORY_PALETTE]
+}) {
+  const scale = useRef(new Animated.Value(1)).current
+  const Icon = INTEREST_ICON_MAP[item] || Sparkle
+  const label = item.indexOf(' ') !== -1 ? item.slice(item.indexOf(' ') + 1) : item
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 0.85, useNativeDriver: true, speed: 60, bounciness: 0 }),
+      Animated.spring(scale, { toValue: 1.08, useNativeDriver: true, speed: 20, bounciness: 10 }),
+      Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 30 }),
+    ]).start()
+    onPress()
+  }
+
+  return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={1}>
+      <Animated.View style={{
+        transform: [{ scale }],
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
+        backgroundColor: isOn ? palette.selectedBg : palette.bg,
+        borderWidth: 1.5, borderColor: isOn ? palette.selectedBorder : palette.border,
+      }}>
+        <Icon size={15} color={isOn ? palette.text : palette.iconColor} weight="duotone" />
+        <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: isOn ? palette.text : '#64748B' }}>{label}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  )
+}
+
 function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; onFinish: (data: any) => void; userId?: string }) {
   const insets = useSafeAreaInsets()
   const TOTAL = 5
@@ -1402,28 +1454,25 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                     </View>
 
                     {/* Categories */}
-                    {INTERESTS_BY_CATEGORY.map(cat => (
-                      <View key={cat.id} style={{ marginBottom: 20 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                          <Text style={{ fontSize: 15 }}>{cat.emoji}</Text>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.8 }}>{cat.label}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                          {cat.items.map(item => {
-                            const on = interests.includes(item)
-                            return (
-                              <TouchableOpacity
+                    {INTERESTS_BY_CATEGORY.map(cat => {
+                      const palette = INTEREST_CATEGORY_PALETTE[cat.id as keyof typeof INTEREST_CATEGORY_PALETTE]
+                      return (
+                        <View key={cat.id} style={{ marginBottom: 20 }}>
+                          <Text style={{ fontSize: 11, fontFamily: 'ClashDisplay-Semibold', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.4, marginBottom: 10 }}>{cat.label}</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                            {cat.items.map(item => (
+                              <AnimatedInterestChip
                                 key={item}
-                                onPress={() => setInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])}
-                                style={[s.chip, on && s.chipOn]}
-                                activeOpacity={0.75}>
-                                <Text style={[s.chipTxt, on && s.chipTxtOn]}>{item}</Text>
-                              </TouchableOpacity>
-                            )
-                          })}
+                                item={item}
+                                isOn={interests.includes(item)}
+                                onPress={() => { setInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]); Haptics.selectionAsync() }}
+                                palette={palette}
+                              />
+                            ))}
+                          </View>
                         </View>
-                      </View>
-                    ))}
+                      )
+                    })}
 
                     {/* AI confidence bar */}
                     <View style={{ marginTop: 8, padding: 16, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' }}>
@@ -4669,22 +4718,25 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
-            {INTERESTS_BY_CATEGORY.map(cat => (
-              <View key={cat.id} style={{ marginBottom: 20 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>{cat.emoji} {cat.label}</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {cat.items.map(item => {
-                    const on = draftInterests.includes(item)
-                    return (
-                      <TouchableOpacity key={item} onPress={() => { setDraftInterests(prev => on ? prev.filter(x => x !== item) : [...prev, item]); Haptics.selectionAsync() }}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? '#F3EEFF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#8B5CF6' : '#E2E8F0' }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#7C3AED' : '#64748B' }}>{item}</Text>
-                      </TouchableOpacity>
-                    )
-                  })}
+            {INTERESTS_BY_CATEGORY.map(cat => {
+              const palette = INTEREST_CATEGORY_PALETTE[cat.id as keyof typeof INTEREST_CATEGORY_PALETTE]
+              return (
+                <View key={cat.id} style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 11, fontFamily: 'ClashDisplay-Semibold', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.4, marginBottom: 10 }}>{cat.label}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {cat.items.map(item => (
+                      <AnimatedInterestChip
+                        key={item}
+                        item={item}
+                        isOn={draftInterests.includes(item)}
+                        onPress={() => { setDraftInterests(prev => draftInterests.includes(item) ? prev.filter(x => x !== item) : [...prev, item]); Haptics.selectionAsync() }}
+                        palette={palette}
+                      />
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
+              )
+            })}
             <TouchableOpacity onPress={() => { onUpdateUserData?.({ interests: draftInterests }); setInterestsEditOpen(false) }}
               style={{ backgroundColor: '#7C3AED', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save{draftInterests.length > 0 ? ` (${draftInterests.length})` : ''}</Text>
