@@ -3228,7 +3228,7 @@ const QUEUE_PROFILES = [
 
 const VIBE_FORMAT_MAX: Record<string, number>       = { '1+1': 2, squad: 5, party: 20 }
 const VIBE_FORMAT_THRESHOLD: Record<string, number> = { '1+1': 2, squad: 5, party: 12 } // party goes active at 12, cap stays 20
-const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': 'Duo · me +1', squad: 'Squad · me +4', party: 'Party · me +19' }
+const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': '1 spot open', squad: '4 spots open', party: '19 spots open' }
 const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', networking: '🤝 Networking', activity: '⚡ Activity' }
 
 function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () => void }) {
@@ -3538,6 +3538,55 @@ function InlineProfileSheet({ profile, onClose }: { profile: any; onClose: () =>
           </View>
         </ScrollView>
       </Animated.View>
+    </View>
+  )
+}
+
+function PulsingStatusBadge({ label, color, bg, border }: { label: string; color: string; bg: string; border: string }) {
+  const pulse = useRef(new Animated.Value(1)).current
+  const isLooking = label === 'Looking...'
+  useEffect(() => {
+    if (!isLooking) return
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.06, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,    duration: 900, useNativeDriver: true }),
+      ])
+    )
+    anim.start()
+    return () => anim.stop()
+  }, [isLooking])
+  return (
+    <Animated.View style={{ transform: [{ scale: pulse }], paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: bg, borderWidth: 1, borderColor: border }}>
+      <Text style={{ fontSize: 10, fontFamily: 'Outfit-Bold', color, letterSpacing: 0.3 }}>{label}</Text>
+    </Animated.View>
+  )
+}
+
+function RockingTransportPill({ transport }: { transport: string }) {
+  const rock = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    if (transport !== 'lift') return
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(rock, { toValue: 1,  duration: 280, useNativeDriver: true }),
+        Animated.timing(rock, { toValue: -1, duration: 280, useNativeDriver: true }),
+        Animated.timing(rock, { toValue: 0,  duration: 200, useNativeDriver: true }),
+        Animated.delay(3200),
+      ])
+    )
+    anim.start()
+    return () => anim.stop()
+  }, [transport])
+  const rotate = rock.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] })
+  const label = transport === 'car' ? 'Can give a lift' : transport === 'lift' ? 'Need a ride' : 'Meeting there'
+  const Icon = transport === 'meet' ? PhMapPin : PhCar
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
+      <Animated.View style={transport === 'lift' ? { transform: [{ rotate }] } : undefined}>
+        <Icon size={12} color="rgba(255,255,255,0.55)" weight="duotone" />
+      </Animated.View>
+      <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.55)' }}>{label}</Text>
     </View>
   )
 }
@@ -3958,24 +4007,20 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   {/* Title + status */}
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3, lineHeight: 21 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
+                      <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: -0.3, lineHeight: 21 }} numberOfLines={2}>{ev.title}</Text>
+                      <Text style={{ fontSize: 11, fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
                     </View>
-                    <View style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99, backgroundColor: statusBg, borderWidth: 1, borderColor: statusBorder }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: statusColor }}>{statusLabel}</Text>
-                    </View>
+                    <PulsingStatusBadge label={statusLabel} color={statusColor} bg={statusBg} border={statusBorder} />
                   </View>
 
                   {/* My choices pills */}
                   <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
-                    {(isCommunity
-                      ? [ev.category, TRANSPORT_LABEL[transport]]
-                      : [VIBE_FORMAT_LABEL[format], TRANSPORT_LABEL[transport]]
-                    ).map((label, i) => (
-                      <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
-                        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '600' }}>{label || '—'}</Text>
-                      </View>
-                    ))}
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
+                      <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.55)' }}>
+                        {isCommunity ? ev.category : VIBE_FORMAT_LABEL[format]}
+                      </Text>
+                    </View>
+                    <RockingTransportPill transport={transport} />
                   </View>
 
                   {/* Confirmation deadline banner for approved community joiners */}
@@ -4006,9 +4051,13 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     </View>
                     <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
                       <LinearGradient
-                        colors={isActive ? ['#43E97B','#22c55e'] : ['#6366F1','#818CF8']}
+                        colors={isActive ? ['#43E97B','#38ef7d'] : ['#6366F1','#818CF8']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                        style={{ height: 6, borderRadius: 99, width: `${(found / cap) * 100}%` as any }}
+                        style={{
+                          height: 6, borderRadius: 99, width: `${(found / cap) * 100}%` as any,
+                          shadowColor: isActive ? '#43E97B' : '#818CF8',
+                          shadowOpacity: 0.9, shadowRadius: 8, elevation: 4,
+                        }}
                       />
                     </View>
                     {isParty && (
@@ -4045,12 +4094,17 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     if (!currentPerson && !anyIncoming) {
                       // No matches yet
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(251,191,36,0.07)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.18)' }}>
-                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(251,191,36,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-                            <Search size={16} color="#FBBF24" />
+                        <BlurView intensity={18} tint="dark" style={{ borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', padding: 14 }}>
+                            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(129,140,248,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                              <MagnifyingGlass size={16} color="#818CF8" weight="duotone" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.7)', marginBottom: 3 }}>Searching...</Text>
+                              <Text style={{ fontSize: 11, fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.38)', lineHeight: 17 }}>You'll be notified when someone going to this event matches your vibe.</Text>
+                            </View>
                           </View>
-                          <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.48)', lineHeight: 18 }}>Looking for people going to this event. You'll be notified when someone matches!</Text>
-                        </View>
+                        </BlurView>
                       )
                     }
 
