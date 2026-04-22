@@ -2593,7 +2593,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,8,30,0.75)' }} activeOpacity={1} onPress={closeJoinSheet} />
-        <View style={s.joinSheetWrap}>
+        <View style={[s.joinSheetWrap, { paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
           <View style={s.joinSheetHandle} />
 
           {joinSheet.ev?.type === 'official' && (
@@ -5350,6 +5350,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createVibe, setCreateVibe] = useState<string | null>(null)
   const [createCustom, setCreateCustom] = useState('')
   const [createImage, setCreateImage] = useState<{ uri: string; base64: string } | null>(null)
+  const createScrollRef = useRef<ScrollView>(null)
   const [city, setCity] = useState('Limassol')
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
@@ -7960,7 +7961,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
             <View style={[s.fill, { paddingBottom: insets.bottom }]}>
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'height' : undefined}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'height' : 'padding'} keyboardVerticalOffset={0}>
 
                 {/* Header row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: insets.top + 4, paddingBottom: 12 }}>
@@ -8020,10 +8021,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                 {/* Step content in ScrollView */}
                 <ScrollView
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
+                  ref={createScrollRef}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
-                  automaticallyAdjustKeyboardInsets
                   style={{ flex: 1 }}>
 
                   {/* ── Step 1: Pod Size ── */}
@@ -8154,6 +8155,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               <TextInput value={createCustom} onChangeText={setCreateCustom}
                                 placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
                                 returnKeyType="done"
+                                onFocus={() => setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 300)}
                                 style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} />
                               {createCustom.length > 0 && (
                                 <TouchableOpacity onPress={() => setCreateCustom('')}>
@@ -9660,7 +9662,7 @@ const s = StyleSheet.create({
   bentoSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, maxHeight: '72%', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 20, elevation: 20 },
 
   // Join bottom sheet
-  joinSheetWrap: { backgroundColor: '#0f0c1e', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 36, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 32, elevation: 24 },
+  joinSheetWrap: { backgroundColor: '#0f0c1e', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 22, paddingTop: 14, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 32, elevation: 24 },
   joinSheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 18 },
   joinSheetTitle: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 30, marginBottom: 18 },
   joinSheetCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 18, padding: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' },
