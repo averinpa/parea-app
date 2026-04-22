@@ -4840,11 +4840,17 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
           ) : null}
         </View>
 
-        {/* Settings button */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 32 }}>
+        {/* Edit Profile + Settings buttons */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 32, flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => { setEditProfileOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#F3EEFF', borderRadius: 16, paddingVertical: 14 }}>
+            <Feather name="edit-2" size={16} color="#8B5CF6" />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#8B5CF6' }}>Edit Profile</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { setSettingsOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#8B5CF6', borderRadius: 16, paddingVertical: 14 }}>
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#8B5CF6', borderRadius: 16, paddingVertical: 14 }}>
             <Feather name="settings" size={16} color="#fff" />
             <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Settings</Text>
           </TouchableOpacity>
