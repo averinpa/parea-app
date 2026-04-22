@@ -4533,7 +4533,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [visibleInVibeCheck, setVisibleInVibeCheck] = useState(true)
   const [blockedUsers, setBlockedUsers] = useState<{ id: string; name: string; photo?: string }[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<string | null>(null)
@@ -4900,17 +4899,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
                       </View>
                       <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>Push Notifications</Text>
                       <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ false: '#E2E8F0', true: '#8B5CF6' }} thumbColor="#fff" />
-                    </View>
-                    <View style={{ height: 1, backgroundColor: '#F8FAFC', marginLeft: 66 }} />
-                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}>
-                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                        <Feather name="eye" size={17} color="#10B981" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>Visible in VibeCheck</Text>
-                        <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 1 }}>Others can find you as a match</Text>
-                      </View>
-                      <Switch value={visibleInVibeCheck} onValueChange={setVisibleInVibeCheck} trackColor={{ false: '#E2E8F0', true: '#10B981' }} thumbColor="#fff" />
                     </View>
                   </View>
                 </View>
