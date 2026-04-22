@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim, Briefcase as PhBriefcase, Egg, SunHorizon, Handshake, Coins, Laptop, Sailboat } from 'phosphor-react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
@@ -5214,6 +5214,31 @@ const CREATE_EVENT_TYPES = [
   { id: 'picnic',      label: 'Picnic',       emoji: '🧺' },
 ]
 
+function BreathingButton({ label, onPress, colors }: { label: string; onPress: () => void; colors: [string, string] }) {
+  const breath = useRef(new Animated.Value(1)).current
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breath, { toValue: 1.025, duration: 1100, useNativeDriver: true }),
+        Animated.timing(breath, { toValue: 1,     duration: 1100, useNativeDriver: true }),
+      ])
+    )
+    anim.start()
+    return () => anim.stop()
+  }, [])
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
+      <Animated.View style={{ transform: [{ scale: breath }] }}>
+        <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={{ borderRadius: 18, paddingVertical: 16, alignItems: 'center', justifyContent: 'center',
+            shadowColor: colors[0], shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}>
+          <Text style={{ fontFamily: 'ClashDisplay-Semibold', fontSize: 16, color: '#fff', letterSpacing: -0.2 }}>{label}</Text>
+        </LinearGradient>
+      </Animated.View>
+    </TouchableOpacity>
+  )
+}
+
 function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
   const insets = useSafeAreaInsets()
   const fullWindowHeightRef = useRef(Dimensions.get('window').height)
@@ -7863,7 +7888,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       }
                     }}
                     style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
-                    <Feather name="chevron-left" size={18} color="#475569" />
+                    <CaretLeft size={20} color="#475569" weight="regular" />
                   </TouchableOpacity>
                   {/* Step counter pill */}
                   <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
@@ -7976,58 +8001,56 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                   {/* ── Step 2: Activity with category tabs ── */}
                   {createStep === 2 && (() => {
-                    const CATS: Record<string, { Icon: any; color: string; bg: string; items: { id: string; emoji: string; label: string }[] }> = {
-                      'Sport':   { Icon: Dumbbell,        color: '#3B82F6', bg: '#EFF6FF', items: [{ id:'padel', emoji:'🏓', label:'Padel' },{ id:'tennis', emoji:'🎾', label:'Tennis' },{ id:'yoga', emoji:'🧘', label:'Yoga' },{ id:'gym', emoji:'💪', label:'Gym' },{ id:'water', emoji:'🏄', label:'Water Sports' }] },
-                      'Food':    { Icon: UtensilsCrossed, color: '#EC4899', bg: '#FDF2F8', items: [{ id:'coffee', emoji:'☕', label:'Coffee' },{ id:'meze', emoji:'🥘', label:'Meze' },{ id:'wine', emoji:'🍷', label:'Wine' },{ id:'brunch', emoji:'🥂', label:'Brunch' },{ id:'sunset', emoji:'🌅', label:'Sunset' }] },
-                      'Work':    { Icon: Briefcase,       color: '#8B5CF6', bg: '#F5F3FF', items: [{ id:'networking', emoji:'🤝', label:'Networking' },{ id:'crypto', emoji:'🪙', label:'Crypto' },{ id:'cowork', emoji:'💻', label:'Co-working' }] },
-                      'Relax':   { Icon: Leaf,            color: '#10B981', bg: '#F0FDF4', items: [{ id:'beach', emoji:'🏖️', label:'Beach' },{ id:'hiking', emoji:'🥾', label:'Hiking' },{ id:'boat', emoji:'⛵', label:'Boat' },{ id:'boardgames', emoji:'🎲', label:'Board Games' }] },
-                      'Culture': { Icon: Palette,         color: '#F59E0B', bg: '#FFFBEB', items: [{ id:'dance', emoji:'💃', label:'Dance' },{ id:'concert', emoji:'🎤', label:'Concert' },{ id:'theatre', emoji:'🎭', label:'Theatre' },{ id:'music', emoji:'🎸', label:'Music' },{ id:'art', emoji:'🎨', label:'Art' }] },
+                    const CATS: Record<string, { PhIcon: any; color: string; bg: string; items: { id: string; Icon: any; label: string }[] }> = {
+                      'Sport':   { PhIcon: Barbell,      color: '#3B82F6', bg: '#EFF6FF', items: [{ id:'padel',   Icon: TennisBall,     label:'Padel' },{ id:'tennis',  Icon: TennisBall,     label:'Tennis' },{ id:'yoga',    Icon: YinYang,        label:'Yoga' },{ id:'gym',     Icon: Barbell,        label:'Gym' },{ id:'water',   Icon: WaveSine,       label:'Water Sports' }] },
+                      'Food':    { PhIcon: ForkKnife,   color: '#EC4899', bg: '#FDF2F8', items: [{ id:'coffee',  Icon: PhCoffee,       label:'Coffee' },{ id:'meze',    Icon: ForkKnife,      label:'Meze' },{ id:'wine',    Icon: PhWine,         label:'Wine' },{ id:'brunch',  Icon: Egg,            label:'Brunch' },{ id:'sunset',  Icon: SunHorizon,     label:'Sunset' }] },
+                      'Work':    { PhIcon: PhBriefcase, color: '#8B5CF6', bg: '#F5F3FF', items: [{ id:'networking', Icon: Handshake,   label:'Networking' },{ id:'crypto',  Icon: Coins,          label:'Crypto' },{ id:'cowork',  Icon: Laptop,         label:'Co-working' }] },
+                      'Relax':   { PhIcon: PhLeaf,      color: '#10B981', bg: '#F0FDF4', items: [{ id:'beach',   Icon: Umbrella,       label:'Beach' },{ id:'hiking',  Icon: Mountains,      label:'Hiking' },{ id:'boat',    Icon: Sailboat,       label:'Boat' },{ id:'boardgames', Icon: GameController, label:'Board Games' }] },
+                      'Culture': { PhIcon: PhPalette,   color: '#F59E0B', bg: '#FFFBEB', items: [{ id:'dance',   Icon: MusicNotes,     label:'Dance' },{ id:'concert',  Icon: MicrophoneStage, label:'Concert' },{ id:'theatre', Icon: MaskHappy,      label:'Theatre' },{ id:'music',   Icon: MusicNotes,     label:'Music' },{ id:'art',     Icon: PhPalette,      label:'Art' }] },
                     }
                     const activeCat = CATS[createCategory] || CATS['Sport']
-                    const catItems = [...(activeCat.items || []), { id: 'other', emoji: '', label: 'Other' }]
+                    const catItems = [...(activeCat.items || []), { id: 'other', Icon: Pencil as any, label: 'Other' }]
                     const cardW = (W - 40 - 10) / 2
                     return (
                       <View>
-                        {/* Category tabs — Lucide icons */}
+                        {/* Category tabs — Phosphor Duotone icons */}
                         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 18 }}>
-                          {Object.entries(CATS).map(([cat, { Icon, color, bg }]) => {
+                          {Object.entries(CATS).map(([cat, { PhIcon, color, bg }]) => {
                             const active = createCategory === cat
                             return (
-                              <TouchableOpacity key={cat} onPress={() => setCreateCategory(cat)} activeOpacity={0.8}
+                              <TouchableOpacity key={cat} onPress={() => { setCreateCategory(cat); setCreateType(null) }} activeOpacity={0.8}
                                 style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 16,
                                   backgroundColor: active ? bg : '#F8FAFC',
                                   borderWidth: 1.5, borderColor: active ? color : 'transparent' }}>
-                                <Icon size={18} color={active ? color : '#94A3B8'} strokeWidth={active ? 2.2 : 1.8} />
-                                <Text style={{ fontSize: 9, fontWeight: '700', marginTop: 4,
+                                <PhIcon size={18} color={active ? color : '#94A3B8'} weight={active ? 'duotone' : 'regular'} />
+                                <Text style={{ fontSize: 9, fontFamily: 'Outfit-Bold', marginTop: 4,
                                   color: active ? color : '#94A3B8', letterSpacing: 0.3 }}>{cat}</Text>
                               </TouchableOpacity>
                             )
                           })}
                         </View>
-                        {/* Activity grid — 2 columns, emoji in colored circle */}
+                        {/* Activity grid — 2 columns, Phosphor Duotone icons */}
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                           {catItems.map(t => {
                             const sel = createType === t.id
+                            const TIcon = t.Icon
                             return (
-                              <TouchableOpacity key={t.id} onPress={() => { setCreateType(t.id); if (t.id !== 'other') setCreateCustom('') }} activeOpacity={0.8}
-                                style={{ width: cardW, flexDirection: 'row', alignItems: 'center', gap: 10,
-                                  paddingHorizontal: 12, paddingVertical: 13, borderRadius: 18,
+                              <Pressable key={t.id} onPress={() => { setCreateType(t.id); if (t.id !== 'other') setCreateCustom('') }}
+                                style={({ pressed }) => ({ width: cardW, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
+                                  paddingHorizontal: 12, paddingVertical: 13, borderRadius: 16,
                                   backgroundColor: sel ? activeCat.bg : '#F8FAFC',
                                   borderWidth: 1.5, borderColor: sel ? activeCat.color : 'transparent',
                                   shadowColor: sel ? activeCat.color : 'transparent',
-                                  shadowOpacity: sel ? 0.15 : 0, shadowRadius: 6, elevation: sel ? 3 : 0 }}>
+                                  shadowOpacity: sel ? 0.15 : 0, shadowRadius: 6, elevation: sel ? 3 : 0,
+                                  transform: [{ scale: pressed ? 0.95 : 1 }] })}>
                                 <View style={{ width: 38, height: 38, borderRadius: 12,
-                                  backgroundColor: sel ? activeCat.color : '#fff',
-                                  alignItems: 'center', justifyContent: 'center',
-                                  shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 }}>
-                                  {t.id === 'other'
-                                    ? <Pencil size={16} color={sel ? '#fff' : '#94A3B8'} strokeWidth={2} />
-                                    : <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
-                                  }
+                                  backgroundColor: sel ? activeCat.color : '#F1F5F9',
+                                  alignItems: 'center', justifyContent: 'center' }}>
+                                  <TIcon size={18} color={sel ? '#fff' : activeCat.color} weight="duotone" />
                                 </View>
-                                <Text style={{ fontSize: 13, fontWeight: sel ? '800' : '600',
+                                <Text style={{ fontSize: 13, fontFamily: sel ? 'Outfit-Bold' : 'Outfit-SemiBold',
                                   color: sel ? activeCat.color : '#475569', flex: 1 }}>{t.label}</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             )
                           })}
                         </View>
@@ -8256,19 +8279,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, backgroundColor: 'transparent' }}>
                   {createStep < 4 ? (() => {
                     const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
-                    const btnLabel = isDisabled
-                      ? ['Pick a format', 'Pick an activity', 'Choose date & time', ''][createStep - 1]
-                      : ['Next: Activity →', 'Next: Date & time →', 'Next: Final step →', ''][createStep - 1]
+                    const disabledLabel = ['Pick a format', 'Pick an activity', 'Choose date & time', ''][createStep - 1]
+                    const activeLabel   = ['Next: Activity →', 'Next: Date & time →', 'Next: Final step →', ''][createStep - 1]
+                    const STEP_COLORS: [string,string][] = [['#6366F1','#818CF8'],['#EC4899','#F472B6'],['#10B981','#34D399'],['#F59E0B','#FBBF24']]
+                    if (isDisabled) return (
+                      <View style={[s.btnPrimary, { opacity: 0.38, backgroundColor: '#CBD5E1' }]}>
+                        <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'Outfit-SemiBold' }]}>{disabledLabel}</Text>
+                      </View>
+                    )
                     return (
-                    <TouchableOpacity
-                      style={[s.btnPrimary, isDisabled
-                          ? { opacity: 0.4, backgroundColor: '#94A3B8' }
-                          : { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }
-                      ]}
-                      disabled={isDisabled}
-                      onPress={() => setCreateStep(cs => cs + 1)}>
-                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>{btnLabel}</Text>
-                    </TouchableOpacity>
+                      <BreathingButton
+                        label={activeLabel}
+                        onPress={() => setCreateStep(cs => cs + 1)}
+                        colors={STEP_COLORS[createStep - 1]}
+                      />
                     )
                   })() : (
                     <TouchableOpacity
