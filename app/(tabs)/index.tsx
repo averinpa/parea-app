@@ -7872,7 +7872,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
             <View style={[s.fill, { paddingBottom: insets.bottom }]}>
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'height' : undefined}>
 
                 {/* Header row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12 }}>
@@ -7935,6 +7935,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
+                  automaticallyAdjustKeyboardInsets
                   style={{ flex: 1 }}>
 
                   {/* ── Step 1: Pod Size ── */}
