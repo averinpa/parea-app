@@ -7792,7 +7792,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             <View style={{ position: 'relative' }}>
               <Feather name="zap" size={22} color={activeTab === 'vibecheck' ? '#43E97B' : '#94A3B8'} />
               {(() => {
-                const allKnownEvs = [...feedOfficialDbEvents, ...dbCommunityEvents, ...userCreatedEvents]
+                const allKnownEvs = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...feedOfficialDbEvents, ...dbCommunityEvents, ...userCreatedEvents]
                 const now = Date.now()
                 const hasActiveJoined = Object.entries(joinedEvents).some(([id, v]) => {
                   if (!v) return false
