@@ -1,12 +1,16 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
-import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim, Briefcase as PhBriefcase, Egg, SunHorizon, Handshake, Coins, Laptop, Sailboat } from 'phosphor-react-native'
+import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim, Briefcase as PhBriefcase, Egg, SunHorizon, Handshake, Coins, Laptop, Sailboat } from '../../lib/phosphor-icons'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
+import * as AppleAuthentication from 'expo-apple-authentication'
 import { BlurView } from 'expo-blur'
+
+WebBrowser.maybeCompleteAuthSession()
+
 import MaskedView from '@react-native-masked-view/masked-view'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
@@ -52,8 +56,9 @@ const LANDING_SLIDES = [
     title: 'Your city,\nyour crew.',
     sub: 'Events are happening around you right now. Find people who want to go together.',
     bg: ['#F5F3FF', '#EDE9FE', '#DDD6FE'],
-    accent: '#6366F1',
+    accent: '#6366F1', titleColor: '#1E1B4B', subColor: '#475569',
     imgScale: 0.78,
+    spheres: ['#818CF8', '#6366F1', '#A5B4FC'],
   },
   {
     img: require('../../assets/images/Gemini_Generated_Image_55nnbe55nnbe55nn-removebg-preview.png'),
@@ -62,6 +67,7 @@ const LANDING_SLIDES = [
     bg: ['#FFF0F9', '#FCE7F3', '#FBCFE8'],
     accent: '#EC4899', titleColor: '#1E1B4B', subColor: '#475569',
     imgScale: 1.0,
+    spheres: ['#F472B6', '#EC4899', '#FBCFE8'],
   },
   {
     img: require('../../assets/images/unnamed__2_-removebg-preview.png'),
@@ -70,6 +76,7 @@ const LANDING_SLIDES = [
     bg: ['#F0FDF4', '#DCFCE7', '#BBF7D0'],
     accent: '#10B981', titleColor: '#1E1B4B', subColor: '#475569',
     imgScale: 1.0,
+    spheres: ['#34D399', '#10B981', '#6EE7B7'],
   },
 ]
 
@@ -413,7 +420,12 @@ async function isImageSafe(base64: string): Promise<boolean> {
 
 // ─── LANDING SCREEN ───────────────────────────────────────────────────────────
 
-function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => void; onLogin: () => void }) {
+function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn }: {
+  onCreateAccount: () => void
+  onLogin: () => void
+  onGoogleSignIn?: () => void
+  onAppleSignIn?: () => void
+}) {
   const [slide, setSlide] = useState(0)
   const slideAnim = useRef(new Animated.Value(0)).current
   const touchX = useRef<number | null>(null)
@@ -428,6 +440,8 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
   const cur = LANDING_SLIDES[slide]
   const isLast = slide === LANDING_SLIDES.length - 1
 
+  const spheres = (cur as any).spheres as string[]
+
   return (
     <LinearGradient
       colors={cur.bg as any} style={s.fill}
@@ -439,21 +453,30 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
         else if (dx > 50) goTo(slide - 1)
         touchX.current = null
       }}>
+      {/* Decorative background spheres */}
+      <View style={{ position: 'absolute', top: -80, right: -70, width: 240, height: 240, borderRadius: 120, backgroundColor: spheres[0], opacity: 0.10 }} />
+      <View style={{ position: 'absolute', bottom: 160, left: -90, width: 260, height: 260, borderRadius: 130, backgroundColor: spheres[1], opacity: 0.08 }} />
+      <View style={{ position: 'absolute', top: '38%', right: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: spheres[2], opacity: 0.07 }} />
+
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
+        {/* Logo */}
         <View style={s.logoRow}>
-          <Image source={require('../../assets/images/logo.png')} style={s.logo} resizeMode="contain" />
+          <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 38, color: cur.accent, letterSpacing: -1 }}>Parea</Text>
         </View>
 
-        <Animated.View style={[s.slideImgWrap, { transform: [{ translateX: slideAnim }] }]}>
-          <Image source={cur.img} style={[s.slideImg, { width: W * 0.88 * (cur.imgScale ?? 1), height: W * 0.88 * (cur.imgScale ?? 1) }]} resizeMode="contain" />
-        </Animated.View>
+        {/* Image + Text */}
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Animated.View style={[s.slideImgWrap, { transform: [{ translateX: slideAnim }] }]}>
+            <Image source={cur.img} style={[s.slideImg, { width: W * 0.68 * (cur.imgScale ?? 1), height: W * 0.68 * (cur.imgScale ?? 1) }]} resizeMode="contain" />
+          </Animated.View>
+          <Animated.View style={[s.slideTextWrap, { transform: [{ translateX: slideAnim }] }]}>
+            <Text style={[s.slideTitle, { color: cur.titleColor, fontFamily: 'ClashDisplay-Bold' }]}>{cur.title}</Text>
+            <Text style={[s.slideSub, { color: cur.subColor, fontFamily: 'Outfit-Regular' }]}>{cur.sub}</Text>
+          </Animated.View>
+        </View>
 
-        <Animated.View style={[s.slideTextWrap, { transform: [{ translateX: slideAnim }] }]}>
-          <Text style={[s.slideTitle, { color: cur.titleColor }]}>{cur.title}</Text>
-          <Text style={[s.slideSub, { color: cur.subColor }]}>{cur.sub}</Text>
-        </Animated.View>
-
+        {/* Dots */}
         <View style={s.dotsRow}>
           {LANDING_SLIDES.map((_, i) => (
             <TouchableOpacity key={i} onPress={() => goTo(i)}>
@@ -462,24 +485,61 @@ function LandingScreen({ onCreateAccount, onLogin }: { onCreateAccount: () => vo
           ))}
         </View>
 
+        {/* Buttons */}
         <View style={s.landingBtns}>
           {isLast ? (
             <>
-              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 10 }]} onPress={onCreateAccount}>
-                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Account ✦</Text>
-              </TouchableOpacity>
+              <BreathingButton
+                label="Create Account"
+                onPress={onCreateAccount}
+                colors={['#6366F1', '#818CF8']}
+                icon={<Sparkle size={18} color="#fff" weight="duotone" />}
+              />
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium' }}>or continue with</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {onGoogleSignIn && (
+                  <TouchableOpacity onPress={onGoogleSignIn}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      height: 52, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.2)',
+                      backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+                    <Svg width={18} height={18} viewBox="0 0 48 48">
+                      <Path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+                      <Path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/>
+                      <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
+                      <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
+                    </Svg>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>Google</Text>
+                  </TouchableOpacity>
+                )}
+                {Platform.OS === 'ios' && onAppleSignIn && (
+                  <TouchableOpacity onPress={onAppleSignIn}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      height: 52, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
+                      backgroundColor: '#000', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, elevation: 2 }}>
+                    <Svg width={16} height={16} viewBox="0 0 814 1000">
+                      <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
+                    </Svg>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Apple</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <TouchableOpacity style={[s.btnSecondary, { borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'rgba(99,102,241,0.06)' }]} onPress={onLogin}>
-                <Text style={[s.btnSecondaryText, { color: '#6366F1' }]}>Log In</Text>
+                <Text style={[s.btnSecondaryText, { color: '#6366F1', fontFamily: 'Outfit-SemiBold' }]}>Log In</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <TouchableOpacity style={[s.btnPrimary, { backgroundColor: cur.accent, shadowColor: cur.accent, shadowOpacity: 0.45, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 10 }]} onPress={() => goTo(slide + 1)}>
-                <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Next  →</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onLogin} style={{ alignItems: 'center', paddingVertical: 6 }}>
-                <Text style={{ fontSize: 14, color: '#94A3B8', letterSpacing: 0.1 }}>
-                  Already have an account? <Text style={{ color: '#6366F1', fontWeight: '700' }}>Log in</Text>
+              <BreathingButton label="Next →" onPress={() => goTo(slide + 1)} colors={[cur.accent, cur.accent]} />
+              <TouchableOpacity onPress={onLogin} style={{ alignItems: 'center', paddingVertical: 4 }}>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontFamily: 'Outfit-Regular' }}>
+                  Already have an account?{'  '}<Text style={{ color: '#6366F1', fontFamily: 'Outfit-Bold' }}>Log in</Text>
                 </Text>
               </TouchableOpacity>
             </>
@@ -5214,7 +5274,7 @@ const CREATE_EVENT_TYPES = [
   { id: 'picnic',      label: 'Picnic',       emoji: '🧺' },
 ]
 
-function BreathingButton({ label, onPress, colors }: { label: string; onPress: () => void; colors: [string, string] }) {
+function BreathingButton({ label, onPress, colors, icon }: { label: string; onPress: () => void; colors: [string, string]; icon?: React.ReactNode }) {
   const breath = useRef(new Animated.Value(1)).current
   useEffect(() => {
     const anim = Animated.loop(
@@ -5230,8 +5290,9 @@ function BreathingButton({ label, onPress, colors }: { label: string; onPress: (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
       <Animated.View style={{ transform: [{ scale: breath }] }}>
         <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={{ borderRadius: 18, paddingVertical: 16, alignItems: 'center', justifyContent: 'center',
+          style={{ borderRadius: 18, paddingVertical: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
             shadowColor: colors[0], shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}>
+          {icon}
           <Text style={{ fontFamily: 'ClashDisplay-Semibold', fontSize: 16, color: '#fff', letterSpacing: -0.2 }}>{label}</Text>
         </LinearGradient>
       </Animated.View>
@@ -9358,6 +9419,52 @@ export default function App() {
     setScreen('feed')
   }
 
+  const handleGoogleSignIn = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'pareaapp://', skipBrowserRedirect: true },
+      })
+      if (error) { Alert.alert('Google Sign In failed', error.message); return }
+      if (!data?.url) return
+      const result = await WebBrowser.openAuthSessionAsync(data.url, 'pareaapp://')
+      if (result.type === 'success' && result.url) {
+        const url = result.url
+        const hashPart = url.includes('#') ? url.split('#')[1] : url.split('?')[1] || ''
+        const params = new URLSearchParams(hashPart)
+        const access_token = params.get('access_token')
+        const refresh_token = params.get('refresh_token')
+        if (access_token) {
+          const { data: s } = await supabase.auth.setSession({ access_token, refresh_token: refresh_token || '' })
+          if (s.user) await loadProfileForUser(s.user.id)
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Google Sign In failed', e.message)
+    }
+  }
+
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      })
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken!,
+      })
+      if (error) { Alert.alert('Apple Sign In failed', error.message); return }
+      if (data.user) await loadProfileForUser(data.user.id)
+    } catch (e: any) {
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Apple Sign In failed', e.message)
+      }
+    }
+  }
+
   const handleLogOut = async () => {
     if (userData?.authId) await AsyncStorage.removeItem(`parea_feed_${userData.authId}`)
     await supabase.auth.signOut()
@@ -9403,7 +9510,7 @@ export default function App() {
     }
   }
 
-  if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('register')} />
+  if (screen === 'landing') return <LandingScreen onCreateAccount={() => setScreen('register')} onLogin={() => setScreen('register')} onGoogleSignIn={handleGoogleSignIn} onAppleSignIn={handleAppleSignIn} />
   if (screen === 'register') return <RegistrationScreen onBack={() => setScreen('landing')} onSendOtp={(method, cred) => { setAuthMethod(method); setAuthCredential(cred); setScreen('otp') }} />
   if (screen === 'otp') return <OTPScreen onBack={() => setScreen('register')} method={authMethod} credential={authCredential} onVerify={handleOtpVerify} />
   if (screen === 'onboarding') return <OnboardingScreen onBack={() => setScreen('otp')} onFinish={handleFinishOnboarding} userId={authUserId || undefined} />
@@ -9438,14 +9545,14 @@ const s = StyleSheet.create({
   // Landing
   logoRow: { alignItems: 'center', paddingTop: 36, paddingBottom: 8 },
   logo: { width: 200, height: 64 },
-  slideImgWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  slideImg: { width: W * 0.88, height: W * 0.88 },
-  slideTextWrap: { paddingHorizontal: 28, marginBottom: 20, alignItems: 'center' },
-  slideTitle: { fontSize: 34, fontWeight: '800', letterSpacing: -0.8, marginBottom: 12, lineHeight: 44, textAlign: 'center' },
-  slideSub: { fontSize: 16, lineHeight: 26, textAlign: 'center' },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 28 },
+  slideImgWrap: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+  slideImg: { width: W * 0.68, height: W * 0.68 },
+  slideTextWrap: { paddingHorizontal: 28, marginBottom: 16, alignItems: 'center' },
+  slideTitle: { fontSize: 30, fontWeight: '800', letterSpacing: -0.8, marginBottom: 10, lineHeight: 40, textAlign: 'center' },
+  slideSub: { fontSize: 15, lineHeight: 24, textAlign: 'center' },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 20 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  landingBtns: { paddingHorizontal: 24, paddingBottom: 48, gap: 12 },
+  landingBtns: { paddingHorizontal: 24, paddingBottom: 32, gap: 10 },
 
   // Buttons
   btnPrimary: { height: 58, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#818CF8', shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
