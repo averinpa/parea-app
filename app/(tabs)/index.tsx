@@ -5515,7 +5515,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const handleReport = async (profile: any, reason: string) => {
     if (!userData?.dbId || !profile?.id) return
     await supabase.from('reports').insert({ reporter_id: userData.dbId, reported_id: profile.id, reason })
-    Alert.alert('Report submitted', 'Thank you. We'll review it shortly.')
+    Alert.alert('Report submitted', "Thank you. We'll review it shortly.")
   }
 
   useEffect(() => {
