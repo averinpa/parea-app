@@ -1,6 +1,4 @@
 // app/(tabs)/index.tsx — Parea Mobile
-import '../../lib/i18n'
-import { useTranslation } from 'react-i18next'
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama } from 'lucide-react-native'
 import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim, Briefcase as PhBriefcase, Egg, SunHorizon, Handshake, Coins, Laptop, Sailboat } from '../../lib/phosphor-icons'
@@ -428,7 +426,6 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
   onGoogleSignIn?: () => void
   onAppleSignIn?: () => void
 }) {
-  const { t } = useTranslation()
   const [slide, setSlide] = useState(0)
   const slideAnim = useRef(new Animated.Value(0)).current
   const touchX = useRef<number | null>(null)
@@ -517,7 +514,7 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
                       <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
                       <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
                     </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>{t('registration.google')}</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>Google</Text>
                   </TouchableOpacity>
                 )}
                 {Platform.OS === 'ios' && onAppleSignIn && (
@@ -528,7 +525,7 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
                     <Svg width={16} height={16} viewBox="0 0 814 1000">
                       <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
                     </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>{t('registration.apple')}</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Apple</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -589,7 +586,6 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
   onGoogleSignIn?: () => void
   onAppleSignIn?: () => void
 }) {
-  const { t } = useTranslation()
   const [tab, setTab] = useState<'email' | 'phone'>('email')
   const [email, setEmail] = useState('')
   const [localPhone, setLocalPhone] = useState('')
@@ -658,8 +654,8 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
 
               {/* Heading */}
               <View style={{ alignItems: 'center', marginBottom: 28 }}>
-                <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 30, color: '#1E1B4B', letterSpacing: -0.8, textAlign: 'center', lineHeight: 38 }}>{t('registration.title')}</Text>
-                <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 15, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>{t('registration.subtitle')}</Text>
+                <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 30, color: '#1E1B4B', letterSpacing: -0.8, textAlign: 'center', lineHeight: 38 }}>Find your people</Text>
+                <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 15, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>Join companions going to the same{'\n'}events in your city.</Text>
               </View>
 
               {/* Social buttons */}
@@ -675,7 +671,7 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                       <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
                       <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
                     </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>{t('registration.google')}</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>Google</Text>
                   </TouchableOpacity>
                 )}
                 {Platform.OS === 'ios' && onAppleSignIn && (
@@ -686,7 +682,7 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                     <Svg width={16} height={16} viewBox="0 0 814 1000">
                       <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
                     </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>{t('registration.apple')}</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Apple</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -694,16 +690,16 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
               {/* Divider */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                 <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
-                <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium' }}>{t('registration.divider')}</Text>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium' }}>or use email / phone</Text>
                 <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
               </View>
 
               {/* Tab toggle */}
               <View style={s.tabToggle}>
-                {(['email', 'phone'] as const).map(tabOpt => (
-                  <TouchableOpacity key={tabOpt} onPress={() => setTab(tabOpt)} style={[s.tabBtn, tab === tabOpt && s.tabBtnOn]}>
-                    <Text style={[s.tabBtnTxt, tab === tabOpt && s.tabBtnTxtOn, { fontFamily: tab === tabOpt ? 'Outfit-SemiBold' : 'Outfit-Regular' }]}>
-                      {tabOpt === 'email' ? t('registration.tab_email') : t('registration.tab_phone')}
+                {(['email', 'phone'] as const).map(t => (
+                  <TouchableOpacity key={t} onPress={() => setTab(t)} style={[s.tabBtn, tab === t && s.tabBtnOn]}>
+                    <Text style={[s.tabBtnTxt, tab === t && s.tabBtnTxtOn, { fontFamily: tab === t ? 'Outfit-SemiBold' : 'Outfit-Regular' }]}>
+                      {t === 'email' ? 'Email' : 'Phone'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -715,8 +711,8 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                   <Feather name="mail" size={17} color="#94A3B8" style={{ marginRight: 10 }} />
                   <TextInput
                     style={[s.glassInputText, { fontFamily: 'Outfit-Regular' }]} value={email}
-                    onChangeText={v => setEmail(v.replace(/\s/g, ''))}
-                    placeholder={t('registration.email_placeholder')} placeholderTextColor="#94A3B8"
+                    onChangeText={t => setEmail(t.replace(/\s/g, ''))}
+                    placeholder="your@email.com" placeholderTextColor="#94A3B8"
                     keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
                   {isEmailValid && <PhCheckCircle size={22} color="#22c55e" weight="duotone" />}
                 </View>
@@ -764,7 +760,7 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                 onPress={handleContinue} disabled={isChecking}>
                 {isChecking
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'ClashDisplay-Semibold' }]}>{t('registration.continue')}</Text>}
+                  : <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'ClashDisplay-Semibold' }]}>Continue</Text>}
               </TouchableOpacity>
 
               {/* GDPR consent */}
@@ -781,16 +777,17 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                   {agreed && <Feather name="check" size={13} color="#fff" />}
                 </View>
                 <Text style={{ flex: 1, fontSize: 13, color: '#64748B', lineHeight: 20, fontFamily: 'Outfit-Regular' }}>
-                  {t('registration.gdpr') + ' '}
+                  {'I have read and agree to the '}
                   <Text style={{ color: '#6366F1', fontFamily: 'Outfit-SemiBold' }}
                     onPress={() => WebBrowser.openBrowserAsync('https://averinpa.github.io/parea-app/terms')}>
-                    {t('registration.terms')}
+                    Terms of Service
                   </Text>
-                  {' ' + t('registration.and') + ' '}
+                  {' and '}
                   <Text style={{ color: '#6366F1', fontFamily: 'Outfit-SemiBold' }}
                     onPress={() => WebBrowser.openBrowserAsync('https://averinpa.github.io/parea-app/privacy')}>
-                    {t('registration.privacy')}
+                    Privacy Policy
                   </Text>
+                  {'. I confirm I am 18 years of age or older.'}
                 </Text>
               </TouchableOpacity>
               {showAgreementWarning && (
