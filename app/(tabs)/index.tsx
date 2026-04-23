@@ -4689,7 +4689,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 
-function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }: { userData: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void; city?: string; setCityOpen?: (v: boolean) => void }) {
+function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, onUnblockUser }: { userData: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void; city?: string; setCityOpen?: (v: boolean) => void; onUnblockUser?: (id: string) => void }) {
   const insets = useSafeAreaInsets()
   const nm = userData?.name || 'Your Profile'
   const ag = userData?.age || ''
@@ -4805,6 +4805,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
     if (!userData?.dbId) return
     await supabase.from('blocked_users').delete().eq('blocker_id', userData.dbId).eq('blocked_id', userId)
     setBlockedUsers(prev => prev.filter(b => b.id !== userId))
+    onUnblockUser?.(userId)
   }
 
   return (
@@ -8065,7 +8066,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           />
           </View>
           <View style={{ flex: 1, display: activeTab === 'profile' ? 'flex' : 'none' }}>
-            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} city={city} setCityOpen={setCityOpen} />
+            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} city={city} setCityOpen={setCityOpen} onUnblockUser={(id) => setBlockedIds(prev => { const n = new Set(prev); n.delete(id); return n })} />
           </View>
         </View>
 
