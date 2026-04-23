@@ -8323,6 +8323,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             <View style={{ zIndex: 10 }}>
                               <GooglePlacesAutocomplete
                                 placeholder="Search for a place..."
+                                minLength={2}
+                                enablePoweredByContainer={false}
+                                keyboardShouldPersistTaps="handled"
                                 onPress={(data, details) => {
                                   setCreateLocation(data.description)
                                   if (details?.geometry?.location) {
@@ -8330,12 +8333,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                   }
                                   setLocationPickerOpen(false)
                                 }}
+                                onFail={(error) => console.log('Places error:', error)}
                                 query={{ key: GOOGLE_MAPS_KEY, language: 'en' }}
                                 fetchDetails
+                                nearbyPlacesAPI="GooglePlacesSearch"
+                                debounce={300}
                                 styles={{
-                                  container: { paddingHorizontal: 16, paddingTop: 12 },
+                                  container: { paddingHorizontal: 16, paddingTop: 12, flex: 0 },
                                   textInput: { fontSize: 15, fontFamily: 'Outfit-Regular', backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 14, height: 46, color: '#1E1B4B' },
-                                  listView: { backgroundColor: '#fff', marginHorizontal: 16 },
+                                  listView: { backgroundColor: '#fff' },
                                   row: { paddingHorizontal: 14, paddingVertical: 12 },
                                   description: { fontSize: 14, fontFamily: 'Outfit-Regular', color: '#1E1B4B' },
                                 }}
