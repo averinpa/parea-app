@@ -3501,8 +3501,9 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
 
 const REPORT_REASONS = ['Inappropriate content', 'Spam or fake profile', 'Harassment', 'Underage user', 'Other']
 
-function ReportModal({ profile, onClose, onSubmit }: { profile: any; onClose: () => void; onSubmit: (reason: string) => void }) {
+function ReportModal({ profile, onClose, onSubmit }: { profile: any; onClose: () => void; onSubmit: (reason: string, details: string) => void }) {
   const [selected, setSelected] = useState('')
+  const [details, setDetails] = useState('')
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={onClose} />
@@ -3518,8 +3519,17 @@ function ReportModal({ profile, onClose, onSubmit }: { profile: any; onClose: ()
             <Text style={{ fontSize: 15, fontWeight: '500', color: '#1E1B4B' }}>{r}</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity onPress={() => { if (selected) { onSubmit(selected); onClose() } }}
-          style={{ marginTop: 20, backgroundColor: selected ? '#6366F1' : '#E2E8F0', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+        <TextInput
+          placeholder="Describe what happened (optional)"
+          placeholderTextColor="#94A3B8"
+          multiline
+          numberOfLines={3}
+          value={details}
+          onChangeText={setDetails}
+          style={{ marginTop: 16, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, fontSize: 14, color: '#1E1B4B', minHeight: 72, textAlignVertical: 'top', borderWidth: 1, borderColor: '#E2E8F0' }}
+        />
+        <TouchableOpacity onPress={() => { if (selected) { onSubmit(selected, details); onClose() } }}
+          style={{ marginTop: 16, backgroundColor: selected ? '#6366F1' : '#E2E8F0', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
           <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: selected ? '#fff' : '#94A3B8' }}>Submit Report</Text>
         </TouchableOpacity>
       </View>
@@ -5519,9 +5529,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     Alert.alert('Blocked', `${profile.name} has been blocked.`)
   }
 
-  const handleReport = async (profile: any, reason: string) => {
+  const handleReport = async (profile: any, reason: string, details?: string) => {
     if (!userData?.dbId || !profile?.id) return
-    await supabase.from('reports').insert({ reporter_id: userData.dbId, reported_id: profile.id, reason })
+    await supabase.from('reports').insert({ reporter_id: userData.dbId, reported_id: profile.id, reason, details: details || null })
     Alert.alert('Report submitted', "Thank you. We'll review it shortly.")
   }
 
@@ -9270,7 +9280,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       )}
 
       {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} onBlock={handleBlock} onReport={(p) => setReportTarget(p)} />}
-      {reportTarget && <ReportModal profile={reportTarget} onClose={() => setReportTarget(null)} onSubmit={(reason) => handleReport(reportTarget, reason)} />}
+      {reportTarget && <ReportModal profile={reportTarget} onClose={() => setReportTarget(null)} onSubmit={(reason, details) => handleReport(reportTarget, reason, details)} />}
 
 
       {/* ── Notification Panel ─────────────────────────────────────────────── */}
@@ -9594,6 +9604,12 @@ export default function App() {
       .eq('auth_id', userId)
       .single()
     if (profile) {
+      if (profile.is_banned) {
+        await supabase.auth.signOut()
+        Alert.alert('Account suspended', 'Your account has been suspended for violating our community guidelines.')
+        setScreen('landing')
+        return
+      }
       setAuthUserId(userId)
       setUserData({
         name: profile.name,
