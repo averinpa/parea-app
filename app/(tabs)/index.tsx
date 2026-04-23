@@ -24,6 +24,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
+
+const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || ''
 
 const { width: W } = Dimensions.get('window')
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY || ''
@@ -5351,6 +5355,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createCustom, setCreateCustom] = useState('')
   const [createImage, setCreateImage] = useState<{ uri: string; base64: string } | null>(null)
   const createScrollRef = useRef<ScrollView>(null)
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false)
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [city, setCity] = useState('Limassol')
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
@@ -8288,14 +8294,81 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                         {/* Location */}
                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Location</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
-                          paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1.5,
-                          borderColor: createLocation.length > 0 ? '#6366F1' : 'transparent' }}>
+                        <TouchableOpacity onPress={() => setLocationPickerOpen(true)}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
+                            paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1.5,
+                            borderColor: createLocation.length > 0 ? '#6366F1' : 'transparent' }}>
                           <Feather name="map-pin" size={15} color="#6366F1" />
-                          <TextInput value={createLocation} onChangeText={setCreateLocation}
-                            placeholder="Café, beach, address..." placeholderTextColor="#94A3B8"
-                            style={{ flex: 1, fontSize: 14, color: '#1E1B4B', fontWeight: '600' }} />
-                        </View>
+                          <Text style={{ flex: 1, fontSize: 14, color: createLocation.length > 0 ? '#1E1B4B' : '#94A3B8', fontWeight: '600' }}>
+                            {createLocation.length > 0 ? createLocation : 'Café, beach, address...'}
+                          </Text>
+                          {createLocation.length > 0 && (
+                            <TouchableOpacity onPress={() => { setCreateLocation(''); setLocationCoords(null) }}>
+                              <Feather name="x" size={15} color="#94A3B8" />
+                            </TouchableOpacity>
+                          )}
+                        </TouchableOpacity>
+
+                        {/* Location Picker Modal */}
+                        <Modal visible={locationPickerOpen} animationType="slide" onRequestClose={() => setLocationPickerOpen(false)}>
+                          <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                            {/* Header */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                              <TouchableOpacity onPress={() => setLocationPickerOpen(false)} style={{ marginRight: 12 }}>
+                                <Feather name="x" size={22} color="#475569" />
+                              </TouchableOpacity>
+                              <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B' }}>Pick a location</Text>
+                            </View>
+
+                            {/* Search */}
+                            <View style={{ zIndex: 10 }}>
+                              <GooglePlacesAutocomplete
+                                placeholder="Search for a place..."
+                                onPress={(data, details) => {
+                                  setCreateLocation(data.description)
+                                  if (details?.geometry?.location) {
+                                    setLocationCoords({ lat: details.geometry.location.lat, lng: details.geometry.location.lng })
+                                  }
+                                  setLocationPickerOpen(false)
+                                }}
+                                query={{ key: GOOGLE_MAPS_KEY, language: 'en' }}
+                                fetchDetails
+                                styles={{
+                                  container: { paddingHorizontal: 16, paddingTop: 12 },
+                                  textInput: { fontSize: 15, fontFamily: 'Outfit-Regular', backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 14, height: 46, color: '#1E1B4B' },
+                                  listView: { backgroundColor: '#fff', marginHorizontal: 16 },
+                                  row: { paddingHorizontal: 14, paddingVertical: 12 },
+                                  description: { fontSize: 14, fontFamily: 'Outfit-Regular', color: '#1E1B4B' },
+                                }}
+                              />
+                            </View>
+
+                            {/* Map */}
+                            <MapView
+                              provider={PROVIDER_GOOGLE}
+                              style={{ flex: 1 }}
+                              initialRegion={{ latitude: 34.6786, longitude: 33.0413, latitudeDelta: 0.1, longitudeDelta: 0.1 }}
+                              region={locationCoords ? { latitude: locationCoords.lat, longitude: locationCoords.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 } : undefined}
+                              onPress={(e) => {
+                                const { latitude, longitude } = e.nativeEvent.coordinate
+                                setLocationCoords({ lat: latitude, lng: longitude })
+                                setCreateLocation(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`)
+                              }}>
+                              {locationCoords && (
+                                <Marker coordinate={{ latitude: locationCoords.lat, longitude: locationCoords.lng }} />
+                              )}
+                            </MapView>
+
+                            {/* Confirm button */}
+                            {createLocation.length > 0 && (
+                              <TouchableOpacity
+                                onPress={() => setLocationPickerOpen(false)}
+                                style={{ margin: 16, marginBottom: insets.bottom + 16, backgroundColor: '#6366F1', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+                                <Text style={{ color: '#fff', fontSize: 16, fontFamily: 'ClashDisplay-Semibold' }}>Confirm location</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </Modal>
 
                         {/* Description */}
                         <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, marginTop: 16 }}>Description</Text>

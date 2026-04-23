@@ -33,6 +33,12 @@
       "expo-router",
       "expo-apple-authentication",
       [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyA4J0sWd7eC_OTg_coZ37XD1NZ6VZ5CbaY"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
