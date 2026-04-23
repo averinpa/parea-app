@@ -24,7 +24,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
 
 const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || ''
@@ -8342,22 +8341,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                                 }}
                               />
                             </View>
-
-                            {/* Map */}
-                            <MapView
-                              provider={PROVIDER_GOOGLE}
-                              style={{ flex: 1 }}
-                              initialRegion={{ latitude: 34.6786, longitude: 33.0413, latitudeDelta: 0.1, longitudeDelta: 0.1 }}
-                              region={locationCoords ? { latitude: locationCoords.lat, longitude: locationCoords.lng, latitudeDelta: 0.01, longitudeDelta: 0.01 } : undefined}
-                              onPress={(e) => {
-                                const { latitude, longitude } = e.nativeEvent.coordinate
-                                setLocationCoords({ lat: latitude, lng: longitude })
-                                setCreateLocation(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`)
-                              }}>
-                              {locationCoords && (
-                                <Marker coordinate={{ latitude: locationCoords.lat, longitude: locationCoords.lng }} />
-                              )}
-                            </MapView>
 
                             {/* Confirm button */}
                             {createLocation.length > 0 && (
