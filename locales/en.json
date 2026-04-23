@@ -1,0 +1,19 @@
+{
+  "registration": {
+    "title": "Find your people",
+    "subtitle": "Join events, meet locals, build your crew",
+    "google": "Continue with Google",
+    "apple": "Continue with Apple",
+    "divider": "or use email / phone",
+    "tab_email": "Email",
+    "tab_phone": "Phone",
+    "email_placeholder": "your@email.com",
+    "phone_placeholder": "Phone number",
+    "continue": "Continue",
+    "gdpr": "By continuing you agree to our",
+    "terms": "Terms",
+    "and": "and",
+    "privacy": "Privacy Policy",
+    "back": "Back"
+  }
+}
