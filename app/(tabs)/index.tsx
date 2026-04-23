@@ -9217,29 +9217,38 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   })}
                 </ScrollView>
 
-                {replyTo && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.15)', gap: 10 }}>
-                    <View style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', alignSelf: 'stretch' }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>{replyTo.senderName}</Text>
-                      <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>{replyTo.text}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setReplyTo(null)} style={{ padding: 4 }}>
-                      <Feather name="x" size={16} color="#94A3B8" />
-                    </TouchableOpacity>
+                {blockedIds.has(openChat?.partnerProfile?.id) ? (
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 14, paddingBottom: Math.max(insets.bottom + 14, 20), backgroundColor: '#FEF2F2', borderTopWidth: 1, borderTopColor: '#FECACA', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Feather name="slash" size={16} color="#EF4444" />
+                    <Text style={{ flex: 1, fontSize: 13, color: '#EF4444', fontWeight: '600' }}>You've blocked this user. Unblock them in Settings to send messages.</Text>
                   </View>
+                ) : (
+                  <>
+                    {replyTo && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: 'rgba(99,102,241,0.15)', gap: 10 }}>
+                        <View style={{ width: 3, borderRadius: 2, backgroundColor: '#6366F1', alignSelf: 'stretch' }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>{replyTo.senderName}</Text>
+                          <Text style={{ fontSize: 13, color: '#64748B' }} numberOfLines={1}>{replyTo.text}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => setReplyTo(null)} style={{ padding: 4 }}>
+                          <Feather name="x" size={16} color="#94A3B8" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'ios' ? (chatKeyboardVisible ? 8 : Math.max(insets.bottom + 6, 16)) : Math.max(insets.bottom, 8) }]}>
+                      <TextInput
+                        style={s.chatInput} value={chatInput} onChangeText={setChatInput}
+                        placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
+                      <TouchableOpacity
+                        style={[s.sendBtn, { backgroundColor: chatInput.trim() ? '#6366F1' : '#E2E8F0' }]}
+                        onPress={handleSend} disabled={!chatInput.trim()}>
+                        <Ionicons name="arrow-up" size={20} color={chatInput.trim() ? '#fff' : '#94A3B8'} />
+                      </TouchableOpacity>
+                    </View>
+                    {Platform.OS === 'android' && <View style={{ height: chatSpacerH }} />}
+                  </>
                 )}
-                <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'ios' ? (chatKeyboardVisible ? 8 : Math.max(insets.bottom + 6, 16)) : Math.max(insets.bottom, 8) }]}>
-                  <TextInput
-                    style={s.chatInput} value={chatInput} onChangeText={setChatInput}
-                    placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
-                  <TouchableOpacity
-                    style={[s.sendBtn, { backgroundColor: chatInput.trim() ? '#6366F1' : '#E2E8F0' }]}
-                    onPress={handleSend} disabled={!chatInput.trim()}>
-                    <Ionicons name="arrow-up" size={20} color={chatInput.trim() ? '#fff' : '#94A3B8'} />
-                  </TouchableOpacity>
-                </View>
-                {Platform.OS === 'android' && <View style={{ height: chatSpacerH }} />}
               </KeyboardAvoidingView>
           </View>
         </Modal>
