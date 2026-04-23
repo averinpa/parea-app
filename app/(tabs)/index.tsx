@@ -2700,11 +2700,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
 // ─── MESSAGES TAB ─────────────────────────────────────────────────────────────
 
-function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {} }: {
+function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {}, onBlockUser, onReportUser }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>; allEvents?: any[]; onEventDetail?: (ev: any) => void;
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
   initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; hostConfirmedMembers?: Record<number, any[]>; approvedAtMap?: Record<number, number>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>; passedRequests?: Record<number, string[]>;
+  onBlockUser?: (profile: any) => void; onReportUser?: (profile: any) => void;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   useEffect(() => { if (initialSubTab) setSubTab(initialSubTab) }, [initialSubTab])
@@ -3280,7 +3281,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
           </View>
         </Modal>
       )}
-      {memberPreview && <ProfilePreviewSheet profile={memberPreview} onClose={() => setMemberPreview(null)} />}
+      {memberPreview && <ProfilePreviewSheet profile={memberPreview} onClose={() => setMemberPreview(null)} onBlock={onBlockUser} onReport={onReportUser} />}
     </View>
   )
 }
@@ -3320,7 +3321,7 @@ const VIBE_FORMAT_THRESHOLD: Record<string, number> = { '1+1': 2, squad: 5, part
 const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': '1 spot open', squad: '4 spots open', party: '19 spots open' }
 const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', networking: '🤝 Networking', activity: '⚡ Activity' }
 
-function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () => void }) {
+function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void }) {
   const insets = useSafeAreaInsets()
   const [photoIdx, setPhotoIdx] = useState(0)
   const slideAnim = useRef(new Animated.Value(300)).current
@@ -3472,8 +3473,56 @@ function ProfilePreviewSheet({ profile, onClose }: { profile: any; onClose: () =
               </View>
             </>
           )}
+
+          {/* Block / Report */}
+          {(onBlock || onReport) && (
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>
+              {onReport && (
+                <TouchableOpacity onPress={() => { onReport(profile); close() }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderRadius: 14, backgroundColor: 'rgba(245,158,11,0.12)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.25)' }}>
+                  <Feather name="flag" size={15} color="#F59E0B" />
+                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#F59E0B' }}>Report</Text>
+                </TouchableOpacity>
+              )}
+              {onBlock && (
+                <TouchableOpacity onPress={() => { onBlock(profile); close() }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderRadius: 14, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.22)' }}>
+                  <Feather name="slash" size={15} color="#EF4444" />
+                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#EF4444' }}>Block</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       </Animated.View>
+    </Modal>
+  )
+}
+
+const REPORT_REASONS = ['Inappropriate content', 'Spam or fake profile', 'Harassment', 'Underage user', 'Other']
+
+function ReportModal({ profile, onClose, onSubmit }: { profile: any; onClose: () => void; onSubmit: (reason: string) => void }) {
+  const [selected, setSelected] = useState('')
+  return (
+    <Modal transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={onClose} />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 36 }}>
+        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', marginBottom: 4 }}>Report {profile?.name}</Text>
+        <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 18 }}>Select a reason. We review all reports.</Text>
+        {REPORT_REASONS.map(r => (
+          <TouchableOpacity key={r} onPress={() => setSelected(r)}
+            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', gap: 12 }}>
+            <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: selected === r ? '#6366F1' : '#CBD5E1', backgroundColor: selected === r ? '#6366F1' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+              {selected === r && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' }} />}
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: '500', color: '#1E1B4B' }}>{r}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity onPress={() => { if (selected) { onSubmit(selected); onClose() } }}
+          style={{ marginTop: 20, backgroundColor: selected ? '#6366F1' : '#E2E8F0', borderRadius: 16, paddingVertical: 15, alignItems: 'center' }}>
+          <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: selected ? '#fff' : '#94A3B8' }}>Submit Report</Text>
+        </TouchableOpacity>
+      </View>
     </Modal>
   )
 }
@@ -3680,7 +3729,7 @@ function RockingTransportPill({ transport }: { transport: string }) {
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {}, topInset = 0 }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
   // Official + approved community events — shown as crew cards
   const myEvents = (allEvents || []).filter((e: any) => {
     const status = joinedEvents?.[e.id]
@@ -4633,7 +4682,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
         </ScrollView>
       </SafeAreaView>
 
-      {previewProfile && <ProfilePreviewSheet profile={previewProfile} onClose={() => setPreviewProfile(null)} />}
+      {previewProfile && <ProfilePreviewSheet profile={previewProfile} onClose={() => setPreviewProfile(null)} onBlock={onBlockUser} onReport={onReportUser} />}
     </View>
   )
 }
@@ -4740,6 +4789,25 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
   const [blockedUsers, setBlockedUsers] = useState<{ id: string; name: string; photo?: string }[]>([])
   const [faqOpen, setFaqOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!userData?.dbId) return
+    supabase.from('blocked_users').select('blocked_id, profiles!blocked_id(id, name, photos)')
+      .eq('blocker_id', userData.dbId)
+      .then(({ data }) => {
+        if (data) setBlockedUsers(data.map((r: any) => ({
+          id: r.profiles?.id || r.blocked_id,
+          name: r.profiles?.name || 'Unknown',
+          photo: r.profiles?.photos?.[0],
+        })))
+      })
+  }, [userData?.dbId])
+
+  const unblockUser = async (userId: string) => {
+    if (!userData?.dbId) return
+    await supabase.from('blocked_users').delete().eq('blocker_id', userData.dbId).eq('blocked_id', userId)
+    setBlockedUsers(prev => prev.filter(b => b.id !== userId))
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -5233,7 +5301,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
                               {u.photo ? <Image source={{ uri: u.photo }} style={{ width: 44, height: 44, borderRadius: 22 }} /> : <Feather name="user" size={20} color="#6366F1" />}
                             </View>
                             <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#1E1B4B' }}>{u.name}</Text>
-                            <TouchableOpacity onPress={() => setBlockedUsers(prev => prev.filter(b => b.id !== u.id))}
+                            <TouchableOpacity onPress={() => unblockUser(u.id)}
                               style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, backgroundColor: '#FEF2F2' }}>
                               <Text style={{ fontSize: 13, fontWeight: '700', color: '#EF4444' }}>Unblock</Text>
                             </TouchableOpacity>
@@ -5428,6 +5496,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [chatKeyboardVisible, setChatKeyboardVisible] = useState(false)
   const chatBodyMaxH = useRef(0)
   const chatBodyCurH = useRef(0)
+
+  useEffect(() => {
+    if (!userData?.dbId) return
+    supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData.dbId)
+      .then(({ data }) => {
+        if (data) setBlockedIds(new Set(data.map((r: any) => r.blocked_id)))
+      })
+  }, [userData?.dbId])
+
+  const handleBlock = async (profile: any) => {
+    if (!userData?.dbId || !profile?.id) return
+    await supabase.from('blocked_users').upsert({ blocker_id: userData.dbId, blocked_id: profile.id }, { onConflict: 'blocker_id,blocked_id' })
+    setBlockedIds(prev => new Set([...prev, profile.id]))
+    Alert.alert('Blocked', `${profile.name} has been blocked.`)
+  }
+
+  const handleReport = async (profile: any, reason: string) => {
+    if (!userData?.dbId || !profile?.id) return
+    await supabase.from('reports').insert({ reporter_id: userData.dbId, reported_id: profile.id, reason })
+    Alert.alert('Report submitted', 'Thank you. We'll review it shortly.')
+  }
+
   useEffect(() => {
     if (Platform.OS === 'android') {
       const show = Keyboard.addListener('keyboardDidShow', e => {
@@ -5454,6 +5544,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [chatList, setChatList] = useState(MOCK_CHATS)
   const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
   const [groupMembersOpen, setGroupMembersOpen] = useState(false)
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
+  const [reportTarget, setReportTarget] = useState<any>(null)
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
   const inboxChannelRef = useRef<any>(null)
@@ -7377,6 +7469,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             userEventTransport={userEventTransport}
             userData={userData}
             tonightVibe={tonightVibe}
+            onBlockUser={handleBlock}
+            onReportUser={(p: any) => setReportTarget(p)}
             eventAttendeesMap={eventAttendeesMap}
             communityEventMembers={communityEventMembers}
             hostConfirmedMembers={hostConfirmedMembers}
@@ -7952,6 +8046,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setActiveTab('home')
               setTimeout(() => setPendingJoinEv(ev), 150)
             }}
+            onBlockUser={handleBlock}
+            onReportUser={(p: any) => setReportTarget(p)}
           />
           </View>
           <View style={{ flex: 1, display: activeTab === 'profile' ? 'flex' : 'none' }}>
@@ -9147,7 +9243,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         </Modal>
       )}
 
-      {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} />}
+      {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} onBlock={handleBlock} onReport={(p) => setReportTarget(p)} />}
+      {reportTarget && <ReportModal profile={reportTarget} onClose={() => setReportTarget(null)} onSubmit={(reason) => handleReport(reportTarget, reason)} />}
 
 
       {/* ── Notification Panel ─────────────────────────────────────────────── */}
