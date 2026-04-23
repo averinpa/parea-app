@@ -5507,10 +5507,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!userData?.dbId || !profile?.id) return
     await supabase.from('blocked_users').upsert({ blocker_id: userData.dbId, blocked_id: profile.id }, { onConflict: 'blocker_id,blocked_id' })
     setBlockedIds(prev => new Set([...prev, profile.id]))
-    setChatList(prev => prev.filter(c =>
-      c.partnerProfile?.id !== profile.id &&
-      !(c.memberProfiles || []).some((m: any) => m.id === profile.id)
-    ))
+    // Duo chats — delete entirely from DB and local state
+    const duoChats = chatList.filter(c => c.type === 'duo' && c.partnerProfile?.id === profile.id)
+    for (const chat of duoChats) {
+      await supabase.from('messages').delete().eq('chat_id', chat.id)
+      await supabase.from('chat_members').delete().eq('chat_id', chat.id)
+      await supabase.from('chats').delete().eq('id', chat.id)
+    }
+    setChatList(prev => prev.filter(c => !(c.type === 'duo' && c.partnerProfile?.id === profile.id)))
     Alert.alert('Blocked', `${profile.name} has been blocked.`)
   }
 
@@ -7070,7 +7074,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // Skip DB insert if chat has a fake local ID (Date.now() > 1e12) — not a real DB chat
       if (openChat.id < 1e12) {
         supabase.from('messages').insert({ chat_id: openChat.id, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
-          .then(({ error }) => { if (error) console.warn('duo message insert error:', error.message) })
+          .then(({ error }) => {
+            if (error) {
+              console.warn('duo message insert error:', error.message)
+              if (error.code === '42501' || error.message?.includes('policy')) {
+                setChatMessages(prev => ({ ...prev, [openChat.id]: (prev[openChat.id] || []).slice(0, -1) }))
+                Alert.alert('Cannot send', 'You cannot message this person.')
+              }
+            }
+          })
       }
       const bcast = { type: 'broadcast', event: 'message', payload }
       if (duoBroadcastRef.current) { console.log('broadcasting on duo_chat_' + openChat.id); duoBroadcastRef.current.send(bcast) }
@@ -9139,8 +9151,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
-                  {(chatMessages[openChat.id] || []).map((msg: any, i: number) => {
-                    const allMsgs = chatMessages[openChat.id] || []
+                  {(chatMessages[openChat.id] || []).filter((msg: any) =>
+                    msg.from === 'me' || msg.from === 'system' || !blockedIds.has(msg.senderId)
+                  ).map((msg: any, i: number) => {
+                    const allMsgs = (chatMessages[openChat.id] || []).filter((m: any) => m.from === 'me' || m.from === 'system' || !blockedIds.has(m.senderId))
                     const prevMsg = allMsgs[i - 1]
                     const showDateSep = msg.date && msg.date !== prevMsg?.date
                     return (
