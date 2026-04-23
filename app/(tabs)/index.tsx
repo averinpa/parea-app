@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Alert, Animated, AppState, Dimensions, Image, Keyboard, Linking, Share,
+  ActivityIndicator, Alert, Animated, AppState, Dimensions, FlatList, Image, Keyboard, Linking, Share,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, Pressable,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
@@ -24,7 +24,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '../../lib/supabase'
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
 
 const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || ''
 
@@ -5330,6 +5329,65 @@ function BreathingButton({ label, onPress, colors, icon }: { label: string; onPr
   )
 }
 
+function LocationSearch({ apiKey, onSelect }: { apiKey: string; onSelect: (desc: string, lat?: number, lng?: number) => void }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const [error, setError] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const search = (text: string) => {
+    setQuery(text)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (text.length < 2) { setResults([]); setError(''); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en`
+        const res = await fetch(url)
+        const json = await res.json()
+        if (json.status === 'OK') {
+          setResults(json.predictions)
+          setError('')
+        } else {
+          setResults([])
+          setError(json.status)
+          console.log('Places API status:', json.status, json.error_message)
+        }
+      } catch (e) {
+        setError('Network error')
+        console.log('Places fetch error:', e)
+      }
+    }, 400)
+  }
+
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+      <TextInput
+        autoFocus
+        value={query}
+        onChangeText={search}
+        placeholder="Search for a place..."
+        placeholderTextColor="#94A3B8"
+        style={{ fontSize: 15, fontFamily: 'Outfit-Regular', backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 14, height: 46, color: '#1E1B4B' }}
+      />
+      {error.length > 0 && (
+        <Text style={{ color: 'red', fontSize: 12, marginTop: 8 }}>Error: {error}</Text>
+      )}
+      <FlatList
+        data={results}
+        keyExtractor={(item) => item.place_id}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => onSelect(item.description)}
+            style={{ paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+            <Text style={{ fontSize: 14, fontFamily: 'Outfit-Regular', color: '#1E1B4B' }}>{item.description}</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  )
+}
+
 function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: any; onUpdateUserData?: (patch: any) => void; onLogOut?: () => void }) {
   const insets = useSafeAreaInsets()
   const fullWindowHeightRef = useRef(Dimensions.get('window').height)
@@ -8320,33 +8378,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             </View>
 
                             {/* Search */}
-                            <View style={{ zIndex: 10 }}>
-                              <GooglePlacesAutocomplete
-                                placeholder="Search for a place..."
-                                minLength={2}
-                                enablePoweredByContainer={false}
-                                keyboardShouldPersistTaps="handled"
-                                onPress={(data, details) => {
-                                  setCreateLocation(data.description)
-                                  if (details?.geometry?.location) {
-                                    setLocationCoords({ lat: details.geometry.location.lat, lng: details.geometry.location.lng })
-                                  }
-                                  setLocationPickerOpen(false)
-                                }}
-                                onFail={(error) => console.log('Places error:', error)}
-                                query={{ key: GOOGLE_MAPS_KEY, language: 'en' }}
-                                fetchDetails
-                                nearbyPlacesAPI="GooglePlacesSearch"
-                                debounce={300}
-                                styles={{
-                                  container: { paddingHorizontal: 16, paddingTop: 12, flex: 0 },
-                                  textInput: { fontSize: 15, fontFamily: 'Outfit-Regular', backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 14, height: 46, color: '#1E1B4B' },
-                                  listView: { backgroundColor: '#fff' },
-                                  row: { paddingHorizontal: 14, paddingVertical: 12 },
-                                  description: { fontSize: 14, fontFamily: 'Outfit-Regular', color: '#1E1B4B' },
-                                }}
-                              />
-                            </View>
+                            <LocationSearch
+                              apiKey={GOOGLE_MAPS_KEY}
+                              onSelect={(desc, lat, lng) => {
+                                setCreateLocation(desc)
+                                if (lat !== undefined && lng !== undefined) setLocationCoords({ lat, lng })
+                                setLocationPickerOpen(false)
+                              }}
+                            />
 
                             {/* Confirm button */}
                             {createLocation.length > 0 && (
