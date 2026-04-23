@@ -4792,14 +4792,12 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen }:
 
   useEffect(() => {
     if (!userData?.dbId) return
-    supabase.from('blocked_users').select('blocked_id, profiles!blocked_id(id, name, photos)')
-      .eq('blocker_id', userData.dbId)
-      .then(({ data }) => {
-        if (data) setBlockedUsers(data.map((r: any) => ({
-          id: r.profiles?.id || r.blocked_id,
-          name: r.profiles?.name || 'Unknown',
-          photo: r.profiles?.photos?.[0],
-        })))
+    supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData.dbId)
+      .then(async ({ data }) => {
+        if (!data || data.length === 0) return
+        const ids = data.map((r: any) => r.blocked_id)
+        const { data: profiles } = await supabase.from('profiles').select('id, name, photos').in('id', ids)
+        if (profiles) setBlockedUsers(profiles.map((p: any) => ({ id: p.id, name: p.name, photo: p.photos?.[0] })))
       })
   }, [userData?.dbId])
 
@@ -5509,6 +5507,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (!userData?.dbId || !profile?.id) return
     await supabase.from('blocked_users').upsert({ blocker_id: userData.dbId, blocked_id: profile.id }, { onConflict: 'blocker_id,blocked_id' })
     setBlockedIds(prev => new Set([...prev, profile.id]))
+    setChatList(prev => prev.filter(c =>
+      c.partnerProfile?.id !== profile.id &&
+      !(c.memberProfiles || []).some((m: any) => m.id === profile.id)
+    ))
     Alert.alert('Blocked', `${profile.name} has been blocked.`)
   }
 
