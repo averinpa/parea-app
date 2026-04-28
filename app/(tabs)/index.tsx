@@ -2155,16 +2155,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
             {/* Row 2: city · vibe · calendar — all in one line */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {/* City */}
-              <TouchableOpacity onPress={() => setCityOpen(true)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
-                <PhMapPin size={12} color="#4338CA" weight="duotone" />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city}</Text>
-              </TouchableOpacity>
-
-              {/* Separator */}
-              <View style={{ width: 1, height: 14, backgroundColor: '#E2E8F0' }} />
-
               {/* Vibe */}
               <TouchableOpacity onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
                 activeOpacity={0.8}
