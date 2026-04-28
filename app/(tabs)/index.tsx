@@ -1996,9 +1996,17 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   })
 
   // Vibe-matched official events (shown in Tonight Vibe section)
-  const vibeEvents = vibeCats.length > 0
-    ? officialAll.filter(ev => vibeCats.includes(ev.category)).slice(0, 5)
-    : []
+  const vibeEvents = (() => {
+    if (vibeCats.length === 0) return []
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const dayAfterTomorrow = new Date(today); dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
+    return officialAll.filter(ev => {
+      if (!vibeCats.includes(ev.category)) return false
+      const d = parseEventDate(ev.date_label || ev.time || '')
+      if (!d) return false
+      return d >= today && d < dayAfterTomorrow
+    }).slice(0, 5)
+  })()
 
   // Apply search + date + city chip filter to official
   const officialEvents = officialAll.filter(ev => {
