@@ -1850,7 +1850,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [forYouFilter, setForYouFilter] = useState(false)
   const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
-  const [selectedOfficialCity, setSelectedOfficialCity] = useState<string | null>(null)
   const now = Date.now()
 
   useEffect(() => {
@@ -1926,7 +1925,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return dt < new Date()
   }
   const allCityEvents = [...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
-    if (e.city !== city) return false
+    if (city && e.city !== city) return false
     if (e.isHosted) return false  // host doesn't join their own event
     if (isEventPast(e.time)) return false  // hide past events
     return true
@@ -1964,7 +1963,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // Community: MOCK community + user-created extra events (including own hosted)
   const communityAll = [...MOCK_COMMUNITY_EVENTS, ...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
-    if (selectedOfficialCity && e.city && e.city.toLowerCase() !== selectedOfficialCity.toLowerCase()) return false
+    if (city && e.city && e.city.toLowerCase() !== city.toLowerCase()) return false
     if (isEventPast(e.time)) return false
     if (e.type === 'official') return false
     return true
@@ -2008,9 +2007,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     }).slice(0, 5)
   })()
 
-  // Apply search + date + city chip filter to official
+  // Apply search + date + city filter to official
   const officialEvents = officialAll.filter(ev => {
-    if (selectedOfficialCity && ev.city && ev.city.toLowerCase() !== selectedOfficialCity.toLowerCase()) return false
+    if (city && ev.city && ev.city.toLowerCase() !== city.toLowerCase()) return false
     if (categoryFilter && ev.category !== categoryFilter) return false
     if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
@@ -2153,21 +2152,18 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               </Animated.View>
             </View>
 
-            {/* Row 2: city chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
-              {([null, 'Limassol', 'Nicosia', 'Paphos', 'Larnaca'] as (string | null)[]).map(c => (
-                <TouchableOpacity key={c ?? 'all'} onPress={() => setSelectedOfficialCity(c)}
-                  style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
-                    backgroundColor: selectedOfficialCity === c ? '#6366F1' : '#EEF2FF' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: selectedOfficialCity === c ? '#fff' : '#4338CA' }}>
-                    {c ?? 'All'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Row 3: vibe · calendar — all in one line */}
+            {/* Row 2: city · vibe · calendar — all in one line */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* City */}
+              <TouchableOpacity onPress={() => setCityOpen(true)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+                <PhMapPin size={12} color="#4338CA" weight="duotone" />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city ?? 'All Cities'}</Text>
+              </TouchableOpacity>
+
+              {/* Separator */}
+              <View style={{ width: 1, height: 14, backgroundColor: '#E2E8F0' }} />
+
               {/* Vibe */}
               <TouchableOpacity onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
                 activeOpacity={0.8}
@@ -2383,7 +2379,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </View>
             {officialEvents.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: '500' }}>No events in {selectedOfficialCity} right now</Text>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: '500' }}>No events in {city ?? 'this selection'} right now</Text>
               </View>
             ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
@@ -5539,7 +5535,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const createScrollRef = useRef<ScrollView>(null)
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null)
-  const [city, setCity] = useState('Limassol')
+  const [city, setCity] = useState<string | null>('Limassol')
   const [cityOpen, setCityOpen] = useState(false)
   const [feedFilter, setFeedFilter] = useState('all')
   const [eventDetail, setEventDetail] = useState<any>(null)
@@ -8124,7 +8120,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           />
           </View>
           <View style={{ flex: 1, display: activeTab === 'profile' ? 'flex' : 'none' }}>
-            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} city={city} setCityOpen={setCityOpen} onUnblockUser={(id) => setBlockedIds(prev => { const n = new Set(prev); n.delete(id); return n })} />
+            <ProfileTab userData={userData} onUpdateUserData={onUpdateUserData} onLogOut={onLogOut} city={city ?? undefined} setCityOpen={setCityOpen} onUnblockUser={(id) => setBlockedIds(prev => { const n = new Set(prev); n.delete(id); return n })} />
           </View>
         </View>
 
@@ -8774,6 +8770,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setCityOpen(false)}>
           <View style={s.cityPickerSheet}>
             <Text style={s.cityPickerTitle}>Select City</Text>
+            <TouchableOpacity style={[s.cityPickerItem, city === null && { backgroundColor: 'rgba(99,102,241,0.08)' }]}
+              onPress={() => { setCity(null); setCityOpen(false) }}>
+              <Text style={[{ fontSize: 16, color: '#334155' }, city === null && { color: '#6366F1', fontWeight: '700' }]}>All Cities</Text>
+              {city === null && <Ionicons name="checkmark" size={18} color="#6366F1" />}
+            </TouchableOpacity>
             {CITIES.map(c => (
               <TouchableOpacity key={c} style={[s.cityPickerItem, city === c && { backgroundColor: 'rgba(99,102,241,0.08)' }]}
                 onPress={() => { setCity(c); setCityOpen(false) }}>
