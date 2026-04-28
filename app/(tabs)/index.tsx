@@ -1850,6 +1850,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [forYouFilter, setForYouFilter] = useState(false)
   const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
+  const [selectedOfficialCity, setSelectedOfficialCity] = useState<string | null>(null)
   const now = Date.now()
 
   useEffect(() => {
@@ -1994,9 +1995,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return (bVibe + bInt) - (aVibe + aInt)
   })
 
-  // Apply search + date filter to official
+  // Vibe-matched official events (shown in Tonight Vibe section)
+  const vibeEvents = vibeCats.length > 0
+    ? officialAll.filter(ev => vibeCats.includes(ev.category)).slice(0, 5)
+    : []
+
+  // Apply search + date + city chip filter to official
   const officialEvents = officialAll.filter(ev => {
-    if (ev.city && ev.city !== city) return false
+    if (selectedOfficialCity && ev.city && ev.city.toLowerCase() !== selectedOfficialCity.toLowerCase()) return false
     if (categoryFilter && ev.category !== categoryFilter) return false
     if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
@@ -2291,6 +2297,46 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           })()}
         </View>
 
+        {/* ── TONIGHT VIBE PICKS ── */}
+        {vibeEvents.length > 0 && (() => {
+          const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe?.energy) || SOCIAL_ENERGY[2]
+          return (
+            <View style={{ marginTop: 20, marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 12 }}>
+                <energyInfo.Icon size={18} color={energyInfo.color} weight="duotone" />
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Tonight's Vibe</Text>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: energyInfo.color + '22' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: energyInfo.color }}>{energyInfo.label}</Text>
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
+                {vibeEvents.map((ev: any) => (
+                  <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
+                    style={{ width: 190, borderRadius: 20, overflow: 'hidden', backgroundColor: '#fff', shadowColor: energyInfo.color, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 }}>
+                    {ev.image_url ? (
+                      <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 90 }} resizeMode="cover" />
+                    ) : (
+                      <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: '100%', height: 90, alignItems: 'center', justifyContent: 'center' }}>
+                        {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={32} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
+                      </LinearGradient>
+                    )}
+                    <View style={{ position: 'absolute', top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: energyInfo.color }}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff', textTransform: 'capitalize' }}>{ev.category || 'Event'}</Text>
+                    </View>
+                    <View style={{ padding: 10 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E1B4B', marginBottom: 4 }} numberOfLines={2}>{ev.title}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <CalendarBlank size={10} color="#94A3B8" weight="regular" />
+                        <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.date_label || ev.time_label || ''}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )
+        })()}
+
         {/* ── OFFICIAL EVENTS ── */}
         {officialDbLoading && (
           <>
@@ -2311,9 +2357,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </ScrollView>
           </>
         )}
-        {!officialDbLoading && officialEvents.length > 0 && (
+        {!officialDbLoading && officialDbEvents.length > 0 && (
           <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <PhStar size={18} color="#F59E0B" weight="duotone" />
                 <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
@@ -2324,6 +2370,23 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 </TouchableOpacity>
               )}
             </View>
+            {/* City chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
+              {([null, 'Limassol', 'Nicosia', 'Paphos', 'Larnaca'] as (string | null)[]).map(c => (
+                <TouchableOpacity key={c ?? 'all'} onPress={() => setSelectedOfficialCity(c)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 99,
+                    backgroundColor: selectedOfficialCity === c ? '#6366F1' : '#EEF2FF' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: selectedOfficialCity === c ? '#fff' : '#4338CA' }}>
+                    {c ?? 'All Cities'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {officialEvents.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: '500' }}>No events in {selectedOfficialCity} right now</Text>
+              </View>
+            ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
               {officialEvents.slice(0, 3).map((ev: any) => (
                 <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
@@ -2376,6 +2439,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 </TouchableOpacity>
               )}
             </ScrollView>
+            )}
 
             {/* ── ALL OFFICIAL EVENTS MODAL ── */}
             <Modal visible={showAllOfficialModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAllOfficialModal(false)}>
