@@ -3114,12 +3114,16 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
       {subTab === 'messages' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, gap: 10, paddingBottom: 32 }}>
           {chatList.length === 0 && (
-            <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 }}>
-              <LinearGradient colors={['#43E97B', '#22c55e']} style={{ width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                <MessageCircle size={32} color="#fff" />
-              </LinearGradient>
-              <Text style={{ fontSize: 20, fontWeight: '900', color: '#1E1B4B', marginBottom: 8, letterSpacing: -0.5 }}>No chats yet</Text>
-              <Text style={{ fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22 }}>Join an event to find your crew!</Text>
+            <View style={{ alignItems: 'center', paddingTop: 72, paddingHorizontal: 32 }}>
+              <View style={{ width: 100, height: 100, marginBottom: 24, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#EEF2FF' }} />
+                <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: '#E0E7FF' }} />
+                <ChatTeardrop size={38} color="#6366F1" weight="duotone" />
+              </View>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: '#1E1B4B', marginBottom: 10, letterSpacing: -0.5 }}>No chats yet</Text>
+              <Text style={{ fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22, maxWidth: 220 }}>
+                Join an event and find your crew — conversations will appear here
+              </Text>
             </View>
           )}
           {chatList.map(chat => (
