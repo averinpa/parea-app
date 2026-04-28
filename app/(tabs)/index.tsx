@@ -3122,7 +3122,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
               </View>
               <Text style={{ fontSize: 22, fontWeight: '900', color: '#1E1B4B', marginBottom: 10, letterSpacing: -0.5 }}>No chats yet</Text>
               <Text style={{ fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22, maxWidth: 220 }}>
-                Join an event and find your crew — conversations will appear here
+                Join an event to start chatting with your crew
               </Text>
             </View>
           )}
