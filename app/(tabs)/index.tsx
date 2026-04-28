@@ -1964,7 +1964,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // Community: MOCK community + user-created extra events (including own hosted)
   const communityAll = [...MOCK_COMMUNITY_EVENTS, ...MOCK_EVENTS, ...(extraEvents || [])].filter(e => {
-    if (e.city && e.city !== city) return false
+    if (selectedOfficialCity && e.city && e.city.toLowerCase() !== selectedOfficialCity.toLowerCase()) return false
     if (isEventPast(e.time)) return false
     if (e.type === 'official') return false
     return true
@@ -2153,7 +2153,20 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               </Animated.View>
             </View>
 
-            {/* Row 2: city · vibe · calendar — all in one line */}
+            {/* Row 2: city chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
+              {([null, 'Limassol', 'Nicosia', 'Paphos', 'Larnaca'] as (string | null)[]).map(c => (
+                <TouchableOpacity key={c ?? 'all'} onPress={() => setSelectedOfficialCity(c)}
+                  style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
+                    backgroundColor: selectedOfficialCity === c ? '#6366F1' : '#EEF2FF' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: selectedOfficialCity === c ? '#fff' : '#4338CA' }}>
+                    {c ?? 'All'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Row 3: vibe · calendar — all in one line */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {/* Vibe */}
               <TouchableOpacity onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
@@ -2368,18 +2381,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 </TouchableOpacity>
               )}
             </View>
-            {/* City chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 12 }}>
-              {([null, 'Limassol', 'Nicosia', 'Paphos', 'Larnaca'] as (string | null)[]).map(c => (
-                <TouchableOpacity key={c ?? 'all'} onPress={() => setSelectedOfficialCity(c)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 99,
-                    backgroundColor: selectedOfficialCity === c ? '#6366F1' : '#EEF2FF' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: selectedOfficialCity === c ? '#fff' : '#4338CA' }}>
-                    {c ?? 'All Cities'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
             {officialEvents.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}>
                 <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: '500' }}>No events in {selectedOfficialCity} right now</Text>
