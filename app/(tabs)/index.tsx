@@ -27,7 +27,7 @@ import { supabase } from '../../lib/supabase'
 
 const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || ''
 
-const { width: W } = Dimensions.get('window')
+const { width: W, height: H } = Dimensions.get('window')
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY || ''
 
 // ─── UPLOAD PHOTO TO SUPABASE STORAGE ────────────────────────────────────────
@@ -54,31 +54,34 @@ const uploadPhotoToStorage = async (base64: string, userId: string, slot: number
 
 const LANDING_SLIDES = [
   {
-    img: require('../../assets/images/characters.png.png'),
-    title: 'Your city,\nyour crew.',
-    sub: 'Events are happening around you right now. Find people who want to go together.',
-    bg: ['#F5F3FF', '#EDE9FE', '#DDD6FE'],
-    accent: '#6366F1', titleColor: '#1E1B4B', subColor: '#475569',
-    imgScale: 0.78,
-    spheres: ['#818CF8', '#6366F1', '#A5B4FC'],
+    img: require('../../assets/images/characters_dark.png.png'),
+    line1: "What's",
+    line2: 'happening',
+    line3: 'tonight?',
+    sub: 'Find events and people going out in your city.',
+    btnLabel: "Show me what's on",
+    imgScale: 0.85,
+    tags: ['Wine bar', 'Live music', 'Theatre'],
   },
   {
     img: require('../../assets/images/Gemini_Generated_Image_55nnbe55nnbe55nn-removebg-preview.png'),
-    title: 'Match with real\npeople.',
-    sub: "Like profiles of people going to the same event. Match — and you're in a group.",
-    bg: ['#FFF0F9', '#FCE7F3', '#FBCFE8'],
-    accent: '#EC4899', titleColor: '#1E1B4B', subColor: '#475569',
+    line1: 'no plans?',
+    line2: 'we got',
+    line3: 'you.',
+    sub: 'Browse events, join spontaneously, meet your crew.',
+    btnLabel: 'Find something tonight',
     imgScale: 1.0,
-    spheres: ['#F472B6', '#EC4899', '#FBCFE8'],
+    tags: ['🎉 Party', '🌴 Beach', '🎤 Concerts'],
   },
   {
     img: require('../../assets/images/unnamed__2_-removebg-preview.png'),
-    title: 'Show up.\nEnjoy together.',
-    sub: 'Coffee on the beach, a board game evening, a concert — find your people.',
-    bg: ['#F0FDF4', '#DCFCE7', '#BBF7D0'],
-    accent: '#10B981', titleColor: '#1E1B4B', subColor: '#475569',
+    line1: '1 app.',
+    line2: 'all',
+    line3: 'the vibes.',
+    sub: 'Official events, community hangs, and people who make it fun.',
+    btnLabel: 'Find my people',
     imgScale: 1.0,
-    spheres: ['#34D399', '#10B981', '#6EE7B7'],
+    tags: ['🎨 Art', '🍕 Food', '💻 Tech'],
   },
 ]
 
@@ -407,6 +410,181 @@ async function isImageSafe(base64: string): Promise<boolean> {
 
 // ─── LANDING SCREEN ───────────────────────────────────────────────────────────
 
+const ls = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#080B16',
+  },
+  safe: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    gap: 10,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoIconLetter: {
+    fontFamily: 'ClashDisplay-Bold',
+    fontSize: 24,
+    color: '#fff',
+    lineHeight: 28,
+    textAlign: 'center',
+  },
+  logoText: {
+    fontFamily: 'ClashDisplay-Bold',
+    fontSize: 26,
+    color: '#F8FAFC',
+    letterSpacing: -0.5,
+  },
+  hero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glow: {
+    position: 'absolute',
+    borderRadius: 9999,
+    backgroundColor: '#7C3AED',
+    opacity: 0.35,
+  },
+  charsImage: {
+    // width/height set dynamically in component
+  },
+  tag: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    height: 42,
+    overflow: 'hidden',
+  },
+  tagText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: '#fff',
+    letterSpacing: 0.1,
+  },
+  headlineBlock: {
+    marginTop: 12,
+  },
+  headlineLine: {
+    fontFamily: 'ClashDisplay-Bold',
+    color: '#F8FAFC',
+    letterSpacing: -1.5,
+    // fontSize/lineHeight set dynamically
+  },
+  headlineAccent: {
+    fontFamily: 'ClashDisplay-Bold',
+    color: '#8B5CF6',
+    letterSpacing: -1.5,
+    // fontSize/lineHeight set dynamically
+  },
+  subtitle: {
+    fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.55)',
+    // fontSize/lineHeight/marginTop set dynamically
+  },
+  bottom: {
+    marginTop: 'auto',
+    paddingBottom: 8,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  dotActive: {
+    width: 24,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  ctaGradient: {
+    height: 58,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaText: {
+    fontFamily: 'ClashDisplay-Semibold',
+    fontSize: 16,
+    color: '#fff',
+    letterSpacing: -0.2,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  dividerText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.35)',
+    fontFamily: 'Outfit-Medium',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  socialBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 52,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  socialBtnText: {
+    fontSize: 14,
+    fontFamily: 'Outfit-SemiBold',
+    color: '#fff',
+  },
+  loginRow: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  loginText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+    fontFamily: 'Outfit-Regular',
+  },
+  loginLink: {
+    color: '#8B5CF6',
+    fontFamily: 'Outfit-Bold',
+  },
+})
+
+
 function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn }: {
   onCreateAccount: () => void
   onLogin: () => void
@@ -414,24 +592,59 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
   onAppleSignIn?: () => void
 }) {
   const [slide, setSlide] = useState(0)
-  const slideAnim = useRef(new Animated.Value(0)).current
   const touchX = useRef<number | null>(null)
+
+  const logoOpacity     = useRef(new Animated.Value(0)).current
+  const headlineY       = useRef(new Animated.Value(28)).current
+  const headlineOpacity = useRef(new Animated.Value(0)).current
+  const charsScale      = useRef(new Animated.Value(0.93)).current
+  const btnOpacity      = useRef(new Animated.Value(0)).current
+
+  const runEntrance = () => {
+    headlineY.setValue(28)
+    headlineOpacity.setValue(0)
+    charsScale.setValue(0.93)
+    btnOpacity.setValue(0)
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(headlineY,       { toValue: 0, duration: 360, useNativeDriver: true }),
+        Animated.timing(headlineOpacity, { toValue: 1, duration: 360, useNativeDriver: true }),
+        Animated.timing(charsScale,      { toValue: 1, duration: 420, useNativeDriver: true }),
+      ]),
+      Animated.timing(btnOpacity, { toValue: 1, duration: 280, useNativeDriver: true }),
+    ]).start()
+  }
+
+  useEffect(() => {
+    Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start()
+  }, [])
+
+  useEffect(() => { runEntrance() }, [slide])
 
   const goTo = (idx: number) => {
     if (idx < 0 || idx >= LANDING_SLIDES.length) return
-    slideAnim.setValue(idx > slide ? W : -W)
     setSlide(idx)
-    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 80, friction: 12 }).start()
   }
 
-  const cur = LANDING_SLIDES[slide]
+  const cur    = LANDING_SLIDES[slide]
   const isLast = slide === LANDING_SLIDES.length - 1
+  const insets = useSafeAreaInsets()
 
-  const spheres = (cur as any).spheres as string[]
+  // Responsive breakpoints: compact < 720, medium < 820, large ≥ 820
+  const heroH    = H < 720 ? 220 : H < 820 ? 260 : 300
+  const heroMT   = H < 720 ? 6   : H < 820 ? 12  : 18
+  const imgW     = H < 720 ? 210 : H < 820 ? 255 : 295
+  const imgHt    = H < 720 ? 200 : H < 820 ? 245 : 280
+  const glowSz   = H < 720 ? 160 : H < 820 ? 200 : 230
+  const hFz      = H < 720 ? 32  : H < 820 ? 36  : 40
+  const hLh      = H < 720 ? 36  : H < 820 ? 42  : 46
+  const subFz    = H < 720 ? 14  : 16
+  const subLh    = H < 720 ? 20  : 24
+  const subMT    = H < 720 ? 10  : 14
 
   return (
-    <LinearGradient
-      colors={cur.bg as any} style={s.fill}
+    <View
+      style={ls.container}
       onTouchStart={e => { touchX.current = e.nativeEvent.pageX }}
       onTouchEnd={e => {
         if (touchX.current === null) return
@@ -440,100 +653,110 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
         else if (dx > 50) goTo(slide - 1)
         touchX.current = null
       }}>
-      {/* Decorative background spheres */}
-      <View style={{ position: 'absolute', top: -80, right: -70, width: 240, height: 240, borderRadius: 120, backgroundColor: spheres[0], opacity: 0.10 }} />
-      <View style={{ position: 'absolute', bottom: 160, left: -90, width: 260, height: 260, borderRadius: 130, backgroundColor: spheres[1], opacity: 0.08 }} />
-      <View style={{ position: 'absolute', top: '38%', right: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: spheres[2], opacity: 0.07 }} />
+      <StatusBar style="light" />
+      <SafeAreaView style={ls.safe}>
 
-      <StatusBar style="dark" />
-      <SafeAreaView style={s.fill}>
-        {/* Logo */}
-        <View style={s.logoRow}>
-          <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 38, color: cur.accent, letterSpacing: -1 }}>Parea</Text>
+        {/* ── Logo ── */}
+        <Animated.View style={[ls.logoRow, { opacity: logoOpacity }]}>
+          <LinearGradient
+            colors={['#8B5CF6', '#F97316']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={ls.logoIcon}>
+            <Text style={ls.logoIconLetter}>P</Text>
+          </LinearGradient>
+          <Text style={ls.logoText} numberOfLines={1}>parea</Text>
+        </Animated.View>
+
+        {/* ── Hero block ── */}
+        <View style={[ls.hero, { height: heroH, marginTop: heroMT }]}>
+          <View style={[ls.glow, { width: glowSz, height: glowSz }]} />
+          <Animated.Image
+            source={cur.img}
+            style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }] }}
+            resizeMode="contain"
+          />
         </View>
 
-        {/* Image + Text */}
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Animated.View style={[s.slideImgWrap, { transform: [{ translateX: slideAnim }] }]}>
-            <Image source={cur.img} style={[s.slideImg, { width: W * 0.68 * (cur.imgScale ?? 1), height: W * 0.68 * (cur.imgScale ?? 1) }]} resizeMode="contain" />
-          </Animated.View>
-          <Animated.View style={[s.slideTextWrap, { transform: [{ translateX: slideAnim }] }]}>
-            <Text style={[s.slideTitle, { color: cur.titleColor, fontFamily: 'ClashDisplay-Bold' }]}>{cur.title}</Text>
-            <Text style={[s.slideSub, { color: cur.subColor, fontFamily: 'Outfit-Regular' }]}>{cur.sub}</Text>
-          </Animated.View>
-        </View>
+        {/* ── Headline ── */}
+        <Animated.View
+          style={[ls.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineY }] }]}>
+          <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
+          <Text style={[ls.headlineAccent, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
+          <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>
+          <Text style={[ls.subtitle, { fontSize: subFz, lineHeight: subLh, marginTop: subMT }]}>{cur.sub}</Text>
+        </Animated.View>
 
-        {/* Dots */}
-        <View style={s.dotsRow}>
-          {LANDING_SLIDES.map((_, i) => (
-            <TouchableOpacity key={i} onPress={() => goTo(i)}>
-              <View style={[s.dot, { backgroundColor: i === slide ? cur.accent : 'rgba(0,0,0,0.12)' }, i === slide && { width: 28, borderRadius: 4 }]} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* ── Bottom ── */}
+        <Animated.View style={[ls.bottom, { opacity: btnOpacity, paddingBottom: insets.bottom + 8 }]}>
 
-        {/* Buttons */}
-        <View style={s.landingBtns}>
-          {isLast ? (
+          {/* Dots */}
+          <View style={ls.dotsRow}>
+            {LANDING_SLIDES.map((_, i) => (
+              <TouchableOpacity key={i} onPress={() => goTo(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <View style={i === slide ? ls.dotActive : ls.dot} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* CTA button */}
+          <TouchableOpacity
+            onPress={isLast ? onCreateAccount : () => goTo(slide + 1)}
+            activeOpacity={0.88}>
+            <LinearGradient
+              colors={['#8B5CF6', '#F97316']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={ls.ctaGradient}>
+              <Text style={ls.ctaText} numberOfLines={1}>
+                {isLast ? 'Find my people' : cur.btnLabel}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Last slide: social auth */}
+          {isLast && (
             <>
-              <BreathingButton
-                label="Create Account"
-                onPress={onCreateAccount}
-                colors={['#6366F1', '#818CF8']}
-                icon={<Sparkle size={18} color="#fff" weight="duotone" />}
-              />
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
-                <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium' }}>or continue with</Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
+              <View style={ls.dividerRow}>
+                <View style={ls.dividerLine} />
+                <Text style={ls.dividerText}>or continue with</Text>
+                <View style={ls.dividerLine} />
               </View>
-
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={ls.socialRow}>
                 {onGoogleSignIn && (
-                  <TouchableOpacity onPress={onGoogleSignIn}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      height: 52, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.2)',
-                      backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+                  <TouchableOpacity style={ls.socialBtn} onPress={onGoogleSignIn}>
                     <Svg width={18} height={18} viewBox="0 0 48 48">
                       <Path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
                       <Path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/>
                       <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
                       <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
                     </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>Google</Text>
+                    <Text style={ls.socialBtnText}>Google</Text>
                   </TouchableOpacity>
                 )}
                 {Platform.OS === 'ios' && onAppleSignIn && (
-                  <TouchableOpacity onPress={onAppleSignIn}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      height: 52, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
-                      backgroundColor: '#000', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, elevation: 2 }}>
+                  <TouchableOpacity style={ls.socialBtn} onPress={onAppleSignIn}>
                     <Svg width={16} height={16} viewBox="0 0 814 1000">
                       <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
                     </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Apple</Text>
+                    <Text style={ls.socialBtnText}>Apple</Text>
                   </TouchableOpacity>
                 )}
               </View>
-
-              <TouchableOpacity style={[s.btnSecondary, { borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'rgba(99,102,241,0.06)' }]} onPress={onLogin}>
-                <Text style={[s.btnSecondaryText, { color: '#6366F1', fontFamily: 'Outfit-SemiBold' }]}>Log In</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <BreathingButton label="Next →" onPress={() => goTo(slide + 1)} colors={[cur.accent, cur.accent]} />
-              <TouchableOpacity onPress={onLogin} style={{ alignItems: 'center', paddingVertical: 4 }}>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontFamily: 'Outfit-Regular' }}>
-                  Already have an account?{'  '}<Text style={{ color: '#6366F1', fontFamily: 'Outfit-Bold' }}>Log in</Text>
-                </Text>
-              </TouchableOpacity>
             </>
           )}
-        </View>
+
+          {/* Login link */}
+          <TouchableOpacity style={ls.loginRow} onPress={onLogin}>
+            <Text style={ls.loginText}>
+              {isLast ? 'Already a member?' : 'Already have an account?'}
+              {'  '}<Text style={ls.loginLink}>Log in</Text>
+            </Text>
+          </TouchableOpacity>
+
+        </Animated.View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   )
 }
 
