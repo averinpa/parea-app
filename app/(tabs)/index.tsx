@@ -470,8 +470,8 @@ const ls = StyleSheet.create({
     marginLeft: -8,
   },
   logoImg: {
-    width: 180,
-    height: 60,
+    width: 150,
+    height: 50,
   },
   logoText: {
     fontFamily: 'ClashDisplay-Bold',
@@ -808,7 +808,7 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
           {/* CTA button */}
           <TouchableOpacity
             onPress={isLast ? onCreateAccount : () => goTo(slide + 1)}
-            activeOpacity={0.88}
+            activeOpacity={1}
             style={{ marginTop: 10 }}>
             <LinearGradient
               colors={['#8B5CF6', '#F97316']}
@@ -934,75 +934,96 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
     }
   }
 
+  const hFz = H < 700 ? 40 : 48
+  const hLh = H < 700 ? 46 : 54
+
   return (
-    <LinearGradient colors={['#EDE9FE', '#E0E7FF', '#DBEAFE']} style={s.fill}>
-      {/* Background spheres */}
-      <View style={{ position: 'absolute', top: -60, right: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: '#818CF8', opacity: 0.10 }} />
-      <View style={{ position: 'absolute', bottom: 100, left: -80, width: 260, height: 260, borderRadius: 130, backgroundColor: '#6366F1', opacity: 0.07 }} />
+    <LinearGradient colors={['#F8F7FF', '#FFF7F5']} style={s.fill}>
+      {/* Background blobs */}
+      <View style={{ position: 'absolute', top: -90, right: -90, width: 340, height: 340, borderRadius: 170, backgroundColor: '#C4B5FD', opacity: 0.18 }} />
+      <View style={{ position: 'absolute', top: 140, right: -30, width: 150, height: 150, borderRadius: 75, backgroundColor: '#DDD6FE', opacity: 0.13 }} />
+      <View style={{ position: 'absolute', bottom: 200, left: -70, width: 240, height: 240, borderRadius: 120, backgroundColor: '#C4B5FD', opacity: 0.11 }} />
+      <View style={{ position: 'absolute', bottom: 100, right: 50, width: 48, height: 48, borderRadius: 24, backgroundColor: '#FED7AA', opacity: 0.65 }} />
+      <View style={{ position: 'absolute', top: 220, left: 28, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FED7AA', opacity: 0.5 }} />
 
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
 
-            {/* Top bar */}
-            <View style={s.authTopBar}>
-              <TouchableOpacity onPress={onBack} style={s.authBackBtn}>
-                <CaretLeft size={20} color="rgba(51,65,85,0.7)" weight="bold" />
+            {/* Back + Logo */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, gap: 10 }}>
+              <TouchableOpacity onPress={onBack} style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: 'rgba(139,92,246,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+                <CaretLeft size={18} color="#7C3AED" weight="bold" />
               </TouchableOpacity>
-              <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 28, color: '#6366F1', letterSpacing: -0.8 }}>Parea</Text>
-              <View style={{ width: 40 }} />
+              <Image source={require('../../assets/images/logo3.png')} style={{ width: 120, height: 46 }} resizeMode="contain" />
             </View>
 
-            <View style={s.authContent}>
-
-              {/* Heading */}
-              <View style={{ alignItems: 'center', marginBottom: 28 }}>
-                <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 30, color: '#1E1B4B', letterSpacing: -0.8, textAlign: 'center', lineHeight: 38 }}>Find your people</Text>
-                <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 15, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 22 }}>Join companions going to the same{'\n'}events in your city.</Text>
+            {/* Hero */}
+            <View style={{ paddingHorizontal: 24, paddingTop: 18, minHeight: 210, overflow: 'visible' }}>
+              <View>
+                <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: hFz, color: '#111827', letterSpacing: -1.5, lineHeight: hLh }}>Find your</Text>
+                <MaskedView
+                  maskElement={<Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: hFz, letterSpacing: -1.5, lineHeight: hLh, color: '#000' }}>people</Text>}
+                >
+                  <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                    <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: hFz, letterSpacing: -1.5, lineHeight: hLh, opacity: 0 }}>people</Text>
+                  </LinearGradient>
+                </MaskedView>
               </View>
+              <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 14, color: '#6B7280', lineHeight: 22, marginTop: 12 }}>
+                {'Join companions going to the\nsame events in your city.'}
+              </Text>
+            </View>
 
-              {/* Social buttons */}
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-                {onGoogleSignIn && (
-                  <TouchableOpacity onPress={onGoogleSignIn}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      height: 52, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.2)',
-                      backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-                    <Svg width={18} height={18} viewBox="0 0 48 48">
-                      <Path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
-                      <Path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/>
-                      <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
-                      <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
-                    </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E293B' }}>Google</Text>
-                  </TouchableOpacity>
-                )}
-                {Platform.OS === 'ios' && onAppleSignIn && (
-                  <TouchableOpacity onPress={onAppleSignIn}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      height: 52, borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.12)',
-                      backgroundColor: '#000', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, elevation: 2 }}>
-                    <Svg width={16} height={16} viewBox="0 0 814 1000">
-                      <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
-                    </Svg>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Apple</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+            {/* Form */}
+            <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 44 }}>
+
+              {/* Google */}
+              {onGoogleSignIn && (
+                <TouchableOpacity onPress={onGoogleSignIn}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    height: 54, borderRadius: 16, backgroundColor: '#fff',
+                    borderWidth: 1, borderColor: 'rgba(139,92,246,0.12)',
+                    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+                    marginBottom: 16 }}>
+                  <Svg width={18} height={18} viewBox="0 0 48 48">
+                    <Path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
+                    <Path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/>
+                    <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
+                    <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
+                  </Svg>
+                  <Text style={{ fontSize: 15, fontFamily: 'Outfit-SemiBold', color: '#111827' }}>Continue with Google</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Apple (iOS only) */}
+              {Platform.OS === 'ios' && onAppleSignIn && (
+                <TouchableOpacity onPress={onAppleSignIn}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    height: 54, borderRadius: 16, backgroundColor: '#111827', marginBottom: 16 }}>
+                  <Svg width={16} height={16} viewBox="0 0 814 1000">
+                    <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
+                  </Svg>
+                  <Text style={{ fontSize: 15, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Continue with Apple</Text>
+                </TouchableOpacity>
+              )}
 
               {/* Divider */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
-                <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium' }}>or use email / phone</Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(99,102,241,0.15)' }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(139,92,246,0.12)' }} />
+                <Text style={{ fontSize: 12, color: '#9CA3AF', fontFamily: 'Outfit-Regular' }}>or use email / phone</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(139,92,246,0.12)' }} />
               </View>
 
               {/* Tab toggle */}
-              <View style={s.tabToggle}>
+              <View style={{ flexDirection: 'row', backgroundColor: '#F3F0FF', borderRadius: 14, padding: 4, marginBottom: 14 }}>
                 {(['email', 'phone'] as const).map(t => (
-                  <TouchableOpacity key={t} onPress={() => setTab(t)} style={[s.tabBtn, tab === t && s.tabBtnOn]}>
-                    <Text style={[s.tabBtnTxt, tab === t && s.tabBtnTxtOn, { fontFamily: tab === t ? 'Outfit-SemiBold' : 'Outfit-Regular' }]}>
+                  <TouchableOpacity key={t} onPress={() => setTab(t)}
+                    style={{ flex: 1, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: tab === t ? '#fff' : 'transparent',
+                      shadowColor: '#000', shadowOpacity: tab === t ? 0.05 : 0, shadowRadius: 5, elevation: tab === t ? 1 : 0 }}>
+                    <Text style={{ fontSize: 14, fontFamily: tab === t ? 'Outfit-SemiBold' : 'Outfit-Regular', color: tab === t ? '#111827' : '#9CA3AF' }}>
                       {t === 'email' ? 'Email' : 'Phone'}
                     </Text>
                   </TouchableOpacity>
@@ -1011,29 +1032,34 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
 
               {/* Input */}
               {tab === 'email' ? (
-                <View style={s.glassInput}>
-                  <Feather name="mail" size={17} color="#94A3B8" style={{ marginRight: 10 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+                  borderRadius: 16, borderWidth: 1, borderColor: 'rgba(139,92,246,0.15)',
+                  paddingHorizontal: 16, height: 56, marginBottom: 4,
+                  shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
+                  <Feather name="mail" size={17} color="#9CA3AF" style={{ marginRight: 10 }} />
                   <TextInput
-                    style={[s.glassInputText, { fontFamily: 'Outfit-Regular' }]} value={email}
-                    onChangeText={t => setEmail(t.replace(/\s/g, ''))}
-                    placeholder="your@email.com" placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, fontSize: 15, color: '#111827', fontFamily: 'Outfit-Regular' }}
+                    value={email} onChangeText={t => setEmail(t.replace(/\s/g, ''))}
+                    placeholder="your@email.com" placeholderTextColor="#9CA3AF"
                     keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
-                  {isEmailValid && <PhCheckCircle size={22} color="#22c55e" weight="duotone" />}
+                  {isEmailValid && <PhCheckCircle size={20} color="#22c55e" weight="duotone" />}
                 </View>
               ) : (
-                <View style={s.glassInput}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+                  borderRadius: 16, borderWidth: 1, borderColor: 'rgba(139,92,246,0.15)',
+                  paddingHorizontal: 16, height: 56, marginBottom: 4,
+                  shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}>
                   <TouchableOpacity onPress={() => setCountryModal(true)} style={s.countryBtn}>
                     <Text style={{ fontSize: 20 }}>{country.flag}</Text>
                     <Text style={[s.countryCode, { fontFamily: 'Outfit-Medium' }]}>{country.code}</Text>
-                    <CaretDown size={12} color="#94A3B8" weight="bold" />
+                    <CaretDown size={12} color="#9CA3AF" weight="bold" />
                   </TouchableOpacity>
                   <View style={s.countryDivider} />
                   <TextInput
-                    style={[s.glassInputText, { flex: 1, fontFamily: 'Outfit-Regular' }]} value={localPhone}
-                    onChangeText={handlePhoneChange}
-                    placeholder="99 123 456" placeholderTextColor="#94A3B8"
-                    keyboardType="phone-pad" />
-                  {isPhoneValid && <PhCheckCircle size={22} color="#22c55e" weight="duotone" />}
+                    style={{ flex: 1, fontSize: 15, color: '#111827', fontFamily: 'Outfit-Regular' }}
+                    value={localPhone} onChangeText={handlePhoneChange}
+                    placeholder="99 123 456" placeholderTextColor="#9CA3AF" keyboardType="phone-pad" />
+                  {isPhoneValid && <PhCheckCircle size={20} color="#22c55e" weight="duotone" />}
                 </View>
               )}
 
@@ -1045,49 +1071,50 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                   <Text style={[s.countryModalTitle, { fontFamily: 'ClashDisplay-Semibold' }]}>Select country</Text>
                   <ScrollView>
                     {COUNTRIES.map(c => (
-                      <TouchableOpacity key={c.code + c.name} style={[s.countryRow, country.name === c.name && { backgroundColor: 'rgba(99,102,241,0.07)' }]}
+                      <TouchableOpacity key={c.code + c.name} style={[s.countryRow, country.name === c.name && { backgroundColor: 'rgba(139,92,246,0.07)' }]}
                         onPress={() => { setCountry(c); setLocalPhone(''); setCountryModal(false) }}>
                         <Text style={{ fontSize: 24 }}>{c.flag}</Text>
                         <Text style={[s.countryRowName, { fontFamily: 'Outfit-Medium' }]}>{c.name}</Text>
                         <Text style={[s.countryRowCode, { fontFamily: 'Outfit-Regular' }]}>{c.code}</Text>
-                        {country.name === c.name && <PhCheckCircle size={18} color="#6366F1" weight="duotone" />}
+                        {country.name === c.name && <PhCheckCircle size={18} color="#8B5CF6" weight="duotone" />}
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
               </Modal>
 
-              {/* Continue button */}
-              <TouchableOpacity
-                style={[s.btnPrimary, { backgroundColor: isValid ? '#6366F1' : 'rgba(99,102,241,0.3)', marginTop: 14,
-                  shadowColor: '#6366F1', shadowOpacity: isValid ? 0.45 : 0, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: isValid ? 8 : 0 }]}
-                onPress={handleContinue} disabled={isChecking}>
-                {isChecking
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'ClashDisplay-Semibold' }]}>Continue</Text>}
+              {/* Continue */}
+              <TouchableOpacity onPress={handleContinue} disabled={isChecking} activeOpacity={0.88}
+                style={{ marginTop: 18, borderRadius: 28, overflow: 'hidden', opacity: isValid ? 1 : 0.55 }}>
+                <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={{ height: 56, alignItems: 'center', justifyContent: 'center' }}>
+                  {isChecking
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: 0.2 }}>Continue</Text>}
+                </LinearGradient>
               </TouchableOpacity>
 
-              {/* GDPR consent */}
+              {/* Checkbox */}
               <TouchableOpacity
                 onPress={() => { setAgreed(v => !v); setShowAgreementWarning(false) }}
                 activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 24 }}>
+                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 20 }}>
                 <View style={{
-                  width: 22, height: 22, borderRadius: 6, borderWidth: 2,
-                  borderColor: showAgreementWarning ? '#EF4444' : agreed ? '#6366F1' : '#CBD5E1',
-                  backgroundColor: agreed ? '#6366F1' : 'transparent',
+                  width: 20, height: 20, borderRadius: 5, borderWidth: 1.5,
+                  borderColor: showAgreementWarning ? '#EF4444' : agreed ? '#8B5CF6' : '#D1D5DB',
+                  backgroundColor: agreed ? '#8B5CF6' : 'transparent',
                   alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0,
                 }}>
-                  {agreed && <Feather name="check" size={13} color="#fff" />}
+                  {agreed && <Feather name="check" size={11} color="#fff" />}
                 </View>
-                <Text style={{ flex: 1, fontSize: 13, color: '#64748B', lineHeight: 20, fontFamily: 'Outfit-Regular' }}>
+                <Text style={{ flex: 1, fontSize: 12, color: '#6B7280', lineHeight: 18, fontFamily: 'Outfit-Regular' }}>
                   {'I have read and agree to the '}
-                  <Text style={{ color: '#6366F1', fontFamily: 'Outfit-SemiBold' }}
+                  <Text style={{ color: '#8B5CF6', fontFamily: 'Outfit-SemiBold' }}
                     onPress={() => WebBrowser.openBrowserAsync('https://averinpa.github.io/parea-app/terms')}>
                     Terms of Service
                   </Text>
                   {' and '}
-                  <Text style={{ color: '#6366F1', fontFamily: 'Outfit-SemiBold' }}
+                  <Text style={{ color: '#8B5CF6', fontFamily: 'Outfit-SemiBold' }}
                     onPress={() => WebBrowser.openBrowserAsync('https://averinpa.github.io/parea-app/privacy')}>
                     Privacy Policy
                   </Text>
@@ -1095,7 +1122,7 @@ function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleSignIn }
                 </Text>
               </TouchableOpacity>
               {showAgreementWarning && (
-                <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 6, marginLeft: 34, fontFamily: 'Outfit-Regular' }}>
+                <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 6, marginLeft: 30, fontFamily: 'Outfit-Regular' }}>
                   Please agree to the Terms of Service and Privacy Policy to continue
                 </Text>
               )}
