@@ -74,10 +74,10 @@ const LANDING_SLIDES = [
     tags: ['🎉 Party', '🌴 Beach', '🎤 Concerts'],
   },
   {
-    img: require('../../assets/images/unnamed__2_-removebg-preview.png'),
-    line1: '1 app.',
-    line2: 'all',
-    line3: 'the vibes.',
+    img: require('../../assets/images/characters_scene3.png'),
+    line1: 'Everything',
+    line2: 'in one place.',
+    line3: '',
     sub: 'Official events, community hangs, and people who make it fun.',
     btnLabel: 'Find my people',
     imgScale: 1.0,
@@ -712,21 +712,12 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
 
         {/* ── Hero block ── */}
         <View style={[ls.hero, { height: heroH, marginTop: heroMT, justifyContent: slide === 1 ? 'flex-end' : 'center' }]}>
-          {slide === 2 && <View style={[ls.glow, { width: glowSz, height: glowSz }]} />}
           <View style={{ position: 'relative' }}>
             <Animated.Image
               source={cur.img}
-              style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }] }}
+              style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }], blendMode: 'screen' }}
               resizeMode="contain"
             />
-            {slide < 2 && (
-              <>
-                <LinearGradient colors={['transparent', '#080B16']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: imgHt * (slide === 1 ? 0.52 : 0.35) }} pointerEvents="none" />
-                <LinearGradient colors={['#080B16', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: imgHt * (slide === 1 ? 0.32 : 0.22) }} pointerEvents="none" />
-                <LinearGradient colors={['#080B16', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: imgW * (slide === 1 ? 0.28 : 0.18) }} pointerEvents="none" />
-                <LinearGradient colors={['transparent', '#080B16']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: imgW * (slide === 1 ? 0.28 : 0.18) }} pointerEvents="none" />
-              </>
-            )}
           </View>
 
           {/* Slide 2 only: floating event cards */}
@@ -802,8 +793,8 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Last slide: social auth */}
-          {isLast && (
+          {/* Last slide: Apple only */}
+          {isLast && Platform.OS === 'ios' && onAppleSignIn && (
             <>
               <View style={ls.dividerRow}>
                 <View style={ls.dividerLine} />
@@ -811,25 +802,12 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
                 <View style={ls.dividerLine} />
               </View>
               <View style={ls.socialRow}>
-                {onGoogleSignIn && (
-                  <TouchableOpacity style={ls.socialBtn} onPress={onGoogleSignIn}>
-                    <Svg width={18} height={18} viewBox="0 0 48 48">
-                      <Path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
-                      <Path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.1 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2c-7.6 0-14.2 4.1-17.7 10.2z" transform="translate(0,1)"/>
-                      <Path fill="#FBBC05" d="M24 46c5.8 0 10.8-1.9 14.6-5.2l-6.7-5.5C29.9 37 27.1 38 24 38c-5.8 0-10.8-3.8-12.6-9.1l-6.9 5.3C8 39.9 15.4 46 24 46z" transform="translate(0,-1)"/>
-                      <Path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.9 2.9-2.8 5.3-5.3 6.9l6.7 5.5C41.6 37.2 45 31 45 24c0-1.3-.2-2.7-.5-4z"/>
-                    </Svg>
-                    <Text style={ls.socialBtnText}>Google</Text>
-                  </TouchableOpacity>
-                )}
-                {Platform.OS === 'ios' && onAppleSignIn && (
-                  <TouchableOpacity style={ls.socialBtn} onPress={onAppleSignIn}>
-                    <Svg width={16} height={16} viewBox="0 0 814 1000">
-                      <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
-                    </Svg>
-                    <Text style={ls.socialBtnText}>Apple</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity style={ls.socialBtn} onPress={onAppleSignIn}>
+                  <Svg width={16} height={16} viewBox="0 0 814 1000">
+                    <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
+                  </Svg>
+                  <Text style={ls.socialBtnText}>Apple</Text>
+                </TouchableOpacity>
               </View>
             </>
           )}
