@@ -64,10 +64,10 @@ const LANDING_SLIDES = [
     tags: ['Wine bar', 'Live music', 'Theatre'],
   },
   {
-    img: require('../../assets/images/Gemini_Generated_Image_55nnbe55nnbe55nn-removebg-preview.png'),
-    line1: 'no plans?',
-    line2: 'we got',
-    line3: 'you.',
+    img: require('../../assets/images/characters_scene2.png.png'),
+    line1: 'No plans?',
+    line2: 'we got you.',
+    line3: '',
     sub: 'Browse events, join spontaneously, meet your crew.',
     btnLabel: 'Find something tonight',
     imgScale: 1.0,
@@ -498,26 +498,27 @@ const ls = StyleSheet.create({
   },
   bottom: {
     marginTop: 'auto',
+    paddingTop: 14,
     paddingBottom: 8,
   },
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     marginBottom: 16,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   dotActive: {
-    width: 24,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   ctaGradient: {
     height: 58,
@@ -581,6 +582,47 @@ const ls = StyleSheet.create({
   loginLink: {
     color: '#8B5CF6',
     fontFamily: 'Outfit-Bold',
+  },
+  // ── Slide 2 floating event cards ──
+  s2card: {
+    position: 'absolute',
+    width: 78,
+    borderRadius: 14,
+    padding: 8,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(14, 10, 28, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  s2cardFeatured: {
+    width: 88,
+    borderColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+  s2icon: {
+    marginBottom: 6,
+  },
+  s2iconFeatured: {},
+  s2title: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 11,
+    color: '#fff',
+    marginBottom: 1,
+  },
+  s2sub: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 13,
+  },
+  s2check: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
   },
 })
 
@@ -669,13 +711,58 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
         </Animated.View>
 
         {/* ── Hero block ── */}
-        <View style={[ls.hero, { height: heroH, marginTop: heroMT }]}>
-          <View style={[ls.glow, { width: glowSz, height: glowSz }]} />
-          <Animated.Image
-            source={cur.img}
-            style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }] }}
-            resizeMode="contain"
-          />
+        <View style={[ls.hero, { height: heroH, marginTop: heroMT, justifyContent: slide === 1 ? 'flex-end' : 'center' }]}>
+          {slide === 2 && <View style={[ls.glow, { width: glowSz, height: glowSz }]} />}
+          <View style={{ position: 'relative' }}>
+            <Animated.Image
+              source={cur.img}
+              style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }] }}
+              resizeMode="contain"
+            />
+            {slide < 2 && (
+              <>
+                <LinearGradient colors={['transparent', '#080B16']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: imgHt * (slide === 1 ? 0.52 : 0.35) }} pointerEvents="none" />
+                <LinearGradient colors={['#080B16', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: imgHt * (slide === 1 ? 0.32 : 0.22) }} pointerEvents="none" />
+                <LinearGradient colors={['#080B16', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: imgW * (slide === 1 ? 0.28 : 0.18) }} pointerEvents="none" />
+                <LinearGradient colors={['transparent', '#080B16']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: imgW * (slide === 1 ? 0.28 : 0.18) }} pointerEvents="none" />
+              </>
+            )}
+          </View>
+
+          {/* Slide 2 only: floating event cards */}
+          {slide === 1 && (
+            <>
+              {/* Left — Theatre */}
+              <View style={[ls.s2card, { top: 10, left: 16, transform: [{ rotate: '-6deg' }] }]}>
+                <View style={ls.s2icon}>
+                  <MaskHappy size={14} color="#fff" weight="duotone" />
+                </View>
+                <Text style={ls.s2title}>Theatre</Text>
+                <Text style={ls.s2sub}>Friday · 7:30 PM</Text>
+              </View>
+
+              {/* Center — Tech Talk (highlighted) */}
+              <View style={[ls.s2card, ls.s2cardFeatured, { top: -4, alignSelf: 'center' }]}>
+                <View style={[ls.s2icon, ls.s2iconFeatured]}>
+                  <MicrophoneStage size={14} color="#8B5CF6" weight="duotone" />
+                </View>
+                <Text style={ls.s2title}>Tech Talk</Text>
+                <Text style={ls.s2sub}>Sat · 2:00 PM</Text>
+                <View style={ls.s2check}>
+                  <PhCheckCircle size={13} color="#8B5CF6" weight="fill" />
+                </View>
+              </View>
+
+              {/* Right — Food Market */}
+              <View style={[ls.s2card, { top: 18, right: 16, transform: [{ rotate: '6deg' }] }]}>
+                <View style={ls.s2icon}>
+                  <ForkKnife size={14} color="#fff" weight="duotone" />
+                </View>
+                <Text style={ls.s2title}>Food Market</Text>
+                <Text style={ls.s2sub}>Sun · 11:00 AM</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── Headline ── */}
@@ -683,7 +770,7 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
           style={[ls.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineY }] }]}>
           <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
           <Text style={[ls.headlineAccent, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
-          <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>
+          {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
           <Text style={[ls.subtitle, { fontSize: subFz, lineHeight: subLh, marginTop: subMT }]}>{cur.sub}</Text>
         </Animated.View>
 
@@ -702,7 +789,8 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
           {/* CTA button */}
           <TouchableOpacity
             onPress={isLast ? onCreateAccount : () => goTo(slide + 1)}
-            activeOpacity={0.88}>
+            activeOpacity={0.88}
+            style={{ marginTop: 10 }}>
             <LinearGradient
               colors={['#8B5CF6', '#F97316']}
               start={{ x: 0, y: 0 }}
