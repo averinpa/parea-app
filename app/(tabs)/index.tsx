@@ -467,20 +467,11 @@ const ls = StyleSheet.create({
     alignItems: 'center',
     height: 52,
     gap: 10,
+    marginLeft: -8,
   },
-  logoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoIconLetter: {
-    fontFamily: 'ClashDisplay-Bold',
-    fontSize: 24,
-    color: '#fff',
-    lineHeight: 28,
-    textAlign: 'center',
+  logoImg: {
+    width: 180,
+    height: 60,
   },
   logoText: {
     fontFamily: 'ClashDisplay-Bold',
@@ -744,14 +735,7 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
 
         {/* ── Logo ── */}
         <Animated.View style={[ls.logoRow, { opacity: logoOpacity }]}>
-          <LinearGradient
-            colors={['#8B5CF6', '#F97316']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={ls.logoIcon}>
-            <Text style={ls.logoIconLetter}>P</Text>
-          </LinearGradient>
-          <Text style={ls.logoText} numberOfLines={1}>parea</Text>
+          <Image source={require('../../assets/images/logo.png')} style={ls.logoImg} resizeMode="contain" />
         </Animated.View>
 
         {/* ── Hero block ── */}
