@@ -2479,7 +2479,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <View style={{ paddingTop: Platform.OS === 'android' ? 10 : 16, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
             {/* Row 1: greeting + bell */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.3 }}>Hi, {userName} 👋</Text>
+              <Text style={{ fontSize: 22, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.5 }}>Hey, {userName} ✨</Text>
               <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
