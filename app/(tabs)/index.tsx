@@ -1198,7 +1198,6 @@ function OTPScreen({ onBack, onVerify, method, credential }: { onBack: () => voi
           <TouchableOpacity onPress={onBack} style={s.authBackBtn}>
             <Ionicons name="chevron-back" size={22} color="rgba(51,65,85,0.7)" />
           </TouchableOpacity>
-          <Image source={require('../../assets/images/logo.png')} style={s.authLogo} resizeMode="contain" />
           <View style={{ width: 40 }} />
         </View>
 
