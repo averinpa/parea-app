@@ -715,7 +715,7 @@ function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppleSignIn
           <View style={{ position: 'relative' }}>
             <Animated.Image
               source={cur.img}
-              style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }], blendMode: 'screen' }}
+              style={{ width: imgW, height: imgHt, transform: [{ scale: charsScale }] }}
               resizeMode="contain"
             />
           </View>
