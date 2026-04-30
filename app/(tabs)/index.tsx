@@ -176,10 +176,10 @@ const MOCK_COMMUNITY_EVENTS: any[] = []
 
 const prettyEventTime = (s: string | undefined | null) => {
   if (!s) return s
-  return s.replace(/(\d{4})-(\d{2})-(\d{2})/, (_, _y, m, d) => {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-    return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]}`
-  })
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return s
+    .replace(/(\d{4})-(\d{2})-(\d{2})/, (_, _y, m, d) => `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]}`)
+    .replace(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/, (_, d, m, y) => `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`)
 }
 
 const MOCK_EVENTS: any[] = []
@@ -2742,14 +2742,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   // ── Format & Transport options ────────────────────────────────────────────
   const FORMAT_OPTIONS = [
-    { id: '1+1',   Icon: Users,        label: 'Duo',   sub: 'Me + 1 person',   grad: ['#6366F1','#818CF8'] as [string,string], color: '#818CF8' },
-    { id: 'squad', Icon: UsersRound,   label: 'Squad', sub: 'Me + 4 people',   grad: ['#10B981','#34D399'] as [string,string], color: '#34D399' },
-    { id: 'party', Icon: PartyPopper,  label: 'Party', sub: 'Me + up to 19',   grad: ['#F59E0B','#FBBF24'] as [string,string], color: '#FBBF24' },
+    { id: '1+1',   Icon: Users,        label: 'Duo',   sub: 'You + 1 person',  grad: ['#6366F1','#818CF8'] as [string,string], color: '#818CF8' },
+    { id: 'squad', Icon: UsersRound,   label: 'Squad', sub: 'Up to 5 people',  grad: ['#10B981','#34D399'] as [string,string], color: '#34D399' },
+    { id: 'party', Icon: PartyPopper,  label: 'Group', sub: 'Up to 20 people', grad: ['#F59E0B','#FBBF24'] as [string,string], color: '#FBBF24' },
   ]
   const TRANSPORT_OPTIONS = [
-    { id: 'car',  Icon: Car,         label: "I'm driving",    sub: 'Can give a lift',          grad: ['#3B82F6','#60A5FA'] as [string,string], color: '#60A5FA' },
-    { id: 'lift', Icon: ThumbsUp,    label: 'Need a ride',    sub: "I'll hop in with someone", grad: ['#EC4899','#F472B6'] as [string,string], color: '#F472B6' },
-    { id: 'meet', Icon: MapPin,      label: 'Meet you there', sub: 'Getting there solo',       grad: ['#8B5CF6','#A78BFA'] as [string,string], color: '#A78BFA' },
+    { id: 'car',  Icon: Car,         label: "I'm driving", sub: 'Open to giving a lift',  grad: ['#3B82F6','#60A5FA'] as [string,string], color: '#60A5FA' },
+    { id: 'lift', Icon: ThumbsUp,    label: 'I need a ride', sub: 'Open to carpooling',   grad: ['#EC4899','#F472B6'] as [string,string], color: '#F472B6' },
+    { id: 'meet', Icon: MapPin,      label: 'Meet there',  sub: "I'll get there myself", grad: ['#8B5CF6','#A78BFA'] as [string,string], color: '#A78BFA' },
   ]
 
   const userName = userData?.name?.split(' ')[0] || 'there'
@@ -2982,7 +2982,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                           <CalendarBlank size={12} color="#94A3B8" weight="regular" />
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || prettyEventTime(ev.time) || ''}</Text>
+                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''}</Text>
                         </View>
                         {(ev.location || ev.venue) && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 }}>
@@ -3027,7 +3027,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     )}
                     <View style={{ padding: 9 }}>
                       <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B', marginBottom: 3 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{ev.date_label || ev.time_label || ''}</Text>
+                      <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{prettyEventTime(ev.date_label || ev.time_label) || ''}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -3097,7 +3097,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6, minHeight: 36 }} numberOfLines={2}>{ev.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <CalendarBlank size={11} color="#94A3B8" weight="regular" />
-                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || prettyEventTime(ev.time) || ''}</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3, height: 16 }}>
                       <PhMapPin size={11} color={ev.location || ev.distance ? '#94A3B8' : 'transparent'} weight="regular" />
@@ -3156,7 +3156,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         <View style={{ gap: 3, marginTop: 4 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <CalendarBlank size={11} color="#94A3B8" weight="regular" />
-                            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || prettyEventTime(ev.time) || ''}</Text>
+                            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''}</Text>
                           </View>
                           {(ev.location || (ev.distance && ev.distance !== '0km')) && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
