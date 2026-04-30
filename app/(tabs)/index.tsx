@@ -5249,7 +5249,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                 <Text style={{ fontSize: 15 }}>{transport === 'car' ? '🚗' : '🎯'}</Text>
                                 <View style={{ flex: 1 }}>
                                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>
-                                    {confirmedCount >= 2 ? `${confirmedCount} confirmed, chat started!` : 'AI found your crew!'}
+                                    {confirmedCount >= 2 ? `${confirmedCount} confirmed, chat started!` : 'Crew matched'}
                                   </Text>
                                   <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
                                     {crewPreview.members.map((m: any) => m.name).join(', ')}
@@ -6908,7 +6908,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const foundEv = dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id) || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)
         const evChatExpiry = (foundEv?.expiresAt > 0 ? foundEv.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
         const newChat = isDuo ? {
-          id: chatId, type: 'duo',
+          id: chatId, type: 'duo', eventRefId: chatData?.event_id,
           name: partner?.name || 'Your crew',
           age: partner?.age || '',
           color: partner?.color || '#818CF8',
@@ -6918,7 +6918,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           event: eventTitle, eventEmoji: '🎉',
           partnerProfile: partner,
         } : {
-          id: chatId, type: 'group',
+          id: chatId, type: 'group', eventRefId: chatData?.event_id,
           event: eventTitle, eventEmoji: '🎉',
           members: members.length,
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
@@ -7058,7 +7058,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
         })
         const newChat = {
-          id: chat.id, type: 'group',
+          id: chat.id, type: 'group', eventRefId: chat.event_id,
           event: dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || feedOfficialDbEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || 'Crew Chat',
           eventEmoji: '🎉', members: members.length,
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
@@ -7737,11 +7737,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       return next
     })
     setPassedRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
-    // Auto-navigate to Vibe Check for official events to start crew finding flow
-    if (ev?.type === 'official') {
-      setActiveTab('vibecheck')
-      markNotifsReadForPlans?.()
-    }
   }
 
   // Match animation refs
@@ -9926,6 +9921,40 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 </TouchableOpacity>
               </View>
             </View>
+
+              {/* Event context strip — date / location / crew count */}
+              {openChat.type !== 'duo' && (() => {
+                const chatEvId = openChat.hostEventId || openChat.communityEventId || openChat.eventRefId
+                const ev = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents].find((e: any) => e.id === chatEvId) : null
+                if (!ev) return null
+                const dateStr = prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''
+                const locShort = (ev.location || ev.venue || '').split(',')[0].trim()
+                const memberCount = openChat.memberProfiles?.length || openChat.members || 0
+                const maxSize = ev.maxParticipants || ev.max_participants || ev.capacity || 0
+                if (!dateStr && !locShort && !memberCount) return null
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(99,102,241,0.05)', paddingHorizontal: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', flexWrap: 'wrap' }}>
+                    {!!dateStr && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <CalendarBlank size={12} color="#6366F1" weight="duotone" />
+                        <Text style={{ fontSize: 12, color: '#475569', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{dateStr}</Text>
+                      </View>
+                    )}
+                    {!!locShort && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+                        <PhMapPin size={12} color="#6366F1" weight="duotone" />
+                        <Text style={{ fontSize: 12, color: '#475569', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{locShort}</Text>
+                      </View>
+                    )}
+                    {memberCount > 0 && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+                        <UsersThree size={12} color="#6366F1" weight="duotone" />
+                        <Text style={{ fontSize: 12, color: '#475569', fontFamily: 'Outfit-Medium' }}>{memberCount} in crew</Text>
+                      </View>
+                    )}
+                  </View>
+                )
+              })()}
 
               {(() => {
                 const chatEvId = openChat.hostEventId || openChat.communityEventId
