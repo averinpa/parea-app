@@ -172,18 +172,15 @@ const LANGUAGES_LIST = [
 
 const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
 
-const MOCK_COMMUNITY_EVENTS = [
-  { id: 901, city: 'Limassol', type: 'community', title: 'Morning coffee & chill',        category: 'coffee',   time: 'Today, 10:00',    location: 'Brew Lab, Limassol',       gradient: ['#f6d365','#fda085'] as [string,string], maxParticipants: 4,  participantsCount: 2, seekerColors: ['#818CF8','#4CAF50'], seekingCount: 0, distance: '0.5km', description: 'Looking for 1-2 people to share morning coffee and good conversation. No agenda, just vibes.' },
-  { id: 902, city: 'Limassol', type: 'community', title: 'Board games night',              category: 'gaming',   time: 'Today, 19:00',    location: 'My place, Germasogeia',    gradient: ['#4facfe','#00f2fe'] as [string,string], maxParticipants: 6,  participantsCount: 3, seekerColors: ['#a78bfa','#f472b6'], seekingCount: 0, distance: '1.2km', description: 'Catan, Codenames, Ticket to Ride — bring your favourite game or just show up. Snacks provided.' },
-  { id: 903, city: 'Limassol', type: 'community', title: 'Beach volleyball',               category: 'sports',   time: 'Tomorrow, 17:00', location: 'Dasoudi Beach',            gradient: ['#43e97b','#38f9d7'] as [string,string], maxParticipants: 10, participantsCount: 4, seekerColors: ['#22c55e','#818CF8'], seekingCount: 0, distance: '2km',   description: 'Casual mixed volleyball, all levels welcome. We play until sunset then grab food nearby.' },
-  { id: 904, city: 'Limassol', type: 'community', title: 'Wine tasting at my terrace',    category: 'wine',     time: 'Tomorrow, 20:00', location: 'Old Town, Limassol',       gradient: ['#f093fb','#f5576c'] as [string,string], maxParticipants: 5,  participantsCount: 2, seekerColors: ['#9C27B0','#E91E63'], seekingCount: 0, distance: '0.8km', description: 'Brought 4 bottles from Paphos wineries last weekend. Sharing with good company on rooftop.' },
-  { id: 905, city: 'Limassol', type: 'community', title: 'Indie film + discussion',        category: 'culture',  time: 'Sat, 18:00',      location: 'Home cinema, Kolonakiou',  gradient: ['#0f0c29','#302b63'] as [string,string], maxParticipants: 5,  participantsCount: 1, seekerColors: ['#a78bfa'],            seekingCount: 0, distance: '1.5km', description: 'Watching a different indie film every Saturday followed by a real discussion. This week: "Past Lives".' },
-  { id: 906, city: 'Limassol', type: 'community', title: 'Sunset hike + picnic',           category: 'outdoors', time: 'Sat, 16:30',      location: 'Akrotiri Peninsula',       gradient: ['#fa8231','#f7b731'] as [string,string], maxParticipants: 8,  participantsCount: 3, seekerColors: ['#334155','#818CF8'], seekingCount: 0, distance: '4km',   description: 'Easy coastal path, 5km loop. Bringing food and a bluetooth speaker. Dogs welcome.' },
-  { id: 907, city: 'Limassol', type: 'community', title: 'Cooking together — Thai food',  category: 'food',     time: 'Sat, 14:00',      location: 'My kitchen, Neapolis',     gradient: ['#f7971e','#ffd200'] as [string,string], maxParticipants: 5,  participantsCount: 2, seekerColors: ['#ef4444','#f97316'], seekingCount: 0, distance: '0.9km', description: 'Teaching pad thai and green curry from scratch. Bring an apron, leave with recipes and leftovers.' },
-  { id: 908, city: 'Limassol', type: 'community', title: 'Rooftop DJ & dancing',           category: 'music',    time: 'Sat, 22:00',      location: 'Rooftop Bar, Marina',      gradient: ['#ee0979','#ff6a00'] as [string,string], maxParticipants: 20, participantsCount: 7, seekerColors: ['#f472b6','#818CF8'], seekingCount: 0, distance: '1km',   description: 'Friend is DJing house & disco. Rooftop, lights, 20 people max. Good energy guaranteed.' },
-  { id: 909, city: 'Limassol', type: 'community', title: 'Paddle at the harbour',          category: 'outdoors', time: 'Sun, 08:00',      location: 'Old Harbour, Limassol',    gradient: ['#56ccf2','#2f80ed'] as [string,string], maxParticipants: 6,  participantsCount: 2, seekerColors: ['#22c55e','#4CAF50'], seekingCount: 0, distance: '1.8km', description: 'SUP boards rental split 4 ways. Calm water in the morning, 90 min session then breakfast.' },
-  { id: 910, city: 'Limassol', type: 'community', title: 'Salsa social night',             category: 'dance',    time: 'Sun, 20:00',      location: 'Dance studio, Agios Athanasios', gradient: ['#fc5c7d','#6a3093'] as [string,string], maxParticipants: 16, participantsCount: 6, seekerColors: ['#f472b6','#a78bfa'], seekingCount: 0, distance: '2.5km', description: 'All levels welcome, beginners rotation included. No partner needed. 1hr lesson + 2hr social.' },
-]
+const MOCK_COMMUNITY_EVENTS: any[] = []
+
+const prettyEventTime = (s: string | undefined | null) => {
+  if (!s) return s
+  return s.replace(/(\d{4})-(\d{2})-(\d{2})/, (_, _y, m, d) => {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]}`
+  })
+}
 
 const MOCK_EVENTS: any[] = []
 
@@ -1387,6 +1384,7 @@ function DobBottomSheet({ initialDay, initialMonth, initialYear, onClose, onConf
   onClose: () => void
   onConfirm: (day: number, month: number, year: number) => void
 }) {
+  const sheetInsets = useSafeAreaInsets()
   const [day, setDay] = useState(initialDay)
   const [month, setMonth] = useState(initialMonth)
   const [year, setYear] = useState(initialYear)
@@ -1430,7 +1428,7 @@ function DobBottomSheet({ initialDay, initialMonth, initialYear, onClose, onConf
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           paddingTop: 12,
-          paddingBottom: 32,
+          paddingBottom: Math.max(sheetInsets.bottom + 16, 32),
           paddingHorizontal: 20,
           shadowColor: '#0F172A',
           shadowOpacity: 0.18,
@@ -1514,6 +1512,13 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const [showWelcome, setShowWelcome] = useState(false)
   const welcomeOpacity = useRef(new Animated.Value(0)).current
   const welcomeScale = useRef(new Animated.Value(0.7)).current
+  const tabPulse = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(tabPulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(tabPulse, { toValue: 0, duration: 800, useNativeDriver: true }),
+    ])).start()
+  }, [])
   const vibeFlashAnim = useRef(new Animated.Value(0)).current
   const counterBounceAnim = useRef(new Animated.Value(1)).current
   const barAnims = useRef([new Animated.Value(0.3), new Animated.Value(0.6), new Animated.Value(0.45), new Animated.Value(0.75)]).current
@@ -2101,14 +2106,17 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                   {/* Mini tab bar */}
                   {(() => {
                     const VIBE_TABS = [
-                      { id: 'music', emoji: '🎵', label: 'Music',     done: musicGenres.length > 0 },
-                      { id: 'vibe',  emoji: '✨', label: 'Vibe',      done: !!socialEnergy },
-                      { id: 'limits',emoji: '🚫', label: 'Limits',    done: true, optional: true },
+                      { id: 'music',  label: 'Music',  num: 1, done: musicGenres.length > 0, optional: false },
+                      { id: 'vibe',   label: 'Vibe',   num: 2, done: !!socialEnergy,           optional: false },
+                      { id: 'limits', label: 'Limits', num: 3, done: false,                    optional: true  },
                     ]
+                    const currentIdx = VIBE_TABS.findIndex(t => t.id === vibeTab)
+                    const nextId = VIBE_TABS[currentIdx + 1]?.id ?? null
                     return (
                       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
                         {VIBE_TABS.map(tab => {
                           const active = vibeTab === tab.id
+                          const showPulse = nextId === tab.id && !active
                           return (
                             <TouchableOpacity
                               key={tab.id}
@@ -2121,14 +2129,24 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                                 boxShadow: active ? '0 4px 12px rgba(129,140,248,0.4)' : 'none',
                               } as any}
                             >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Text style={{ fontSize: 13 }}>{tab.emoji}</Text>
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#fff' : '#64748B' }}>{tab.label}</Text>
-                                {tab.done && !tab.optional && (
-                                  <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: active ? 'rgba(255,255,255,0.6)' : '#10B981' }} />
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: active ? 'rgba(255,255,255,0.75)' : '#94A3B8' }}>{tab.num}</Text>
+                                {tab.done && !tab.optional ? (
+                                  <Ionicons name="checkmark" size={12} color={active ? 'rgba(255,255,255,0.9)' : '#10B981'} />
+                                ) : (
+                                  <Text style={{ fontSize: 11, color: active ? 'rgba(255,255,255,0.55)' : '#CBD5E1', fontWeight: '700' }}>·</Text>
                                 )}
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#fff' : '#64748B' }}>{tab.label}</Text>
                                 {tab.optional && (
                                   <Text style={{ fontSize: 9, color: active ? 'rgba(255,255,255,0.6)' : '#CBD5E1', fontWeight: '600' }}>opt</Text>
+                                )}
+                                {showPulse && (
+                                  <Animated.View style={{
+                                    width: 7, height: 7, borderRadius: 3.5,
+                                    backgroundColor: '#F97316',
+                                    opacity: tabPulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
+                                    transform: [{ scale: tabPulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.25] }) }],
+                                  }} />
                                 )}
                               </View>
                             </TouchableOpacity>
@@ -2294,7 +2312,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 28 : insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
+        <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) + 6 : insets.bottom > 0 ? insets.bottom + 8 : 12 }]}>
           {step === TOTAL ? (
             <View>
               <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showWelcome} activeOpacity={0.88}>
@@ -2605,7 +2623,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const JoinButton = ({ ev }: { ev: any }) => {
     if (ev.isHosted) return (
       <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,215,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' }}>
-        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309' }}>My Event 👑</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309' }}>Your plan 👑</Text>
       </View>
     )
     const state = getJoinState(ev)
@@ -2928,7 +2946,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6, minHeight: 36 }} numberOfLines={2}>{ev.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <CalendarBlank size={11} color="#94A3B8" weight="regular" />
-                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || prettyEventTime(ev.time) || ''}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3, height: 16 }}>
                       <PhMapPin size={11} color={ev.location || ev.distance ? '#94A3B8' : 'transparent'} weight="regular" />
@@ -2987,7 +3005,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         <View style={{ gap: 3, marginTop: 4 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <CalendarBlank size={11} color="#94A3B8" weight="regular" />
-                            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || ev.time || ''}</Text>
+                            <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || prettyEventTime(ev.time) || ''}</Text>
                           </View>
                           {(ev.location || (ev.distance && ev.distance !== '0km')) && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -3072,7 +3090,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   <View style={{ flexDirection: 'row', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <CalendarBlank size={12} color="#94A3B8" weight="regular" />
-                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.time}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{prettyEventTime(ev.time)}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <PhMapPin size={12} color="#94A3B8" weight="regular" />
@@ -3090,7 +3108,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                         <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '500' }}>{filled} of {total} spots</Text>
-                        <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '700' }}>{free} free</Text>
+                        <Text style={{ fontSize: 11, color: '#6366F1', fontWeight: '700' }}>{free === 0 ? 'Full' : `${free} spot${free === 1 ? '' : 's'} left`}</Text>
                       </View>
                       <View style={{ height: 4, backgroundColor: '#EEF2FF', borderRadius: 99 }}>
                         <View style={{ height: 4, width: `${Math.round(pct * 100)}%` as any, backgroundColor: pct >= 0.8 ? '#EF4444' : '#6366F1', borderRadius: 99 }} />
@@ -3417,7 +3435,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
                         <CalendarDays size={12} color="#64748B" />
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{ev.time}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{prettyEventTime(ev.time)}</Text>
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
                         <Users size={12} color="#64748B" />
@@ -3521,7 +3539,7 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                           )}
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Clock size={11} color="#94A3B8" />
-                            <Text style={{ fontSize: 12, color: '#64748B' }}>{ev.date_label ? `${ev.date_label}${ev.time_label ? ' · ' + ev.time_label : ''}` : ev.time || '—'}</Text>
+                            <Text style={{ fontSize: 12, color: '#64748B' }}>{ev.date_label ? `${ev.date_label}${ev.time_label ? ' · ' + ev.time_label : ''}` : prettyEventTime(ev.time) || '—'}</Text>
                           </View>
                         </View>
                       </View>
@@ -4727,7 +4745,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: -0.3, lineHeight: 21 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
+                      <Text style={{ fontSize: 11, fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{prettyEventTime(ev.time)}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
                     </View>
                     <PulsingStatusBadge label={statusLabel} color={statusColor} bg={statusBg} border={statusBorder} />
                   </View>
@@ -5137,7 +5155,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{prettyEventTime(ev.time)}{ev.location ? ` · ${ev.location}` : ''}</Text>
                       {ev.hostTransport === 'car' && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 }}>
                           <Text style={{ fontSize: 11 }}>🚗</Text>
@@ -5167,7 +5185,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ marginBottom: 16 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
                       <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: '700', letterSpacing: 0.5 }}>SPOTS FILLED</Text>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.7)' }}>{filled} / {total} · {free} free</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.7)' }}>{filled} / {total} · {free === 0 ? 'Full' : `${free} spot${free === 1 ? '' : 's'} left`}</Text>
                     </View>
                     <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
                       <LinearGradient
@@ -5228,7 +5246,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{ev.time}</Text>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{prettyEventTime(ev.time)}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 5 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.13)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)' }}>
@@ -6191,7 +6209,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           id: e.id,
           type: 'community',
           city: e.city || '',
-          title: e.title,
+          title: e.title ? e.title.charAt(0).toUpperCase() + e.title.slice(1) : e.title,
           category: e.category || 'outdoors',
           location: e.location,
           time: e.time || 'TBD',
@@ -6462,7 +6480,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (saved.joinedEvents) setJoinedEvents(saved.joinedEvents)
         if (saved.userEventFormat) setUserEventFormat(saved.userEventFormat)
         if (saved.userEventTransport) setUserEventTransport(saved.userEventTransport)
-        if (saved.userCreatedEvents) setUserCreatedEvents(saved.userCreatedEvents)
+        if (saved.userCreatedEvents) setUserCreatedEvents(saved.userCreatedEvents.map((ev: any) => ({
+          ...ev,
+          title: ev.title ? ev.title.charAt(0).toUpperCase() + ev.title.slice(1) : ev.title,
+        })))
         if (saved.pendingJoinRequests) setPendingJoinRequests(saved.pendingJoinRequests)
         if (saved.approvedJoiners) {
           setApprovedJoiners(saved.approvedJoiners)
@@ -9197,7 +9218,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         ]
                         const tempId = Date.now()
                         const grad = GRAD_POOL[tempId % GRAD_POOL.length]
-                        const actLabel = createCustom.trim() || createType || 'Social'
+                        const rawLabel = createCustom.trim() || createType || 'Social'
+                        const actLabel = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1)
 
                         // Build expiry timestamp from selected date + time
                         let expiresAt = 0
