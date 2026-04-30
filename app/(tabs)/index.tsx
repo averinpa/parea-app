@@ -187,18 +187,18 @@ const MOCK_EVENTS: any[] = []
 // Maps INTERESTS_LIST labels → event categories for Data Matching
 const INTEREST_TO_CATEGORY: Record<string, string> = {
   '☕ Coffee': 'coffee', '🍷 Wine': 'wine', '🎾 Tennis': 'sports', '🎬 Movies': 'culture',
-  '🥾 Hiking': 'outdoors', '🍕 Foodie': 'food', '🧘 Yoga': 'sports', '🎨 Art': 'culture',
-  '🎸 Music': 'music', '✈️ Travel': 'outdoors', '🏓 Padel': 'sports', '✂️ Crafts': 'culture',
+  '🥾 Hiking': 'outdoors', '🍕 Foodie': 'food', '🧘 Yoga': 'sports', '🎨 Art': 'art',
+  '🎸 Music': 'music', '✈️ Travel': 'outdoors', '🏓 Padel': 'sports', '✂️ Crafts': 'art',
   '👗 Fashion': 'culture', '💻 IT': 'tech', '🏄 Water Sports': 'outdoors',
   '🏊 Swimming': 'sports', '🏖️ Beach': 'outdoors', '🎤 Concerts': 'music',
-  '💃 Dance': 'dance', '📷 Photography': 'culture', '📚 Books': 'culture',
-  '🎮 Gaming': 'gaming', '🎭 Theatre': 'dance', '🎲 Board Games': 'gaming',
+  '💃 Dance': 'dance', '📷 Photography': 'art', '📚 Books': 'culture',
+  '🎮 Gaming': 'gaming', '🎭 Theatre': 'theatre', '🎲 Board Games': 'gaming',
 }
 
-const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵', dance: '💃' }
-const CATEGORY_ICON: Record<string, any> = { coffee: PhCoffee, sports: Barbell, wine: PhWine, gaming: GameController, tech: PhCpu, outdoors: PhLeaf, food: ForkKnife, culture: PhPalette, music: MusicNotes, dance: MusicNotes }
-const CATEGORY_COLOR: Record<string, string> = { coffee: '#92400E', sports: '#1D4ED8', wine: '#7C2D12', gaming: '#5B21B6', tech: '#0369A1', outdoors: '#166534', food: '#9A3412', culture: '#B45309', music: '#6D28D9', dance: '#BE185D' }
-const CATEGORY_BG: Record<string, [string,string]> = { coffee: ['#FEF3C7','#FDE68A'], sports: ['#DBEAFE','#BFDBFE'], wine: ['#FEE2E2','#FECACA'], gaming: ['#EDE9FE','#DDD6FE'], tech: ['#E0F2FE','#BAE6FD'], outdoors: ['#DCFCE7','#BBF7D0'], food: ['#FFEDD5','#FED7AA'], culture: ['#FEF9C3','#FEF08A'], music: ['#F3E8FF','#E9D5FF'], dance: ['#FCE7F3','#FBCFE8'] }
+const CATEGORY_EMOJI: Record<string, string> = { coffee: '☕', sports: '🎾', wine: '🍷', gaming: '🎮', tech: '💻', outdoors: '🌿', food: '🍕', culture: '🎨', music: '🎵', dance: '🎭', theatre: '🎭', art: '🎨' }
+const CATEGORY_ICON: Record<string, any> = { coffee: PhCoffee, sports: Barbell, wine: PhWine, gaming: GameController, tech: PhCpu, outdoors: PhLeaf, food: ForkKnife, culture: PhPalette, music: MusicNotes, dance: MaskHappy, theatre: MaskHappy, art: PhPalette }
+const CATEGORY_COLOR: Record<string, string> = { coffee: '#92400E', sports: '#1D4ED8', wine: '#7C2D12', gaming: '#5B21B6', tech: '#0369A1', outdoors: '#166534', food: '#9A3412', culture: '#B45309', music: '#6D28D9', dance: '#BE185D', theatre: '#9D174D', art: '#B45309' }
+const CATEGORY_BG: Record<string, [string,string]> = { coffee: ['#FEF3C7','#FDE68A'], sports: ['#DBEAFE','#BFDBFE'], wine: ['#FEE2E2','#FECACA'], gaming: ['#EDE9FE','#DDD6FE'], tech: ['#E0F2FE','#BAE6FD'], outdoors: ['#DCFCE7','#BBF7D0'], food: ['#FFEDD5','#FED7AA'], culture: ['#FEF9C3','#FEF08A'], music: ['#F3E8FF','#E9D5FF'], dance: ['#FCE7F3','#FBCFE8'], theatre: ['#FBCFE8','#F9A8D4'], art: ['#FEF3C7','#FDE68A'] }
 
 const BENTO_SONGS = ['Pop 🎤', 'Hip-Hop 🎧', 'R&B / Soul 🎶', 'Electronic / House 🎛️', 'Indie / Alternative 🎸', 'Jazz / Blues 🎷', 'Classical 🎻', 'Rock / Metal 🤘', 'Reggaeton / Latin 💃', 'Afrobeats 🥁', 'K-Pop 🌸', 'Lo-fi / Chillhop 🌙', 'Country 🤠', 'Funk / Disco 🕺']
 const BENTO_FLAGS = ['Spontaneous plans 🟢', 'Great listener 🟢', 'Dog lover 🟢', 'Always on time 🟢', 'Foodie 🟢', 'Late replies 🚩', "Cancels last minute 🚩", 'No sense of humour 🚩', "Can't make plans 🚩"]
@@ -2583,6 +2583,84 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return (bVibe + bInt) - (aVibe + aInt)
   })
 
+  // ── For You scoring ───────────────────────────────────────────────────────
+  const userLangs: string[] = userData?.langs || []
+  const LANG_LABEL: Record<string, string> = { en: 'English', ru: 'Russian', el: 'Greek', de: 'German', fr: 'French', he: 'Hebrew', uk: 'Ukrainian', it: 'Italian', es: 'Spanish' }
+  const todayForYou = new Date(); todayForYou.setHours(0, 0, 0, 0)
+  const dayAfterForYou = new Date(todayForYou); dayAfterForYou.setDate(dayAfterForYou.getDate() + 2)
+
+  const scoreForYou = (ev: any): { score: number; reasons: string[] } => {
+    let score = 0
+    const reasons: string[] = []
+
+    if (vibeCats.length > 0 && vibeCats.includes(ev.category)) {
+      score += 35
+      reasons.push('Vibe')
+    }
+    if (userCategories.length > 0 && userCategories.includes(ev.category)) {
+      score += 30
+      reasons.push('Interests match')
+    }
+
+    let langHit: string | null = null
+    if (userLangs.length > 0) {
+      if (ev.type === 'community') {
+        const evLangs: string[] = ev.hostLangs || []
+        const overlap = evLangs.filter((l: string) => userLangs.includes(l))
+        if (overlap.length > 0) langHit = LANG_LABEL[overlap[0]] || overlap[0]
+      } else {
+        const langStr = (ev.language || '').toLowerCase()
+        if (langStr) {
+          const matched = userLangs.find(code => {
+            const label = (LANG_LABEL[code] || code).toLowerCase()
+            return langStr.includes(label) || langStr.includes(code)
+          })
+          if (matched) langHit = LANG_LABEL[matched] || matched
+        }
+      }
+    }
+    if (langHit) {
+      score += 15
+      reasons.push(langHit)
+    }
+
+    const d = parseEventDate(ev.date_label || ev.time || '')
+    if (d && d >= todayForYou && d < dayAfterForYou) {
+      score += 10
+      reasons.push(d.toDateString() === todayForYou.toDateString() ? 'Today' : 'Tomorrow')
+    }
+
+    let joinable = false
+    if (ev.type === 'community') {
+      const filled = ev.isHosted ? (approvedJoiners[ev.id] || []).length + 1 : ev.participantsCount || 0
+      const total = ev.maxParticipants || 10
+      joinable = filled < total
+    } else {
+      joinable = !ev.expiresAt || ev.expiresAt > Date.now()
+    }
+    if (joinable) {
+      score += 10
+      reasons.push('Spots open')
+    }
+
+    return { score: Math.min(100, score), reasons: reasons.slice(0, 3) }
+  }
+
+  const forYouEvents = (() => {
+    const officialForYou = officialAll.filter((ev: any) => !city || !ev.city || ev.city.toLowerCase() === city.toLowerCase())
+    const all: any[] = [...officialForYou, ...communityAll]
+    const seen = new Set<number>()
+    const scored = all.flatMap(ev => {
+      if (seen.has(ev.id)) return []
+      seen.add(ev.id)
+      const { score, reasons } = scoreForYou(ev)
+      if (score < 60) return []
+      return [{ ev, score, reasons }]
+    })
+    scored.sort((a, b) => b.score - a.score)
+    return scored
+  })()
+
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
   const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2 | 3; format: string; transport: string; groupMin: number; groupMax: number }>(
     { visible: false, ev: null, step: 1, format: '', transport: '', groupMin: 2, groupMax: 5 }
@@ -2690,7 +2768,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <View style={{ paddingTop: Platform.OS === 'android' ? 10 : 16, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
             {/* Row 1: greeting + bell */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Medium', color: '#475569', letterSpacing: -0.2 }}>Hey, {userName} ✨</Text>
+              <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Medium', color: '#475569', letterSpacing: -0.2 }}>Hey, {userName}</Text>
               <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
@@ -2855,8 +2933,77 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           })()}
         </View>
 
+        {/* ── FOR YOU ── */}
+        {forYouFilter && (
+          <View>
+            <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 14 }}>
+              <Text style={{ fontSize: 26, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.5 }}>Picked for you ✨</Text>
+              <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>Based on your vibe, interests and languages</Text>
+            </View>
+            {forYouEvents.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingTop: 24, paddingHorizontal: 32, paddingBottom: 32 }}>
+                <Image source={require('../../assets/images/community_empty.png')} style={{ width: 160, height: 122, marginBottom: 14 }} resizeMode="contain" />
+                <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', textAlign: 'center' }}>Your picks are warming up ✨</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'Outfit-Regular', color: '#94A3B8', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Add more interests to get better recommendations</Text>
+                <TouchableOpacity onPress={() => setVibeEditOpen(true)} activeOpacity={0.85}
+                  style={{ marginTop: 20, borderRadius: 14, overflow: 'hidden' }}>
+                  <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={{ paddingVertical: 13, paddingHorizontal: 24 }}>
+                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Improve my vibe</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 16 }}>
+                {forYouEvents.map(({ ev, score, reasons }: any) => {
+                  const CatIcon = CATEGORY_ICON[ev.category] || MapPin
+                  const bgColors = CATEGORY_BG[ev.category] || ['#EEF2FF', '#C7D2FE']
+                  const iconColor = CATEGORY_COLOR[ev.category] || '#4338CA'
+                  return (
+                    <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
+                      style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+                        <LinearGradient colors={bgColors as any}
+                          style={{ width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <CatIcon size={22} color={iconColor} weight="duotone" />
+                        </LinearGradient>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                            <View style={{ paddingHorizontal: 9, paddingVertical: 3, borderRadius: 99, backgroundColor: '#EDE9FE', borderWidth: 1, borderColor: '#DDD6FE' }}>
+                              <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: '#6D28D9' }}>{score >= 70 ? `${score}% match` : 'Good match'}</Text>
+                            </View>
+                          </View>
+                          {reasons.length > 0 && (
+                            <Text style={{ fontSize: 12, color: '#8B5CF6', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{reasons.join(' · ')}</Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <CalendarBlank size={12} color="#94A3B8" weight="regular" />
+                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.date_label || ev.time_label || prettyEventTime(ev.time) || ''}</Text>
+                        </View>
+                        {(ev.location || ev.venue) && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 }}>
+                            <PhMapPin size={12} color="#94A3B8" weight="regular" />
+                            <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{(ev.location || ev.venue || '').split(',')[0].trim()}</Text>
+                          </View>
+                        )}
+                        <View style={{ marginLeft: 'auto', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: ev.type === 'community' ? '#EEF2FF' : '#FEF3C7' }}>
+                          <Text style={{ fontSize: 10, fontFamily: 'Outfit-SemiBold', color: ev.type === 'community' ? '#4338CA' : '#B45309' }}>{ev.type === 'community' ? 'Community' : 'Official'}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* ── TONIGHT VIBE PICKS ── */}
-        {vibeEvents.length > 0 && (() => {
+        {!forYouFilter && vibeEvents.length > 0 && (() => {
           const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe?.energy) || SOCIAL_ENERGY[2]
           return (
             <View style={{ marginTop: 28, marginBottom: 12 }}>
@@ -2890,7 +3037,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         })()}
 
         {/* ── OFFICIAL EVENTS ── */}
-        {officialDbLoading && (
+        {!forYouFilter && officialDbLoading && (
           <>
             <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
@@ -2909,7 +3056,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </ScrollView>
           </>
         )}
-        {!officialDbLoading && officialDbEvents.length > 0 && (
+        {!forYouFilter && !officialDbLoading && officialDbEvents.length > 0 && (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -3029,6 +3176,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         )}
 
         {/* ── COMMUNITY ── */}
+        {!forYouFilter && (<>
         {communityAll.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -3135,6 +3283,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             <Text style={{ fontSize: 13, fontFamily: 'Outfit-Regular', color: '#94A3B8', marginTop: 6 }}>Tap + to start one</Text>
           </View>
         )}
+        </>)}
 
       </ScrollView>
 
