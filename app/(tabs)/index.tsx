@@ -5094,24 +5094,25 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             </TouchableOpacity>
                           </View>
                         ) : inviteSent ? (
-                          // Invite already sent — show sent state + Skip
+                          // Invite sent — waiting for them to confirm
                           <View style={{ gap: 10 }}>
-                            <View style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#43E97B' }}>Invite sent ✓</Text>
+                            <View style={{ borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', backgroundColor: 'rgba(251,191,36,0.10)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.28)' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '800', color: '#FBBF24' }}>Waiting for {currentPerson?.name || 'them'}</Text>
+                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4, textAlign: 'center' }}>We'll create a chat if they confirm too.</Text>
                             </View>
                             <TouchableOpacity activeOpacity={0.8} onPress={() => { onPassJoiner?.(ev.id, currentPerson); Haptics.selectionAsync() }} style={{ borderRadius: 99, paddingVertical: 11, alignItems: 'center' }}>
                               <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.3)' }}>Skip and see next</Text>
                             </TouchableOpacity>
                           </View>
                         ) : (
-                          // Default: Let's go + Skip
+                          // Default: Invite + Skip
                           <View style={{ flexDirection: 'row', gap: 10 }}>
                             <TouchableOpacity
                               activeOpacity={0.85}
                               onPress={() => { onConfirm?.(ev, [currentPerson], format); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
                               style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
                               <Zap size={15} color="#052e16" fill="#052e16" />
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Let's go!</Text>
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Invite</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               activeOpacity={0.8}
@@ -5129,7 +5130,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   <View style={{ marginBottom: isActive ? 20 : 0 }}>
                     {(partners.length > 0) && (
                       <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, marginBottom: 12 }}>
-                        TAP TO VET YOUR CREW
+                        YOUR CREW SO FAR
                       </Text>
                     )}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
@@ -5207,10 +5208,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     <View style={{ gap: 10 }}>
                       {(() => {
                         const isAlreadyConfirmed = joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id]
-                        const crewPreview = !isCommunity && (format === 'squad' || format === 'party') ? crewPreviewMap[ev.id] : null
+                        const crewPreview = !isCommunity && (format === 'squad' || format === 'party') && !isAlreadyConfirmed ? crewPreviewMap[ev.id] : null
                         const readyCount = readyCountMap[ev.id] // others ready (excludes self)
-                        const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 0 && !crewPreview
-                        if (isAlreadyConfirmed && !crewPreview) {
+                        const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 0 && !crewPreview && !isAlreadyConfirmed
+                        if (isAlreadyConfirmed) {
                           const confirmedSoFar = (crewPreview?.confirmedCount || 0) + 1 // +1 for self
                           const maxSize = VIBE_FORMAT_MAX[format] || 5
                           return (
@@ -5222,7 +5223,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                 <View style={{ flex: 1 }}>
                                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in the crew!</Text>
                                   <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
-                                    {`Waiting for more · up to ${maxSize} people`}
+                                    We'll keep looking for more people.
                                   </Text>
                                 </View>
                               </View>
@@ -5238,11 +5239,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                         }
                         if (crewPreview) {
                           const confirmedCount = crewPreview.confirmedCount || 0
-                          const confirmBtnLabel = confirmedCount >= 2
-                            ? `Join ${confirmedCount} confirmed 🎉`
-                            : confirmedCount === 1
-                            ? 'Join — 1 already confirmed ✓'
-                            : 'Be first to confirm! 🚀'
+                          const confirmBtnLabel = 'Join crew'
                           return (
                             <View style={{ gap: 10 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
@@ -5251,9 +5248,14 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>
                                     {confirmedCount >= 2 ? `${confirmedCount} confirmed, chat started!` : 'Crew matched'}
                                   </Text>
-                                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
-                                    {crewPreview.members.map((m: any) => m.name).join(', ')}
-                                    {confirmedCount > 0 ? ` · ${confirmedCount} confirmed` : ''}
+                                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }} numberOfLines={1}>
+                                    {(() => {
+                                      const names = crewPreview.members.map((m: any) => m.name)
+                                      const head = names.slice(0, 2).join(', ')
+                                      const rest = names.length - 2
+                                      const namesStr = rest > 0 ? `${head} +${rest} more` : head
+                                      return confirmedCount > 0 ? `${namesStr} · ${confirmedCount} confirmed` : namesStr
+                                    })()}
                                   </Text>
                                   {crewPreview.members.some((m: any) => m.transport) && (
                                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
@@ -5282,17 +5284,17 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             </View>
                           )
                         }
+                        const isSquadOrParty = !isCommunity && (format === 'squad' || format === 'party')
                         return (
                           <TouchableOpacity
-                            activeOpacity={isWaiting || inviteSentToAll ? 1 : 0.85}
-                            disabled={isWaiting || inviteSentToAll}
-                            onPress={() => onConfirm?.(ev, partners, format)}
-                            style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: isWaiting ? 'rgba(251,191,36,0.18)' : inviteSentToAll ? 'rgba(67,233,123,0.2)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: isWaiting || inviteSentToAll ? 0 : 0.4, shadowRadius: 14, elevation: isWaiting || inviteSentToAll ? 0 : 6 }}>
-                            {!isWaiting && !inviteSentToAll && (isCommunity ? <MessageCircle size={15} color="#052e16" /> : <Zap size={15} color="#052e16" fill="#052e16" />)}
-                            {isWaiting && <Clock size={15} color="#FBBF24" />}
+                            activeOpacity={inviteSentToAll ? 1 : 0.85}
+                            disabled={inviteSentToAll}
+                            onPress={() => isSquadOrParty ? onJoinCrew?.(ev) : onConfirm?.(ev, partners, format)}
+                            style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: inviteSentToAll ? 'rgba(67,233,123,0.2)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: inviteSentToAll ? 0 : 0.4, shadowRadius: 14, elevation: inviteSentToAll ? 0 : 6 }}>
+                            {!inviteSentToAll && (isCommunity ? <MessageCircle size={15} color="#052e16" /> : <Zap size={15} color="#052e16" fill="#052e16" />)}
                             {inviteSentToAll && <CheckCircle size={15} color="#43E97B" />}
-                            <Text style={{ fontSize: 15, fontWeight: '900', color: isWaiting ? '#FBBF24' : inviteSentToAll ? '#43E97B' : '#052e16' }}>
-                              {isCommunity ? 'Confirm & Open Chat' : isWaiting ? 'You\'re ready · waiting for crew' : inviteSentToAll ? 'Invite sent' : "Let's go!"}
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: inviteSentToAll ? '#43E97B' : '#052e16' }}>
+                              {isCommunity ? 'Confirm & Open Chat' : inviteSentToAll ? 'Invite sent' : 'Join crew'}
                             </Text>
                           </TouchableOpacity>
                         )
@@ -8478,8 +8480,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }}
             onJoinCrew={async (ev: any) => {
               const preview = crewPreviewMap[ev.id]
-              if (!preview) return
-              if (preview.chatId) {
+              if (preview && preview.chatId) {
                 // Join existing chat
                 await supabase.from('chat_members').insert({ chat_id: preview.chatId, profile_id: userData?.dbId })
                 // Mark self as confirmed so we don't appear in others' VibeCheck
@@ -9930,7 +9931,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               {/* Event context strip — date / location / crew count */}
               {openChat.type !== 'duo' && (() => {
                 const chatEvId = openChat.hostEventId || openChat.communityEventId || openChat.eventRefId
-                const ev = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents].find((e: any) => e.id === chatEvId) : null
+                const ev = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents].find((e: any) => e.id === chatEvId || e._dbId === chatEvId) : null
                 if (!ev) return null
                 const dateStr = prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''
                 const locShort = (ev.location || ev.venue || '').split(',')[0].trim()
