@@ -470,8 +470,8 @@ const ls = StyleSheet.create({
     marginLeft: -8,
   },
   logoImg: {
-    width: 150,
-    height: 50,
+    width: 120,
+    height: 40,
   },
   logoText: {
     fontFamily: 'ClashDisplay-Bold',
@@ -521,7 +521,7 @@ const ls = StyleSheet.create({
   },
   headlineAccent: {
     fontFamily: 'ClashDisplay-Bold',
-    color: '#8B5CF6',
+    color: '#FB923C',
     letterSpacing: -1.5,
     // fontSize/lineHeight set dynamically
   },
@@ -1323,6 +1323,152 @@ function AnimatedInterestChip({ item, isOn, onPress, palette }: {
   )
 }
 
+function WheelColumn({ data, value, onChange, width }: {
+  data: { label: string; value: number }[]
+  value: number
+  onChange: (v: number) => void
+  width: number
+}) {
+  const ITEM_HEIGHT = 44
+  const VISIBLE = 5
+  const HEIGHT = ITEM_HEIGHT * VISIBLE
+  const listRef = useRef<FlatList<{ label: string; value: number }>>(null)
+  const initialIdx = Math.max(0, data.findIndex(d => d.value === value))
+  const [activeIdx, setActiveIdx] = useState(initialIdx)
+
+  useEffect(() => {
+    const idx = Math.max(0, data.findIndex(d => d.value === value))
+    setActiveIdx(idx)
+    const t = setTimeout(() => listRef.current?.scrollToOffset({ offset: idx * ITEM_HEIGHT, animated: false }), 30)
+    return () => clearTimeout(t)
+  }, [data.length])
+
+  return (
+    <View style={{ width, height: HEIGHT, position: 'relative' }}>
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: ITEM_HEIGHT * 2, height: ITEM_HEIGHT, backgroundColor: 'rgba(99,102,241,0.07)', borderRadius: 12, zIndex: 0 }} />
+      <FlatList
+        ref={listRef}
+        data={data}
+        keyExtractor={(_, i) => String(i)}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+        getItemLayout={(_, i) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * i, index: i })}
+        scrollEventThrottle={16}
+        onScroll={e => {
+          const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT)
+          if (idx !== activeIdx && idx >= 0 && idx < data.length) setActiveIdx(idx)
+        }}
+        onMomentumScrollEnd={e => {
+          const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT)
+          const clamped = Math.max(0, Math.min(data.length - 1, idx))
+          setActiveIdx(clamped)
+          onChange(data[clamped].value)
+        }}
+        renderItem={({ item, index }) => {
+          const active = index === activeIdx
+          return (
+            <View style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ fontSize: active ? 20 : 16, fontFamily: active ? 'Outfit-SemiBold' : 'Outfit-Regular', color: active ? '#1E1B4B' : '#94A3B8', opacity: active ? 1 : 0.5 }}>{item.label}</Text>
+            </View>
+          )
+        }}
+      />
+    </View>
+  )
+}
+
+function DobBottomSheet({ initialDay, initialMonth, initialYear, onClose, onConfirm }: {
+  initialDay: number
+  initialMonth: number
+  initialYear: number
+  onClose: () => void
+  onConfirm: (day: number, month: number, year: number) => void
+}) {
+  const [day, setDay] = useState(initialDay)
+  const [month, setMonth] = useState(initialMonth)
+  const [year, setYear] = useState(initialYear)
+  const slide = useRef(new Animated.Value(0)).current
+  const backdrop = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slide,    { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.timing(backdrop, { toValue: 1, duration: 280, useNativeDriver: true }),
+    ]).start()
+  }, [])
+
+  const closeWithAnim = () => {
+    Animated.parallel([
+      Animated.timing(slide,    { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(backdrop, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => onClose())
+  }
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const YEARS  = Array.from({ length: 2008 - 1940 + 1 }, (_, i) => 1940 + i)
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const DAYS = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+
+  useEffect(() => {
+    if (day > daysInMonth) setDay(daysInMonth)
+  }, [daysInMonth])
+
+  const today = new Date()
+  let calcAge = today.getFullYear() - year
+  if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) calcAge--
+  const isAdult = calcAge >= 18
+
+  return (
+    <Modal visible transparent animationType="none" onRequestClose={closeWithAnim} statusBarTranslucent>
+      <Animated.View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', opacity: backdrop, justifyContent: 'flex-end' }}>
+        <TouchableOpacity activeOpacity={1} onPress={closeWithAnim} style={{ flex: 1 }} />
+        <Animated.View style={{
+          backgroundColor: '#fff',
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          paddingTop: 12,
+          paddingBottom: 32,
+          paddingHorizontal: 20,
+          shadowColor: '#0F172A',
+          shadowOpacity: 0.18,
+          shadowRadius: 28,
+          shadowOffset: { width: 0, height: -6 },
+          elevation: 16,
+          transform: [{ translateY: slide.interpolate({ inputRange: [0, 1], outputRange: [500, 0] }) }],
+        }}>
+          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+          <Text style={{ fontSize: 20, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B', textAlign: 'center', marginBottom: 4 }}>Date of birth</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'Outfit-Regular', color: '#94A3B8', textAlign: 'center', marginBottom: 18 }}>Pick day, month and year</Text>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+            <WheelColumn data={DAYS.map(d => ({ label: String(d), value: d }))} value={day} onChange={setDay} width={66} />
+            <WheelColumn data={MONTHS.map((m, i) => ({ label: m, value: i + 1 }))} value={month} onChange={setMonth} width={86} />
+            <WheelColumn data={YEARS.map(y => ({ label: String(y), value: y }))} value={year} onChange={setYear} width={86} />
+          </View>
+
+          {!isAdult && (
+            <Text style={{ fontSize: 13, fontFamily: 'Outfit-Medium', color: '#EF4444', textAlign: 'center', marginTop: 14 }}>
+              You must be 18 or older to use Parea
+            </Text>
+          )}
+
+          <TouchableOpacity
+            onPress={() => { if (isAdult) { onConfirm(day, month, year); closeWithAnim() } }}
+            disabled={!isAdult}
+            activeOpacity={0.85}
+            style={{ marginTop: 18, opacity: isAdult ? 1 : 0.5, borderRadius: 16, overflow: 'hidden' }}>
+            <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontFamily: 'Outfit-SemiBold', color: '#fff', letterSpacing: 0.2 }}>Confirm</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  )
+}
+
 function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; onFinish: (data: any) => void; userId?: string }) {
   const insets = useSafeAreaInsets()
   const TOTAL = 5
@@ -1332,6 +1478,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const [dobDay, setDobDay] = useState('')
   const [dobMonth, setDobMonth] = useState('')
   const [dobYear, setDobYear] = useState('')
+  const [dobPickerOpen, setDobPickerOpen] = useState(false)
   const [gender, setGender] = useState<string | null>(null)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null])
   const [photoLoading, setPhotoLoading] = useState([false, false, false])
@@ -1363,8 +1510,6 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const [emojiParticles, setEmojiParticles] = useState<Array<{ id: number; x: Animated.Value; y: Animated.Value; opacity: Animated.Value; rotate: Animated.Value }>>([])
   const slideAnim = useRef(new Animated.Value(0)).current
   const ageRef = useRef<TextInput>(null)
-  const dobMonthRef = useRef<TextInput>(null)
-  const dobYearRef = useRef<TextInput>(null)
 
   // Music visualizer animation
   useEffect(() => {
@@ -1609,7 +1754,6 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
           <TouchableOpacity onPress={back} style={s.authBackBtn}>
             <Ionicons name="chevron-back" size={22} color="rgba(51,65,85,0.7)" />
           </TouchableOpacity>
-          <Image source={require('../../assets/images/logo.png')} style={{ width: 110, height: 36 }} resizeMode="contain" />
           <View style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: 99 }}>
             <Text style={{ fontSize: 12, fontWeight: '700', color: '#6366F1' }}>{step}/{TOTAL}</Text>
           </View>
@@ -1626,13 +1770,20 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
               {step === 1 && (
                 <View>
                   {/* Header */}
-                  <View style={{ marginBottom: 32 }}>
-                    <Text style={{ fontSize: 32, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 38 }}>
-                      Hey! 👋{'\n'}Who are you?
-                    </Text>
-                    <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8, lineHeight: 20 }}>
-                      Your profile info · visible to others
-                    </Text>
+                  <View style={{ marginBottom: 28, flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: '#1E1B4B', letterSpacing: -0.5, lineHeight: 32 }}>
+                        Tell us{'\n'}about you ✨
+                      </Text>
+                      <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 8, lineHeight: 18 }}>
+                        Your profile · visible to others
+                      </Text>
+                    </View>
+                    <Image
+                      source={require('../../assets/images/step1_bubble.png')}
+                      style={{ width: 150, height: 150, marginLeft: 4, marginRight: -8 }}
+                      resizeMode="contain"
+                    />
                   </View>
 
                   {/* Name */}
@@ -1654,67 +1805,34 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                   {/* Date of birth */}
                   <View style={{ marginBottom: 28 }}>
                     <Text style={s.label}>Date of birth</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-                      {/* DD */}
-                      <View style={{ alignItems: 'center', gap: 6 }}>
-                        <TextInput
-                          ref={ageRef}
-                          style={{ fontSize: 22, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', width: 48, paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: dobDay.length === 2 ? '#818CF8' : '#E2E8F0' }}
-                          value={dobDay}
-                          onChangeText={v => {
-                            const d = v.replace(/\D/g, '').slice(0, 2)
-                            setDobDay(d)
-                            if (d.length === 2) dobMonthRef.current?.focus()
-                          }}
-                          placeholder="DD"
-                          placeholderTextColor="#CBD5E1"
-                          keyboardType="number-pad"
-                          maxLength={2}
-                          underlineColorAndroid="transparent"
-                        />
-                      </View>
-                      <Text style={{ fontSize: 22, color: '#CBD5E1', fontWeight: '300', paddingBottom: 8 }}>/</Text>
-                      {/* MM */}
-                      <View style={{ alignItems: 'center' }}>
-                        <TextInput
-                          ref={dobMonthRef}
-                          style={{ fontSize: 22, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', width: 48, paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: dobMonth.length === 2 ? '#818CF8' : '#E2E8F0' }}
-                          value={dobMonth}
-                          onChangeText={v => {
-                            const d = v.replace(/\D/g, '').slice(0, 2)
-                            setDobMonth(d)
-                            if (d.length === 2) dobYearRef.current?.focus()
-                          }}
-                          placeholder="MM"
-                          placeholderTextColor="#CBD5E1"
-                          keyboardType="number-pad"
-                          maxLength={2}
-                          underlineColorAndroid="transparent"
-                        />
-                      </View>
-                      <Text style={{ fontSize: 22, color: '#CBD5E1', fontWeight: '300', paddingBottom: 8 }}>/</Text>
-                      {/* YYYY */}
-                      <View style={{ alignItems: 'center' }}>
-                        <TextInput
-                          ref={dobYearRef}
-                          style={{ fontSize: 22, fontWeight: '700', color: '#1E1B4B', textAlign: 'center', width: 72, paddingBottom: 6, borderBottomWidth: 2, borderBottomColor: dobYear.length === 4 ? '#818CF8' : '#E2E8F0' }}
-                          value={dobYear}
-                          onChangeText={v => {
-                            const d = v.replace(/\D/g, '').slice(0, 4)
-                            setDobYear(d)
-                            if (d.length === 4) dobYearRef.current?.blur()
-                          }}
-                          placeholder="YYYY"
-                          placeholderTextColor="#CBD5E1"
-                          keyboardType="number-pad"
-                          maxLength={4}
-                          underlineColorAndroid="transparent"
-                        />
-                      </View>
-                    </View>
-                    {dobFilled && (dobAgeNum < 18 || dobAgeNum > 99) && (
-                      <Text style={{ fontSize: 12, color: '#EF4444', marginTop: 8 }}>
-                        {dobAgeNum < 18 ? 'You must be 18 or older' : 'Please enter a valid age'}
+                    <TouchableOpacity
+                      onPress={() => setDobPickerOpen(true)}
+                      activeOpacity={0.85}
+                      style={{
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 14,
+                        borderWidth: 1.5,
+                        borderColor: dobFilled && dobValid ? '#818CF8' : '#E2E8F0',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={{
+                        fontSize: 17,
+                        fontFamily: 'Outfit-SemiBold',
+                        color: dobFilled ? '#1E1B4B' : '#94A3B8',
+                      }}>
+                        {dobFilled
+                          ? `${parseInt(dobDay)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(dobMonth) - 1]} ${dobYear}`
+                          : 'Select date'}
+                      </Text>
+                      <CalendarBlank size={20} color={dobFilled ? '#818CF8' : '#94A3B8'} weight="regular" />
+                    </TouchableOpacity>
+                    {dobFilled && dobAgeNum < 18 && (
+                      <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: '#EF4444', marginTop: 8 }}>
+                        You must be 18 or older
                       </Text>
                     )}
                   </View>
@@ -1722,24 +1840,26 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                   {/* Gender */}
                   <View>
                     <Text style={s.label}>Gender</Text>
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                      {[
-                        { label: 'Male', emoji: '♂' },
-                        { label: 'Female', emoji: '♀' },
-                        { label: 'Non-binary', emoji: '⚧' },
-                      ].map(({ label, emoji }) => (
-                        <TouchableOpacity
-                          key={label}
-                          onPress={() => handleGender(label)}
-                          style={[
-                            { flex: 1, paddingVertical: 14, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.65)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' },
-                            gender === label && { backgroundColor: '#818CF8', borderColor: '#818CF8', boxShadow: '0 4px 16px rgba(129,140,248,0.65)' } as any,
-                          ]}
-                          activeOpacity={0.75}>
-                          <Text style={{ fontSize: 16, marginBottom: 2 }}>{emoji}</Text>
-                          <Text style={{ fontSize: 13, fontWeight: '700', color: gender === label ? '#fff' : '#64748B' }}>{label}</Text>
-                        </TouchableOpacity>
-                      ))}
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      {['Male', 'Female', 'Other'].map(label => {
+                        const active = gender === label
+                        return (
+                          <TouchableOpacity
+                            key={label}
+                            onPress={() => handleGender(label)}
+                            activeOpacity={0.8}
+                            style={{
+                              paddingVertical: 9,
+                              paddingHorizontal: 18,
+                              borderRadius: 99,
+                              backgroundColor: active ? '#818CF8' : 'rgba(255,255,255,0.7)',
+                              borderWidth: 1.5,
+                              borderColor: active ? '#818CF8' : '#E2E8F0',
+                            }}>
+                            <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: active ? '#fff' : '#475569' }}>{label}</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
                     </View>
                   </View>
                 </View>
@@ -2160,6 +2280,19 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
           )}
         </View>
       </SafeAreaView>
+      {dobPickerOpen && (
+        <DobBottomSheet
+          initialDay={dobDay ? parseInt(dobDay) : 1}
+          initialMonth={dobMonth ? parseInt(dobMonth) : 1}
+          initialYear={dobYear ? parseInt(dobYear) : 1998}
+          onClose={() => setDobPickerOpen(false)}
+          onConfirm={(d, m, y) => {
+            setDobDay(String(d).padStart(2, '0'))
+            setDobMonth(String(m).padStart(2, '0'))
+            setDobYear(String(y))
+          }}
+        />
+      )}
     </LinearGradient>
   )
 }
@@ -2479,7 +2612,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <View style={{ paddingTop: Platform.OS === 'android' ? 10 : 16, paddingHorizontal: 20, paddingBottom: 10, gap: 10 }}>
             {/* Row 1: greeting + bell */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 22, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.5 }}>Hey, {userName} ✨</Text>
+              <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Medium', color: '#475569', letterSpacing: -0.2 }}>Hey, {userName} ✨</Text>
               <Animated.View style={{ transform: [{ rotate: bellShake?.interpolate({ inputRange: [-12, 0, 12], outputRange: ['-18deg', '0deg', '18deg'] }) ?? '0deg' }] }}>
                 <TouchableOpacity onPress={onBellPress} activeOpacity={0.85}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
