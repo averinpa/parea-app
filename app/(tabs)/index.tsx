@@ -1479,6 +1479,11 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const [dobMonth, setDobMonth] = useState('')
   const [dobYear, setDobYear] = useState('')
   const [dobPickerOpen, setDobPickerOpen] = useState(false)
+  const [expandedCats, setExpandedCats] = useState<string[]>([INTERESTS_BY_CATEGORY[0].id])
+  const toggleCat = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setExpandedCats(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
   const [gender, setGender] = useState<string | null>(null)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null])
   const [photoLoading, setPhotoLoading] = useState([false, false, false])
@@ -1991,23 +1996,51 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                       </Text>
                     </View>
 
-                    {/* Categories */}
+                    {/* Categories — collapsible */}
                     {INTERESTS_BY_CATEGORY.map(cat => {
                       const palette = INTEREST_CATEGORY_PALETTE[cat.id as keyof typeof INTEREST_CATEGORY_PALETTE]
+                      const isOpen = expandedCats.includes(cat.id)
+                      const selectedInCat = cat.items.filter(i => interests.includes(i)).length
                       return (
-                        <View key={cat.id} style={{ marginBottom: 20 }}>
-                          <Text style={{ fontSize: 11, fontFamily: 'ClashDisplay-Semibold', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.4, marginBottom: 10 }}>{cat.label}</Text>
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                            {cat.items.map(item => (
-                              <AnimatedInterestChip
-                                key={item}
-                                item={item}
-                                isOn={interests.includes(item)}
-                                onPress={() => { setInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]); Haptics.selectionAsync() }}
-                                palette={palette}
-                              />
-                            ))}
-                          </View>
+                        <View key={cat.id} style={{ marginBottom: 10 }}>
+                          <TouchableOpacity
+                            onPress={() => toggleCat(cat.id)}
+                            activeOpacity={0.85}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingVertical: 14,
+                              paddingHorizontal: 16,
+                              backgroundColor: 'rgba(255,255,255,0.7)',
+                              borderRadius: 14,
+                              borderWidth: 1.5,
+                              borderColor: isOpen ? palette.selectedBorder : 'rgba(255,255,255,0.85)',
+                            }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
+                              <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }}>{cat.label}</Text>
+                              {selectedInCat > 0 && (
+                                <View style={{ backgroundColor: palette.selectedBorder, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, marginLeft: 2 }}>
+                                  <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>{selectedInCat}</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#94A3B8" />
+                          </TouchableOpacity>
+                          {isOpen && (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12, paddingHorizontal: 2 }}>
+                              {cat.items.map(item => (
+                                <AnimatedInterestChip
+                                  key={item}
+                                  item={item}
+                                  isOn={interests.includes(item)}
+                                  onPress={() => { setInterests(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]); Haptics.selectionAsync() }}
+                                  palette={palette}
+                                />
+                              ))}
+                            </View>
+                          )}
                         </View>
                       )
                     })}
