@@ -3094,7 +3094,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <PhMapPin size={12} color="#94A3B8" weight="regular" />
-                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{ev.location || 'See details'}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{(ev.location || '').split(',')[0].trim() || 'Location TBD'}</Text>
                     </View>
                     {ev.hostTransport === 'car' && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99 }}>
@@ -7315,6 +7315,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             const numId = +id
             const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId) || numId > 100000
             if (!isMockOrOfficial && !validEventIds.has(numId)) {
+              const wasJoinedOrConfirmed = updated[numId] === 'joined' || updated[numId] === 'confirmed'
+              const cancelledByUser = cancelledEventIdsRef.current.has(numId)
+              if (wasJoinedOrConfirmed && !cancelledByUser) {
+                const chat = chatList.find(c => (c.communityEventId === numId || c.hostEventId === numId))
+                const title = chat?.event || 'A social you joined'
+                addNotif({ type: 'event_cancelled', emoji: '🗑️', color: '#EF4444', title: 'Event cancelled', body: `Host cancelled "${title}"` })
+              }
               delete updated[numId]; changed = true
             }
           })
@@ -8585,7 +8592,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
               supabase.from('community_events').delete().eq('id', ev.id).then(({ error, status, statusText }) => { console.log('community_events delete:', { eventId: ev.id, error: error?.message, status, statusText }) })
               supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error, count }) => { console.log('join_requests delete:', { eventId: ev.id, error: error?.message, count }) })
-              addNotif({ type: 'event_cancelled', emoji: '🗑️', color: '#EF4444', title: 'Event cancelled', body: `"${ev.title}" has been removed` })
               showToast('All requests and chats removed', 'Event cancelled 🗑️', '🗑️')
             }}
             onVibeCheck={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}
@@ -9183,7 +9189,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 {/* Bottom button — pinned to bottom */}
                 <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, backgroundColor: 'transparent' }}>
                   {createStep < 4 ? (() => {
-                    const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour))
+                    const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour || !createLocation.trim()))
                     const disabledLabel = ['Pick a format', 'Pick an activity', 'Choose date & time', ''][createStep - 1]
                     const activeLabel   = ['Next: Activity →', 'Next: Date & time →', 'Next: Final step →', ''][createStep - 1]
                     const STEP_COLORS: [string,string][] = [['#6366F1','#818CF8'],['#EC4899','#F472B6'],['#10B981','#34D399'],['#F59E0B','#FBBF24']]
