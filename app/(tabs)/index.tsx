@@ -1247,22 +1247,23 @@ function OTPScreen({ onBack, onVerify, method, credential }: { onBack: () => voi
 
 const MUSIC_GENRES = [
   { id: 'rock',       label: 'Rock',        emoji: '🎸', colors: ['#1a0505', '#c0392b'] as const },
+  { id: 'pop',        label: 'Pop',         emoji: '🎵', colors: ['#1a0020', '#e91e8c'] as const },
   { id: 'electronic', label: 'Electronic',  emoji: '🎧', colors: ['#0d0221', '#6c3fc5'] as const },
   { id: 'hiphop',     label: 'Hip-hop',     emoji: '🎤', colors: ['#0a0a0a', '#e67e22'] as const },
-  { id: 'pop',        label: 'Pop',         emoji: '🎵', colors: ['#1a0020', '#e91e8c'] as const },
   { id: 'jazz',       label: 'Jazz',        emoji: '🎷', colors: ['#1c0f00', '#c8890a'] as const },
-  { id: 'rnb',        label: 'R&B',         emoji: '🎶', colors: ['#12001f', '#9b59b6'] as const },
-  { id: 'classical',  label: 'Classical',   emoji: '🎻', colors: ['#0a1020', '#2471a3'] as const },
-  { id: 'metal',      label: 'Metal',       emoji: '🤘', colors: ['#0a0a0a', '#555']    as const },
   { id: 'indie',      label: 'Indie',       emoji: '🌿', colors: ['#0a1a0a', '#2e7d32'] as const },
-  { id: 'reggae',     label: 'Reggae',      emoji: '🌴', colors: ['#0a1500', '#558b2f'] as const },
-  { id: 'latin',      label: 'Latin',       emoji: '💃', colors: ['#1a0a00', '#d84315'] as const },
   { id: 'house',      label: 'House',       emoji: '🎹', colors: ['#050520', '#0288d1'] as const },
+  { id: 'latin',      label: 'Latin',       emoji: '💃', colors: ['#1a0a00', '#d84315'] as const },
+  { id: 'classical',  label: 'Classical',   emoji: '🎻', colors: ['#0a1020', '#2471a3'] as const },
+  { id: 'rnb',        label: 'R&B',         emoji: '🎶', colors: ['#12001f', '#9b59b6'] as const },
+  { id: 'metal',      label: 'Metal',       emoji: '🤘', colors: ['#0a0a0a', '#555']    as const },
+  { id: 'reggae',     label: 'Reggae',      emoji: '🌴', colors: ['#0a1500', '#558b2f'] as const },
   { id: 'techno',     label: 'Techno',      emoji: '⚙️', colors: ['#050505', '#424242'] as const },
   { id: 'country',    label: 'Country',     emoji: '🤠', colors: ['#1a1000', '#a0522d'] as const },
   { id: 'punk',       label: 'Punk',        emoji: '✊', colors: ['#0f0010', '#ad1457'] as const },
   { id: 'soul',       label: 'Soul',        emoji: '🕯️', colors: ['#1a0505', '#bf360c'] as const },
 ]
+const PRIMARY_GENRE_COUNT = 10
 
 const SOCIAL_ENERGY = [
   { id: 'homebody',  label: 'Homebody',        Icon: HouseLine, color: '#8B5CF6', grad: ['#EDE9FE','#C4B5FD'] as [string,string] },
@@ -1484,6 +1485,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setExpandedCats(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
+  const [showAllGenres, setShowAllGenres] = useState(false)
   const [gender, setGender] = useState<string | null>(null)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null])
   const [photoLoading, setPhotoLoading] = useState([false, false, false])
@@ -1565,7 +1567,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
     if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return interests.length > 0
     if (step === 4) return langs.length > 0
-    if (step === 5) return musicGenres.length >= 1 && !!socialEnergy
+    if (step === 5) return true
     return true
   }
 
@@ -1992,7 +1994,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                         Your{'\n'}interests ✦
                       </Text>
                       <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 8 }}>
-                        AI uses this to find your perfect companion
+                        Helps us tailor your matches
                       </Text>
                     </View>
 
@@ -2085,8 +2087,8 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                     <Text style={{ fontSize: 28, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.8, lineHeight: 34 }}>
                       Your vibe ✦
                     </Text>
-                    <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6 }}>
-                      Helps AI find your perfect companion
+                    <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6, lineHeight: 18 }}>
+                      Choose what helps us match you better. You can change this later.
                     </Text>
                   </View>
 
@@ -2133,32 +2135,38 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                   {/* ── TAB: Music ── */}
                   {vibeTab === 'music' && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {MUSIC_GENRES.map(g => {
+                      <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: '#94A3B8' }}>Pick up to 5</Text>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: musicGenres.length >= 5 ? '#818CF8' : '#94A3B8' }}>{musicGenres.length}/5</Text>
+                      </View>
+                      {(showAllGenres ? MUSIC_GENRES : MUSIC_GENRES.slice(0, PRIMARY_GENRE_COUNT)).map(g => {
                         const on = musicGenres.includes(g.id)
+                        const atMax = musicGenres.length >= 5 && !on
                         return (
                           <TouchableOpacity
                             key={g.id}
-                            onPress={() => setMusicGenres(prev => prev.includes(g.id) ? prev.filter(x => x !== g.id) : [...prev, g.id])}
-                            activeOpacity={0.8}
-                            style={{ width: (W - 48 - 16) / 3, borderRadius: 12, overflow: 'hidden' }}>
+                            onPress={() => {
+                              if (on) setMusicGenres(prev => prev.filter(x => x !== g.id))
+                              else if (musicGenres.length < 5) setMusicGenres(prev => [...prev, g.id])
+                            }}
+                            activeOpacity={atMax ? 1 : 0.8}
+                            style={{ width: (W - 48 - 16) / 3, borderRadius: 12, overflow: 'hidden', opacity: atMax ? 0.4 : 1 }}>
                             <LinearGradient
                               colors={on ? g.colors : ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.35)']}
-                              style={{ paddingVertical: 9, alignItems: 'center', gap: 3, borderWidth: 1.5, borderRadius: 12, borderColor: on ? 'transparent' : 'rgba(255,255,255,0.85)', boxShadow: on ? `0 3px 10px ${g.colors[1]}55` : 'none' } as any}>
+                              style={{ paddingVertical: 9, alignItems: 'center', gap: 3, borderWidth: on ? 2 : 1.5, borderRadius: 12, borderColor: on ? '#fff' : 'rgba(255,255,255,0.85)', boxShadow: on ? `0 3px 10px ${g.colors[1]}55` : 'none' } as any}>
                               <Text style={{ fontSize: 18 }}>{g.emoji}</Text>
                               <Text style={{ fontSize: 10, fontWeight: '700', color: on ? '#fff' : '#334155', textAlign: 'center' }}>{g.label}</Text>
                             </LinearGradient>
                           </TouchableOpacity>
                         )
                       })}
-                      {musicGenres.length > 0 && (
-                        <TouchableOpacity onPress={() => setVibeTab('vibe')} activeOpacity={0.85} style={{ width: '100%', marginTop: 8 }}>
-                          <LinearGradient colors={['#818CF8', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            style={{ borderRadius: 14, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-                            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Next · Vibe</Text>
-                            <Text style={{ fontSize: 14 }}>→</Text>
-                          </LinearGradient>
-                        </TouchableOpacity>
-                      )}
+                      <TouchableOpacity
+                        onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setShowAllGenres(v => !v) }}
+                        activeOpacity={0.85}
+                        style={{ width: '100%', marginTop: 4, paddingVertical: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: '#6366F1' }}>{showAllGenres ? 'Show less' : 'More genres'}</Text>
+                        <Ionicons name={showAllGenres ? 'chevron-up' : 'chevron-down'} size={15} color="#6366F1" />
+                      </TouchableOpacity>
                     </View>
                   )}
 
@@ -2166,7 +2174,10 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                   {vibeTab === 'vibe' && (
                     <View>
                       {/* Social energy */}
-                      <Text style={s.label}>Social energy</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <Text style={s.label}>Social energy</Text>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: '#94A3B8', textTransform: 'none' }}>Pick 1</Text>
+                      </View>
                       <View style={{ flexDirection: 'row', gap: 6, marginBottom: 20 }}>
                         {SOCIAL_ENERGY.map(e => {
                           const on = socialEnergy === e.id
@@ -2174,7 +2185,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                             <TouchableOpacity key={e.id} onPress={() => setSocialEnergy(e.id)} activeOpacity={0.8}
                               style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 14,
                                 backgroundColor: on ? '#818CF8' : 'rgba(255,255,255,0.65)',
-                                borderWidth: 1.5, borderColor: on ? '#818CF8' : 'rgba(255,255,255,0.85)',
+                                borderWidth: on ? 2 : 1.5, borderColor: on ? '#fff' : 'rgba(255,255,255,0.85)',
                                 boxShadow: on ? '0 4px 14px rgba(129,140,248,0.55)' : 'none',
                               } as any}>
                               <e.Icon size={18} color={on ? '#fff' : '#94A3B8'} weight="duotone" />
@@ -2182,34 +2193,6 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                             </TouchableOpacity>
                           )
                         })}
-                      </View>
-
-                      {/* Lifestyle */}
-                      <Text style={[s.label, { marginBottom: 10 }]}>Lifestyle</Text>
-                      <View style={{ backgroundColor: 'rgba(255,255,255,0.65)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', overflow: 'hidden', marginBottom: 20 }}>
-                        {[
-                          { key: 'drinks',  label: '🍷 Alcohol',  val: drinksPref,  set: setDrinksPref,  opts: ['Social drinker', 'Rarely', "Don't drink"] },
-                          { key: 'smoking', label: '🚬 Smoking',  val: smokingPref, set: setSmokingPref, opts: ['Non-smoker', 'Social', 'Smoker'] },
-                          { key: 'pets',    label: '🐾 Pets',     val: petsPref,    set: setPetsPref,    opts: ['🐕 Dogs', '🐱 Cats', '❤️ Both', '🙅 None'] },
-                        ].map((row, ri, arr) => (
-                          <View key={row.key} style={{ paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: ri < arr.length - 1 ? 1 : 0, borderBottomColor: 'rgba(203,213,225,0.4)' }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 7 }}>{row.label}</Text>
-                            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                              {row.opts.map(opt => {
-                                const on = row.val === opt
-                                return (
-                                  <TouchableOpacity key={opt} onPress={() => row.set(on ? '' : opt)}
-                                    style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 99,
-                                      backgroundColor: on ? '#818CF8' : 'rgba(241,245,249,0.8)',
-                                      borderWidth: 1.5, borderColor: on ? '#818CF8' : 'rgba(203,213,225,0.6)',
-                                    } as any} activeOpacity={0.75}>
-                                    <Text style={{ fontSize: 12, fontWeight: '700', color: on ? '#fff' : '#64748B' }}>{opt}</Text>
-                                  </TouchableOpacity>
-                                )
-                              })}
-                            </View>
-                          </View>
-                        ))}
                       </View>
 
                       {/* Bio */}
@@ -2225,13 +2208,11 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                           underlineColorAndroid="transparent"
                         />
                       </View>
-                      <TouchableOpacity onPress={magicRewrite} disabled={magicLoading} activeOpacity={0.85}>
-                        <LinearGradient colors={['#7c3aed', '#4f46e5', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                          style={{ borderRadius: 14, paddingVertical: 12, alignItems: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' } as any}>
-                          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
-                            {magicLoading ? 'Writing... ✨' : '✨ Write with AI'}
-                          </Text>
-                        </LinearGradient>
+                      <TouchableOpacity onPress={magicRewrite} disabled={magicLoading} activeOpacity={0.7}
+                        style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 2 }}>
+                        <Text style={{ color: '#6366F1', fontFamily: 'Outfit-SemiBold', fontSize: 13, opacity: magicLoading ? 0.5 : 1 }}>
+                          {magicLoading ? 'Writing…' : '✨ Need help? Write with AI'}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -2239,6 +2220,11 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                   {/* ── TAB: Limits ── */}
                   {vibeTab === 'limits' && (
                     <View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: 'rgba(148,163,184,0.15)' }}>
+                          <Text style={{ fontSize: 10, fontFamily: 'Outfit-SemiBold', color: '#64748B', letterSpacing: 0.4 }}>OPTIONAL</Text>
+                        </View>
+                      </View>
                       <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 16, lineHeight: 18 }}>
                         These people will never appear in your matches — no exceptions. Skip if no hard limits.
                       </Text>
@@ -2304,13 +2290,18 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
 
         <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 28 : insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
           {step === TOTAL ? (
-            <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
-              <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
-                <LinearGradient colors={['#a78bfa', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bentoFinishGrad}>
-                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>Let's slay! 🚀</Text>
-                </LinearGradient>
-              </BlurView>
-            </TouchableOpacity>
+            <View>
+              <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
+                <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
+                  <LinearGradient colors={['#a78bfa', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bentoFinishGrad}>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>Complete profile</Text>
+                  </LinearGradient>
+                </BlurView>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 12, fontFamily: 'Outfit-Regular', color: '#94A3B8', textAlign: 'center', marginTop: 10 }}>
+                You can edit this later
+              </Text>
+            </View>
           ) : (
             <TouchableOpacity style={[s.btnPrimary, !canNext() && { opacity: 0.4 }, canNext() && { shadowColor: '#818CF8', shadowOpacity: 0.6, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 14, boxShadow: '0 8px 32px rgba(129, 140, 248, 0.7)' } as any]} onPress={next} disabled={!canNext()}>
               <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Continue</Text>
