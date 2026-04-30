@@ -1951,10 +1951,10 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                     {/* Checklist */}
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                       {[
-                        'No nudity or sexual content',
-                        'No minors (18+ only)',
-                        'No hate symbols or violence',
-                        'Your face must be visible',
+                        'Face clearly visible',
+                        '18+ only',
+                        'No nudity',
+                        'No violence or hate symbols',
                       ].map(label => (
                         <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.85)' }}>
                           <Text style={{ fontSize: 11 }}>·</Text>
@@ -1969,12 +1969,13 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
               {step === 3 && (() => {
                 const count = interests.length
                 const aiLevel = count === 0 ? 0 : count === 1 ? 20 : count === 2 ? 40 : count === 3 ? 60 : count <= 5 ? 80 : 100
+                const aiLabel = count === 0 ? '' : count < 3 ? 'Low' : count < 6 ? 'Good' : 'Great'
                 const aiMsg = count === 0
-                  ? 'Pick at least 3 for smart matching'
+                  ? 'Pick 3+ interests to unlock better suggestions.'
                   : count < 3
-                  ? `${3 - count} more for better matches`
+                  ? `${3 - count} more to unlock smart matches`
                   : count < 6
-                  ? 'Good! Adding more improves accuracy'
+                  ? 'Adding more improves quality'
                   : 'Your AI is ready to find your people ✦'
                 const aiColor = count >= 6 ? '#22c55e' : count >= 3 ? '#818CF8' : '#CBD5E1'
 
@@ -2014,8 +2015,12 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
                     {/* AI confidence bar */}
                     <View style={{ marginTop: 8, padding: 16, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>🤖 AI Match Accuracy</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '800', color: aiColor }}>{aiLevel}%</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>🤖 AI Match Quality</Text>
+                        {aiLabel ? (
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: aiColor }}>{aiLabel}</Text>
+                        ) : (
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: '#94A3B8' }}>Starts after 3 interests</Text>
+                        )}
                       </View>
                       <View style={{ height: 6, backgroundColor: 'rgba(203,213,225,0.5)', borderRadius: 99, overflow: 'hidden' }}>
                         <View style={{ height: 6, width: `${aiLevel}%` as any, backgroundColor: aiColor, borderRadius: 99 }} />
