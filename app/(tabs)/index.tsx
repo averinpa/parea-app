@@ -1511,6 +1511,9 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const [vibeCheckPassed, setVibeCheckPassed] = useState(false)
   const [magicLoading, setMagicLoading] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const welcomeOpacity = useRef(new Animated.Value(0)).current
+  const welcomeScale = useRef(new Animated.Value(0.7)).current
   const vibeFlashAnim = useRef(new Animated.Value(0)).current
   const counterBounceAnim = useRef(new Animated.Value(1)).current
   const barAnims = useRef([new Animated.Value(0.3), new Animated.Value(0.6), new Animated.Value(0.45), new Animated.Value(0.75)]).current
@@ -1599,12 +1602,17 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const next = () => {
     if (step < TOTAL) { animSlide(1); setStep(p => p + 1) }
     else {
-      fireEmojiBurst()
-      setShowConfetti(true)
+      setShowWelcome(true)
+      Animated.parallel([
+        Animated.timing(welcomeOpacity, { toValue: 1, duration: 320, useNativeDriver: true }),
+        Animated.spring(welcomeScale,   { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
+      ]).start()
       setTimeout(() => {
-        setShowConfetti(false)
-        onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy, dealbreakers })
-      }, 2200)
+        Animated.timing(welcomeOpacity, { toValue: 0, duration: 320, useNativeDriver: true }).start(() => {
+          setShowWelcome(false)
+          onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy, dealbreakers })
+        })
+      }, 1600)
     }
   }
 
@@ -1748,8 +1756,6 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
       <StatusBar style="dark" />
       {/* Vibe flash overlay */}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', opacity: vibeFlashAnim, zIndex: 99 }} />
-      {/* Confetti */}
-      {showConfetti && <ConfettiCannon count={180} origin={{ x: W / 2, y: -20 }} fadeOut autoStart />}
       {/* Emoji burst particles */}
       {emojiParticles.map(p => (
         <Animated.Text key={p.id} style={{ position: 'absolute', fontSize: 28, zIndex: 101, transform: [{ translateX: p.x }, { translateY: p.y }, { rotate: p.rotate.interpolate({ inputRange: [-6, 6], outputRange: ['-360deg', '360deg'] }) }], opacity: p.opacity, pointerEvents: 'none' }}>
@@ -2291,7 +2297,7 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
         <View style={[s.bottomBar, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 24) + 28 : insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
           {step === TOTAL ? (
             <View>
-              <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showConfetti} activeOpacity={0.88}>
+              <TouchableOpacity style={[s.bentoFinishBtn, !canNext() && { opacity: 0.5 }, canNext() && { shadowOpacity: 0.55, shadowRadius: 28, elevation: 14 }]} onPress={next} disabled={!canNext() || showWelcome} activeOpacity={0.88}>
                 <BlurView intensity={40} tint="light" style={s.bentoFinishBlur}>
                   <LinearGradient colors={['#a78bfa', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bentoFinishGrad}>
                     <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>Complete profile</Text>
@@ -2309,6 +2315,18 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
           )}
         </View>
       </SafeAreaView>
+      {showWelcome && (
+        <Animated.View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: welcomeOpacity, zIndex: 200, alignItems: 'center', justifyContent: 'center' }}>
+          <LinearGradient colors={['rgba(139,92,246,0.96)', 'rgba(99,102,241,0.96)']} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+          <Animated.View style={{ alignItems: 'center', transform: [{ scale: welcomeScale }] }}>
+            <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 22, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
+              <Ionicons name="checkmark" size={50} color="#fff" />
+            </View>
+            <Text style={{ fontSize: 30, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -0.6, marginBottom: 6 }}>You're in ✦</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'Outfit-Medium', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.2 }}>Welcome to Parea</Text>
+          </Animated.View>
+        </Animated.View>
+      )}
       {dobPickerOpen && (
         <DobBottomSheet
           initialDay={dobDay ? parseInt(dobDay) : 1}
