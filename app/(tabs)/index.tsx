@@ -6453,6 +6453,40 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
     return () => { clearInterval(interval); supabase.removeChannel(jrChannel) }
   }, [userData?.dbId])
+  // Group chat: refresh members from DB on open (covers cases where realtime missed updates)
+  useEffect(() => {
+    if (!openChat || openChat.type !== 'group' || !openChat.id || !userData?.dbId) return
+    const chatId = openChat.id
+    const refresh = async () => {
+      const { data: members } = await supabase
+        .from('chat_members')
+        .select('profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, goal)')
+        .eq('chat_id', chatId)
+      if (!members) return
+      const others = members
+        .filter((m: any) => m.profile_id !== userData.dbId && (m as any).profiles?.id)
+        .map((m: any) => {
+          const p = (m as any).profiles
+          return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍' }
+        })
+      setOpenChat((cur: any) => cur && cur.id === chatId ? {
+        ...cur,
+        members: members.length,
+        memberProfiles: others,
+        avatars: others.map((p: any) => p.photo).filter(Boolean),
+        colors: others.map((p: any) => p.color),
+      } : cur)
+      setChatList(prev => prev.map(c => c.id === chatId ? {
+        ...c,
+        members: members.length,
+        memberProfiles: others,
+        avatars: others.map((p: any) => p.photo).filter(Boolean),
+        colors: others.map((p: any) => p.color),
+      } : c))
+    }
+    refresh()
+  }, [openChat?.id, openChat?.type, userData?.dbId])
+
   const persistLoaded = useRef(false)
   const [persistLoadedState, setPersistLoadedState] = useState(false)
 
@@ -9868,9 +9902,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </LinearGradient>
                     <View style={{ flex: 1, marginLeft: 10 }}>
                       <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.2 }} numberOfLines={1}>{openChat.event}</Text>
-                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }} numberOfLines={1}>
-                        {openChat.members} members
-                      </Text>
+                      {(() => {
+                        const chatEvId = openChat.hostEventId || openChat.communityEventId || openChat.eventRefId
+                        const ev = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents].find((e: any) => e.id === chatEvId || e._dbId === chatEvId) : null
+                        const dateStr = prettyEventTime(ev?.date_label || ev?.time_label || ev?.time) || ''
+                        const venueShort = (ev?.location || ev?.venue || '').split(',')[0].trim()
+                        const dateAndVenue = [dateStr, venueShort].filter(Boolean).join(' · ')
+                        const memberCount = openChat.memberProfiles?.length || openChat.members || 0
+                        return (
+                          <>
+                            {!!dateAndVenue && (
+                              <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }} numberOfLines={1}>{dateAndVenue}</Text>
+                            )}
+                            <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1 }} numberOfLines={1}>Crew chat · {memberCount + 1} members</Text>
+                          </>
+                        )
+                      })()}
                     </View>
                   </TouchableOpacity>
                 )}
@@ -9928,40 +9975,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
             </View>
 
-              {/* Event context strip — date / location / crew count */}
-              {openChat.type !== 'duo' && (() => {
-                const chatEvId = openChat.hostEventId || openChat.communityEventId || openChat.eventRefId
-                const ev = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents].find((e: any) => e.id === chatEvId || e._dbId === chatEvId) : null
-                if (!ev) return null
-                const dateStr = prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''
-                const locShort = (ev.location || ev.venue || '').split(',')[0].trim()
-                const memberCount = openChat.memberProfiles?.length || openChat.members || 0
-                const maxSize = ev.maxParticipants || ev.max_participants || ev.capacity || 0
-                if (!dateStr && !locShort && !memberCount) return null
-                return (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(99,102,241,0.05)', paddingHorizontal: 16, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', flexWrap: 'wrap' }}>
-                    {!!dateStr && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <CalendarBlank size={12} color="#6366F1" weight="duotone" />
-                        <Text style={{ fontSize: 12, color: '#475569', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{dateStr}</Text>
-                      </View>
-                    )}
-                    {!!locShort && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
-                        <PhMapPin size={12} color="#6366F1" weight="duotone" />
-                        <Text style={{ fontSize: 12, color: '#475569', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{locShort}</Text>
-                      </View>
-                    )}
-                    {memberCount > 0 && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                        <UsersThree size={12} color="#6366F1" weight="duotone" />
-                        <Text style={{ fontSize: 12, color: '#475569', fontFamily: 'Outfit-Medium' }}>{memberCount} in crew</Text>
-                      </View>
-                    )}
-                  </View>
-                )
-              })()}
-
               {(() => {
                 const chatEvId = openChat.hostEventId || openChat.communityEventId
                 const chatEv = chatEvId ? [...userCreatedEvents, ...dbCommunityEvents].find(e => e.id === chatEvId) : null
@@ -9980,6 +9993,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
                 <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }} showsVerticalScrollIndicator={false}
                   onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+                  {/* Pinned crew info block — group chats only */}
+                  {openChat.type !== 'duo' && (
+                    <View style={{ backgroundColor: 'rgba(139,92,246,0.08)', borderWidth: 1, borderColor: 'rgba(139,92,246,0.18)', borderRadius: 16, padding: 14, marginBottom: 14 }}>
+                      <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: '#5B21B6', marginBottom: 4 }}>You matched for this event ✨</Text>
+                      <Text style={{ fontSize: 12, fontFamily: 'Outfit-Regular', color: '#6D28D9', lineHeight: 17 }}>Use the chat to coordinate meeting and transport.</Text>
+                    </View>
+                  )}
                   {(chatMessages[openChat.id] || []).filter((msg: any) =>
                     msg.from === 'me' || msg.from === 'system' || !blockedIds.has(msg.senderId)
                   ).map((msg: any, i: number) => {
@@ -10082,7 +10102,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <View style={[s.chatInputRow, { paddingBottom: Platform.OS === 'ios' ? (chatKeyboardVisible ? 8 : Math.max(insets.bottom + 6, 16)) : Math.max(insets.bottom, 8) }]}>
                       <TextInput
                         style={s.chatInput} value={chatInput} onChangeText={setChatInput}
-                        placeholder="Message..." placeholderTextColor="#94A3B8" multiline />
+                        placeholder={openChat.type === 'duo' ? 'Message...' : 'Message your crew...'} placeholderTextColor="#94A3B8" multiline />
                       <TouchableOpacity
                         style={[s.sendBtn, { backgroundColor: chatInput.trim() ? '#6366F1' : '#E2E8F0' }]}
                         onPress={handleSend} disabled={!chatInput.trim()}>
