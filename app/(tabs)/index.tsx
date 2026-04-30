@@ -2678,30 +2678,37 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   const closeJoinSheet = () => setJoinSheet(prev => ({ ...prev, visible: false }))
 
-  const confirmJoin = async () => {
-    onJoin(joinSheet.ev, joinSheet.transport)
-    if (joinSheet.ev?.id) {
-      if (joinSheet.format)    setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.format }))
-      if (joinSheet.transport) setUserEventTransport?.((prev: Record<number, string>) => ({ ...prev, [joinSheet.ev.id]: joinSheet.transport }))
+  const confirmJoin = () => {
+    const ev = joinSheet.ev
+    const format = joinSheet.format
+    const transport = joinSheet.transport
+    // Show success immediately
+    setJoinSheet(prev => ({ ...prev, step: 3 }))
+    // Apply local state
+    onJoin(ev, transport)
+    if (ev?.id) {
+      if (format)    setUserEventFormat?.((prev: Record<number, string>) => ({ ...prev, [ev.id]: format }))
+      if (transport) setUserEventTransport?.((prev: Record<number, string>) => ({ ...prev, [ev.id]: transport }))
     }
-    // Save to event_attendees for official events (crew matching)
-    if (joinSheet.ev?.type === 'official' && userData?.dbId) {
+    // Background DB write for official events (crew matching) — don't block UI
+    if (ev?.type === 'official' && userData?.dbId) {
       const formatSizes: Record<string, [number, number]> = { '1+1': [2, 2], squad: [3, 5], party: [6, 20] }
-      const [gMin, gMax] = formatSizes[joinSheet.format] || [2, 5]
-      const { error } = await supabase.from('event_attendees').upsert({
-        event_ref_id: joinSheet.ev.id,
-        event_title: joinSheet.ev.title,
+      const [gMin, gMax] = formatSizes[format] || [2, 5]
+      supabase.from('event_attendees').upsert({
+        event_ref_id: ev.id,
+        event_title: ev.title,
         profile_id: userData.dbId,
         group_size_min: gMin,
         group_size_max: gMax,
-        transport: joinSheet.transport,
+        transport,
         status: 'looking',
       }, { onConflict: 'event_ref_id,profile_id' })
-      if (error) console.warn('event_attendees upsert error:', error.message)
-      else console.log('✅ Saved to event_attendees')
+        .then(({ error }) => { if (error) console.warn('event_attendees upsert error:', error.message); else console.log('✅ Saved to event_attendees') })
     }
-    onJoinConfirmed?.(joinSheet.ev, joinSheet.format, joinSheet.transport)
-    closeJoinSheet()
+    setTimeout(() => {
+      onJoinConfirmed?.(ev, format, transport)
+      closeJoinSheet()
+    }, 1100)
   }
 
   const getJoinState = (ev: any) => {
@@ -3340,7 +3347,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         <View style={[s.joinSheetWrap, { paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
           <View style={s.joinSheetHandle} />
 
-          {joinSheet.ev?.type === 'official' && (
+          {joinSheet.ev?.type === 'official' && joinSheet.step !== 3 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {[1, 2].map(n => (
@@ -3352,7 +3359,17 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </View>
           )}
 
-          {joinSheet.step === 1 ? (
+          {joinSheet.step === 3 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 28 }}>
+              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(167,139,250,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 18, borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.45)' }}>
+                <Ionicons name="checkmark" size={38} color="#A78BFA" />
+              </View>
+              <Text style={{ fontSize: 22, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -0.4, marginBottom: 6 }}>You're in ✨</Text>
+              <Text style={{ fontSize: 14, fontFamily: 'Outfit-Medium', color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 20 }}>
+                {joinSheet.ev?.type === 'official' ? "We'll start looking for your crew." : "Request sent. Host will reply soon."}
+              </Text>
+            </View>
+          ) : joinSheet.step === 1 ? (
             <>
               <Text style={s.joinSheetTitle}>How many people are{'\n'}you looking for?</Text>
               <View style={{ gap: 10, marginTop: 4 }}>
@@ -7709,7 +7726,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }
 
   const handleJoinConfirmed = (ev: any, format: string, transport: string) => {
-    const FORMAT_LABEL: Record<string, string> = { '1+1': '1+1', squad: 'Squad', party: 'Party' }
+    const FORMAT_LABEL: Record<string, string> = { '1+1': '1+1', squad: 'Squad', party: 'Group' }
     const TRANSPORT_LABEL: Record<string, string> = { car: 'Can give a lift', lift: 'Needs a lift', meet: 'Meeting there' }
     const parts = [FORMAT_LABEL[format], TRANSPORT_LABEL[transport]].filter(Boolean)
     showToast(parts.join(' · '), 'Finding your crew...')
@@ -7720,6 +7737,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       return next
     })
     setPassedRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+    // Auto-navigate to Vibe Check for official events to start crew finding flow
+    if (ev?.type === 'official') {
+      setActiveTab('vibecheck')
+      markNotifsReadForPlans?.()
+    }
   }
 
   // Match animation refs
@@ -8983,7 +9005,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           bg: '#F0FDF4', accent: '#16a34a', tagBg: '#BBF7D0',
                         },
                         {
-                          id: 'party', Icon: PartyPopper, label: 'Party', tag: 'up to 20',
+                          id: 'party', Icon: PartyPopper, label: 'Group', tag: 'up to 20',
                           sub: 'Open gathering — the more the merrier',
                           grad: ['#ea580c', '#f97316'] as [string,string],
                           bg: '#FFF7ED', accent: '#ea580c', tagBg: '#FED7AA',
