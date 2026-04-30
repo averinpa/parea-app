@@ -2535,21 +2535,34 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return (bVibe + bInt) - (aVibe + aInt)
   })
 
-  // Vibe-matched official events (shown in Tonight Vibe section)
+  // Vibe-matched official events (shown in Tonight Vibe section) — curated top-3 for today/tomorrow
   const vibeEvents = (() => {
     if (vibeCats.length === 0) return []
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const dayAfterTomorrow = new Date(today); dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
-    return officialAll.filter(ev => {
-      if (!vibeCats.includes(ev.category)) return false
-      const d = parseEventDate(ev.date_label || ev.time || '')
-      if (!d) return false
-      return d >= today && d < dayAfterTomorrow
-    }).slice(0, 5)
+    return officialAll
+      .filter(ev => {
+        if (!vibeCats.includes(ev.category)) return false
+        if (city && ev.city && ev.city.toLowerCase() !== city.toLowerCase()) return false
+        const d = parseEventDate(ev.date_label || ev.time || '')
+        if (!d) return false
+        return d >= today && d < dayAfterTomorrow
+      })
+      .map(ev => {
+        const interestHit = userCategories.includes(ev.category) ? 2 : 0
+        const d = parseEventDate(ev.date_label || ev.time || '')
+        const todayHit = d && d.toDateString() === today.toDateString() ? 1 : 0
+        return { ev, score: interestHit + todayHit }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(x => x.ev)
   })()
+  const vibeEventIds = new Set(vibeEvents.map((e: any) => e.id))
 
-  // Apply search + date + city filter to official
+  // Apply search + date + city filter to official; exclude Tonight's Vibe picks (B+C)
   const officialEvents = officialAll.filter(ev => {
+    if (vibeEventIds.has(ev.id)) return false
     if (city && ev.city && ev.city.toLowerCase() !== city.toLowerCase()) return false
     if (categoryFilter && ev.category !== categoryFilter) return false
     if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
@@ -2628,12 +2641,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     )
     const state = getJoinState(ev)
     const isFull = state === 'full'
-    const label = isFull ? 'Full' : (state === 'joined' || state === 'confirmed') ? 'Joined ✓' : state === 'pending' ? 'Requested…' : ev.type === 'community' ? 'Request' : 'Join'
+    const label = isFull ? 'Full' : (state === 'joined' || state === 'confirmed') ? 'Joined ✓' : state === 'pending' ? 'Requested…' : ev.type === 'community' ? 'Request to join' : 'Join'
     let bg: string, textColor: string
     if (isFull)                                          { bg = '#F1F5F9'; textColor = '#94A3B8' }
     else if (state === 'joined' || state === 'confirmed') { bg = 'rgba(34,197,94,0.12)'; textColor = '#16a34a' }
     else if (state === 'pending')                        { bg = 'rgba(251,191,36,0.15)'; textColor = '#d97706' }
-    else                                                 { bg = '#6366F1'; textColor = '#fff' }
+    else                                                 { bg = '#F97316'; textColor = '#fff' }
     return (
       <TouchableOpacity
         onPress={() => {
@@ -2693,46 +2706,43 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               </Animated.View>
             </View>
 
-            {/* Row 2: city · vibe · calendar — all in one line */}
+            {/* Row 2: city (primary, soft) · vibe (outline) · calendar (ghost) */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {/* City */}
-              <TouchableOpacity onPress={() => setCityOpen(true)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
-                <PhMapPin size={12} color="#4338CA" weight="duotone" />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>{city ?? 'All Cities'}</Text>
+              {/* City — primary, subtle */}
+              <TouchableOpacity onPress={() => setCityOpen(true)} activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, backgroundColor: '#F5F3FF', borderWidth: 1, borderColor: '#E9E5FF' }}>
+                <PhMapPin size={12} color="#6366F1" weight="duotone" />
+                <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: '#4338CA', letterSpacing: -0.1 }}>{city ?? 'All Cities'}</Text>
+                <CaretDown size={10} color="#A5B4FC" weight="bold" />
               </TouchableOpacity>
 
-              {/* Separator */}
-              <View style={{ width: 1, height: 14, backgroundColor: '#E2E8F0' }} />
-
-              {/* Vibe */}
+              {/* Vibe — outline, muted */}
               <TouchableOpacity onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
                 activeOpacity={0.8}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
-                  backgroundColor: tonightVibe ? '#EEF2FF' : '#F1F5F9' }}>
+                  backgroundColor: 'transparent',
+                  borderWidth: 1,
+                  borderColor: tonightVibe ? (SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy)?.color || '#E2E8F0') + '33' : '#E2E8F0' }}>
                 {tonightVibe ? (() => {
                   const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
                   return <>
-                    <energyInfo.Icon size={12} color={energyInfo.color} weight="duotone" />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: energyInfo.color }}>{energyInfo.label}</Text>
-                    <CaretDown size={11} color="#94A3B8" weight="bold" />
+                    <energyInfo.Icon size={12} color={energyInfo.color + 'B0'} weight="duotone" />
+                    <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: energyInfo.color + 'CC' }}>{energyInfo.label}</Text>
+                    <CaretDown size={10} color="#CBD5E1" weight="bold" />
                   </>
                 })() : <>
                   <Sparkle size={12} color="#94A3B8" weight="duotone" />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8' }}>My Vibe</Text>
-                  <CaretDown size={11} color="#94A3B8" weight="bold" />
+                  <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: '#94A3B8' }}>My Vibe</Text>
+                  <CaretDown size={10} color="#CBD5E1" weight="bold" />
                 </>}
               </TouchableOpacity>
 
-              {/* Separator */}
-              <View style={{ width: 1, height: 14, backgroundColor: '#E2E8F0' }} />
-
-              {/* Calendar */}
+              {/* Calendar — ghost */}
               <TouchableOpacity onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
-                  backgroundColor: calendarOpen || selectedDate ? '#6366F1' : '#F1F5F9' }}>
-                <CalendarBlank size={13} color={calendarOpen || selectedDate ? '#fff' : '#64748B'} weight="duotone" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: calendarOpen || selectedDate ? '#fff' : '#64748B' }}>
+                activeOpacity={0.7}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 7 }}>
+                <CalendarBlank size={14} color={calendarOpen || selectedDate ? '#6366F1' : '#94A3B8'} weight="regular" />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: calendarOpen || selectedDate ? '#6366F1' : '#94A3B8' }}>
                   {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
                 </Text>
               </TouchableOpacity>
@@ -2849,34 +2859,28 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {vibeEvents.length > 0 && (() => {
           const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe?.energy) || SOCIAL_ENERGY[2]
           return (
-            <View style={{ marginTop: 20, marginBottom: 4 }}>
+            <View style={{ marginTop: 28, marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 12 }}>
                 <energyInfo.Icon size={18} color={energyInfo.color} weight="duotone" />
                 <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Tonight's Vibe</Text>
-                <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: energyInfo.color + '22' }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: energyInfo.color }}>{energyInfo.label}</Text>
+                <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: energyInfo.color + '14' }}>
+                  <Text style={{ fontSize: 10, fontFamily: 'Outfit-Medium', color: energyInfo.color, letterSpacing: 0.1 }}>{energyInfo.label}</Text>
                 </View>
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 4 }}>
                 {vibeEvents.map((ev: any) => (
                   <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
-                    style={{ width: 190, borderRadius: 20, overflow: 'hidden', backgroundColor: '#fff', shadowColor: energyInfo.color, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 }}>
+                    style={{ width: 148, borderRadius: 16, overflow: 'hidden', backgroundColor: '#fff', shadowColor: energyInfo.color, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2 }}>
                     {ev.image_url ? (
-                      <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 90 }} resizeMode="cover" />
+                      <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 68 }} resizeMode="cover" />
                     ) : (
-                      <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: '100%', height: 90, alignItems: 'center', justifyContent: 'center' }}>
-                        {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={32} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
+                      <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: '100%', height: 68, alignItems: 'center', justifyContent: 'center' }}>
+                        {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={26} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
                       </LinearGradient>
                     )}
-                    <View style={{ position: 'absolute', top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: energyInfo.color }}>
-                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff', textTransform: 'capitalize' }}>{ev.category || 'Event'}</Text>
-                    </View>
-                    <View style={{ padding: 10 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E1B4B', marginBottom: 4 }} numberOfLines={2}>{ev.title}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <CalendarBlank size={10} color="#94A3B8" weight="regular" />
-                        <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.date_label || ev.time_label || ''}</Text>
-                      </View>
+                    <View style={{ padding: 9 }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B', marginBottom: 3 }} numberOfLines={2}>{ev.title}</Text>
+                      <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{ev.date_label || ev.time_label || ''}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -2888,7 +2892,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {/* ── OFFICIAL EVENTS ── */}
         {officialDbLoading && (
           <>
-            <View style={{ paddingHorizontal: 20, marginTop: 16, marginBottom: 12 }}>
+            <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 4 }}>
@@ -2907,7 +2911,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         )}
         {!officialDbLoading && officialDbEvents.length > 0 && (
           <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 16, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <PhStar size={18} color="#F59E0B" weight="duotone" />
                 <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
