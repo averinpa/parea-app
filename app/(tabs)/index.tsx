@@ -7737,6 +7737,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       return next
     })
     setPassedRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+    // Joining an official event → start crew-finding in Vibe Check
+    if (ev?.type === 'official' && !ev?.isHosted) {
+      setActiveTab('vibecheck')
+      markNotifsReadForPlans?.()
+    }
   }
 
   // Match animation refs
