@@ -3121,10 +3121,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             })}
           </View>
         ) : (
-          <View style={{ alignItems: 'center', paddingTop: 40, paddingBottom: 20 }}>
-            <Text style={{ fontSize: 40, marginBottom: 12 }}>🌴</Text>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>Nothing here yet</Text>
-            <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>Try a different category or date</Text>
+          <View style={{ alignItems: 'center', paddingTop: 32, paddingBottom: 24 }}>
+            <Image
+              source={require('../../assets/images/community_empty.png')}
+              style={{ width: 180, height: 138, marginBottom: 14 }}
+              resizeMode="contain"
+            />
+            <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3 }}>No community plans yet</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Outfit-Regular', color: '#94A3B8', marginTop: 6 }}>Tap + to start one</Text>
           </View>
         )}
 
