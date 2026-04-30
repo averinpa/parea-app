@@ -4644,7 +4644,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   const subtitle = (() => {
     if (hasHostActivity) return '👑 You have join requests'
     const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
-    if (myEvents.length > 0 && totalReal > 0) return `${totalReal} people going · tap to see them`
+    if (myEvents.length > 0 && totalReal > 0) return `${totalReal} ${totalReal === 1 ? 'person' : 'people'} joined · tap to review`
     if (myEvents.length > 0) return `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · looking for crew...`
     if (myApprovedCommunityEvents.length > 0) return `You're in — open the chat`
     if (myCommunityEvents.length > 0) return `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host`
@@ -5229,9 +5229,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                               <TouchableOpacity
                                 activeOpacity={0.85}
                                 onPress={() => onGoToMessages?.(ev)}
-                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
-                                <MessageCircle size={16} color="#052e16" />
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Open Chat</Text>
+                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                                <MessageCircle size={16} color="#fff" />
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>Open Chat</Text>
                               </TouchableOpacity>
                             </View>
                           )
@@ -7715,12 +7715,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [toast, setToast] = useState<{ visible: boolean; text: string; title?: string; emoji?: string }>({ visible: false, text: '' })
   const toastAnim = useRef(new Animated.Value(0)).current
 
-  const showToast = (text: string, title?: string, emoji?: string) => {
+  const showToast = (text: string, title?: string, emoji?: string, holdMs: number = 3500) => {
     setToast({ visible: true, text, title, emoji })
     toastAnim.setValue(0)
     Animated.sequence([
       Animated.spring(toastAnim, { toValue: 1, friction: 8, useNativeDriver: true }),
-      Animated.delay(3500),
+      Animated.delay(holdMs),
       Animated.timing(toastAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
     ]).start(() => setToast({ visible: false, text: '' }))
   }
@@ -8371,7 +8371,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
                       setMessagesInitialSubTab('messages'); setActiveTab('messages')
                     } else {
-                      showToast('We\'ll notify you when someone joins', 'You\'re ready! ⏳', '⏳')
+                      showToast('', 'You\'re in ✨', '✨', 2000)
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                     }
                     return
@@ -8388,7 +8388,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
                   if (othersCount < 1) {
                     // First one — wait for others
-                    showToast('We\'ll notify you when someone joins', 'You\'re ready! ⏳', '⏳')
+                    showToast('', 'You\'re in ✨', '✨', 2000)
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                     return
                   }
@@ -8414,7 +8414,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const othersCount = registeredSquadReady.length
                 setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
                 if (othersCount < 1) {
-                  showToast('We\'ll notify you when someone joins', 'You\'re the first one! ⏳', '⏳')
+                  showToast('', 'You\'re in ✨', '✨', 2000)
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                   return
                 }
