@@ -16,10 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  ActivityIndicator, Alert, Animated, AppState, Dimensions, FlatList, Image, Keyboard, Linking, Share,
+  ActivityIndicator, Alert, Animated, AppState, Dimensions, FlatList, Image, Keyboard, Linking, LogBox, Share,
   KeyboardAvoidingView, LayoutAnimation, Modal, PanResponder, Platform, Pressable,
   ScrollView, StatusBar as RNStatusBar, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native'
+
+LogBox.ignoreLogs(['Invalid Refresh Token', 'AuthApiError: Invalid Refresh Token'])
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -10478,6 +10480,14 @@ export default function App() {
 
   // Check existing session on mount
   useEffect(() => {
+    // Pre-clear stale/invalid refresh token before auto-refresh tries it
+    supabase.auth.getSession().catch(async (err: any) => {
+      const msg = err?.message || ''
+      if (msg.includes('Refresh Token') || msg.includes('refresh_token')) {
+        await supabase.auth.signOut().catch(() => {})
+        setScreen('landing')
+      }
+    })
     // onAuthStateChange catches both initial restore from AsyncStorage and new logins
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'INITIAL_SESSION') {
