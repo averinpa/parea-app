@@ -3297,7 +3297,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       {/* ── Vibe Edit Modal ── */}
       <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom + 16, 36) }}>
           <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
           <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 26, color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 20 }}>Tonight's vibe</Text>
 
@@ -4086,6 +4086,8 @@ const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', net
 
 function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void }) {
   const insets = useSafeAreaInsets()
+  const screenH = Dimensions.get('window').height
+  const sheetMaxH = screenH - insets.top - 16
   const [photoIdx, setPhotoIdx] = useState(0)
   const slideAnim = useRef(new Animated.Value(300)).current
 
@@ -4109,7 +4111,7 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
     <Modal transparent animationType="none" onRequestClose={close}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={close} />
       <Animated.View style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
+        position: 'absolute', bottom: 0, left: 0, right: 0, maxHeight: sheetMaxH,
         backgroundColor: '#100D20', borderTopLeftRadius: 32, borderTopRightRadius: 32,
         overflow: 'hidden', transform: [{ translateY: slideAnim }],
       }}>
@@ -4156,7 +4158,7 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
           </TouchableOpacity>
         </View>
 
-        <View style={{ paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
           {/* Name + age */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
             <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
@@ -4256,7 +4258,7 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
               )}
             </View>
           )}
-        </View>
+        </ScrollView>
       </Animated.View>
     </Modal>
   )
