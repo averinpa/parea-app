@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open in Parea</title>
+<meta name="description" content="Find your tonight's crew on Parea.">
+<meta property="og:title" content="Parea — Find your tonight's crew">
+<meta property="og:description" content="Tap to open this event in the Parea app.">
+<meta property="og:type" content="website">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #F97316 100%);
+    color: #fff; text-align: center; padding: 24px;
+  }
+  .card { max-width: 360px; width: 100%; }
+  .logo { font-size: 56px; margin-bottom: 8px; }
+  h1 { font-size: 30px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.5px; }
+  p { font-size: 15px; opacity: 0.9; margin: 0 0 28px; line-height: 1.5; }
+  a.btn {
+    display: inline-block; background: #fff; color: #6366F1;
+    padding: 15px 32px; border-radius: 16px; font-weight: 700;
+    text-decoration: none; font-size: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .small { display: block; margin-top: 22px; font-size: 12px; opacity: 0.7; line-height: 1.5; }
+  .footer { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 11px; opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">✨</div>
+  <h1>Opening Parea</h1>
+  <p>If the app doesn't open automatically, tap the button below.</p>
+  <a id="openBtn" class="btn" href="#">Open in Parea</a>
+  <span class="small">Don't have the app yet? Ask the sender for an install link.</span>
+</div>
+<div class="footer">parea — find your tonight's crew</div>
+<script>
+  // Path looks like /event/123
+  var path = window.location.pathname || '';
+  var match = path.match(/event\/(\d+)/);
+  var id = match ? match[1] : null;
+  var deepLink = id ? 'pareaapp://event/' + id : 'pareaapp://';
+  document.getElementById('openBtn').href = deepLink;
+  // Auto-attempt on mobile
+  if (id && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    setTimeout(function () { window.location.href = deepLink; }, 200);
+  }
+</script>
+</body>
+</html>
