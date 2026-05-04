@@ -5570,7 +5570,13 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
     }
     Alert.alert('Delete photo?', undefined, [
       { text: 'Delete', style: 'destructive', onPress: () => {
-        onUpdateUserData?.({ photos: userPhotos.filter((_, i) => i !== idx) })
+        const updated = userPhotos.filter((_, i) => i !== idx)
+        onUpdateUserData?.({ photos: updated })
+        // Persist to DB directly — handleUpdateUserData skips photos to avoid clobbering public URLs
+        if (userData?.dbId) {
+          supabase.from('profiles').update({ photos: updated }).eq('id', userData.dbId)
+            .then(({ error }) => { if (error) console.warn('Photo delete DB update error:', error.message) })
+        }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
       }},
       { text: 'Cancel', style: 'cancel' },
@@ -9807,11 +9813,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </View>
 
                     {/* Description */}
-                    {eventDetail.description && (
-                      <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14 }}>
-                        <Text style={{ fontSize: 14, color: '#334155', lineHeight: 21 }}>{eventDetail.description}</Text>
-                      </View>
-                    )}
+                    {(() => {
+                      const cleaned = (eventDetail.description || '').replace(/^[\s.:;,•·\-–—]+/, '').trim()
+                      if (!cleaned) return null
+                      return (
+                        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14 }}>
+                          <Text style={{ fontSize: 14, color: '#334155', lineHeight: 21 }}>{cleaned}</Text>
+                        </View>
+                      )
+                    })()}
 
                     {/* Price / Language / Age — official events */}
                     {eventDetail.type === 'official' && (eventDetail.price || eventDetail.language || eventDetail.age_restriction) && (
