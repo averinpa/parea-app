@@ -23,6 +23,7 @@ import {
 
 LogBox.ignoreLogs(['Invalid Refresh Token', 'AuthApiError: Invalid Refresh Token'])
 import MapView, { Marker } from 'react-native-maps'
+import * as ExpoLinking from 'expo-linking'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import ConfettiCannon from 'react-native-confetti-cannon'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -2674,13 +2675,13 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   })()
 
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
-  const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2 | 3; format: string; transport: string; groupMin: number; groupMax: number }>(
-    { visible: false, ev: null, step: 1, format: '', transport: '', groupMin: 2, groupMax: 5 }
+  const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2 | 3 | 4; format: string; transport: string; crewPref: string; groupMin: number; groupMax: number }>(
+    { visible: false, ev: null, step: 1, format: '', transport: '', crewPref: 'any', groupMin: 2, groupMax: 5 }
   )
 
   const openJoinSheet = (ev: any) => {
     const startStep = ev?.type === 'official' ? 1 : 2
-    setJoinSheet({ visible: true, ev, step: startStep as any, format: '', transport: '', groupMin: 2, groupMax: 5 })
+    setJoinSheet({ visible: true, ev, step: startStep as any, format: '', transport: '', crewPref: 'any', groupMin: 2, groupMax: 5 })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
@@ -2694,8 +2695,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     const ev = joinSheet.ev
     const format = joinSheet.format
     const transport = joinSheet.transport
+    const crewPref = joinSheet.crewPref || 'any'
     // Show success immediately
-    setJoinSheet(prev => ({ ...prev, step: 3 }))
+    setJoinSheet(prev => ({ ...prev, step: 4 }))
     // Apply local state
     onJoin(ev, transport)
     if (ev?.id) {
@@ -2714,6 +2716,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         group_size_max: gMax,
         transport,
         status: 'looking',
+        crew_pref: crewPref,
       }, { onConflict: 'event_ref_id,profile_id' })
         .then(({ error }) => { if (error) console.warn('event_attendees upsert error:', error.message); else console.log('✅ Saved to event_attendees') })
     }
@@ -3359,19 +3362,19 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         <View style={[s.joinSheetWrap, { paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
           <View style={s.joinSheetHandle} />
 
-          {joinSheet.ev?.type === 'official' && joinSheet.step !== 3 && (
+          {joinSheet.ev?.type === 'official' && joinSheet.step !== 4 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                {[1, 2].map(n => (
+                {[1, 2, 3].map(n => (
                   <View key={n} style={{ width: joinSheet.step === n ? 20 : 6, height: 6, borderRadius: 3,
                     backgroundColor: joinSheet.step >= n ? '#6366F1' : 'rgba(99,102,241,0.2)' }} />
                 ))}
               </View>
-              <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 2</Text>
+              <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 3</Text>
             </View>
           )}
 
-          {joinSheet.step === 3 ? (
+          {joinSheet.step === 4 ? (
             <View style={{ alignItems: 'center', paddingVertical: 28 }}>
               <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(167,139,250,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 18, borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.45)' }}>
                 <Ionicons name="checkmark" size={38} color="#A78BFA" />
@@ -3413,7 +3416,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 <Text style={s.joinSheetNextTxt}>Next →</Text>
               </TouchableOpacity>
             </>
-          ) : (
+          ) : joinSheet.step === 2 ? (
             <>
               {joinSheet.ev?.type === 'official' && (
                 <TouchableOpacity onPress={() => setJoinSheet(prev => ({ ...prev, step: 1 }))}
@@ -3454,6 +3457,46 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               <TouchableOpacity
                 style={[s.joinSheetNext, !joinSheet.transport && { opacity: 0.4 }, joinSheet.transport && { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 }]}
                 disabled={!joinSheet.transport}
+                onPress={() => setJoinSheet(prev => ({ ...prev, step: 3 }))}>
+                <Text style={s.joinSheetNextTxt}>Continue →</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
+
+          {joinSheet.step === 3 && (
+            <>
+              <TouchableOpacity onPress={() => setJoinSheet(prev => ({ ...prev, step: 2 }))}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                <Ionicons name="chevron-back" size={14} color="#6366F1" />
+                <Text style={{ fontSize: 12, color: '#6366F1', fontWeight: '600' }}>Back</Text>
+              </TouchableOpacity>
+              <Text style={s.joinSheetTitle}>Who would you feel{'\n'}comfortable going with?</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'Outfit-Regular', marginTop: 4, marginBottom: 8 }}>Optional · applies to this event only</Text>
+              <View style={{ gap: 8, marginTop: 4 }}>
+                {[
+                  { id: 'any',    label: 'Any',          sub: 'Open to everyone' },
+                  { id: 'women',  label: 'Women only',   sub: 'Crew of women only' },
+                  { id: 'men',    label: 'Men only',     sub: 'Crew of men only' },
+                  { id: 'mixed',  label: 'Mixed group',  sub: 'Mix of women and men' },
+                ].map(opt => {
+                  const active = joinSheet.crewPref === opt.id
+                  return (
+                    <TouchableOpacity key={opt.id} activeOpacity={0.8}
+                      onPress={() => { setJoinSheet(prev => ({ ...prev, crewPref: opt.id })); Haptics.selectionAsync() }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 16,
+                        backgroundColor: active ? 'rgba(167,139,250,0.12)' : 'rgba(255,255,255,0.04)',
+                        borderWidth: 1.5, borderColor: active ? 'rgba(167,139,250,0.6)' : 'rgba(255,255,255,0.08)' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: active ? '#A78BFA' : '#fff' }}>{opt.label}</Text>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{opt.sub}</Text>
+                      </View>
+                      {active && <CheckCircle size={20} color="#A78BFA" strokeWidth={2} />}
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+              <TouchableOpacity
+                style={[s.joinSheetNext, { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 }]}
                 onPress={confirmJoin}>
                 <Text style={s.joinSheetNextTxt}>
                   {joinSheet.ev?.type === 'official' ? "I'm Going" : "Send Request →"}
@@ -6590,6 +6633,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createType, setCreateType] = useState<string | null>(null)
   const [createDay, setCreateDay] = useState('')
   const [createHour, setCreateHour] = useState('')
+  const [dateSheetOpen, setDateSheetOpen] = useState(false)
+  const [timeSheetOpen, setTimeSheetOpen] = useState(false)
   const [createLocation, setCreateLocation] = useState('')
   const [createDescription, setCreateDescription] = useState('')
   const [createDriving, setCreateDriving] = useState(false)
@@ -6868,6 +6913,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
   const [eventAttendeesMap, setEventAttendeesMap] = useState<Record<number, any[]>>({})
+  // Bidirectional crew_pref + gender check.
+  // Returns true if (a) my preference allows the other person's gender AND (b) their preference allows my gender.
+  const fitsCrewPref = (myPref: string, myGender: string | undefined, theirPref: string, theirGender: string | undefined) => {
+    const accepts = (pref: string, gender: string | undefined) => {
+      if (!pref || pref === 'any' || pref === 'mixed') return true
+      const g = (gender || '').toLowerCase()
+      if (pref === 'women') return g === 'female'
+      if (pref === 'men')   return g === 'male'
+      return true
+    }
+    return accepts(myPref || 'any', theirGender) && accepts(theirPref || 'any', myGender)
+  }
   const [incomingCrewInvites, setIncomingCrewInvites] = useState<any[]>([])
   const [sentCrewInvites, setSentCrewInvites] = useState<Record<string, string>>({}) // `${eventId}_${profileId}` -> 'pending'|'accepted'
   const [officialEventChatMap, setOfficialEventChatMap] = useState<Record<number, number>>({}) // eventId -> chatId
@@ -6899,7 +6956,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const [userMin, userMax] = FORMAT_SIZES[evFormat] || [2, 5]
         // Include confirmed users so others can see them and join existing crew chats
         const statusFilter = ['looking', 'ready', 'confirmed']
-        const { data } = await supabase
+        // Fetch own row to know my crew_pref for this event
+        const { data: mine } = await supabase.from('event_attendees').select('crew_pref').eq('event_ref_id', evId).eq('profile_id', userData.dbId).maybeSingle()
+        const myPref = mine?.crew_pref || 'any'
+        const myGender = (userData as any)?.gender
+        const { data: rawData } = await supabase
           .from('event_attendees')
           .select('*, profiles(*)')
           .eq('event_ref_id', evId)
@@ -6908,6 +6969,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           .lte('group_size_min', userMax)
           .gte('group_size_max', userMin)
           .limit(20)
+        // Bidirectional crew_pref + gender filter
+        const data = (rawData || []).filter((row: any) => fitsCrewPref(myPref, myGender, row.crew_pref || 'any', row.profiles?.gender))
         if (data && data.length > 0) {
           const candidates = data.map((row: any) => {
             const p = row.profiles || {}
@@ -6975,11 +7038,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       for (const evId of waitingIds) {
         const format = userEventFormat[evId] || 'squad'
         const [userMin, userMax] = FORMAT_SIZES[format] || [3, 5]
-        const { data: readyData } = await supabase
+        const { data: mine } = await supabase.from('event_attendees').select('crew_pref').eq('event_ref_id', evId).eq('profile_id', userData.dbId).maybeSingle()
+        const myPref = mine?.crew_pref || 'any'
+        const myGender = (userData as any)?.gender
+        const { data: rawReady } = await supabase
           .from('event_attendees').select('*, profiles(*)')
           .eq('event_ref_id', evId).in('status', ['ready', 'confirmed'])
           .neq('profile_id', userData.dbId)
           .lte('group_size_min', userMax).gte('group_size_max', userMin)
+        const readyData = (rawReady || []).filter((r: any) => fitsCrewPref(myPref, myGender, r.crew_pref || 'any', r.profiles?.gender))
         const othersCount = readyData?.length || 0
         const confirmedCount = (readyData || []).filter((r: any) => r.status === 'confirmed').length
         setReadyCountMap(prev => ({ ...prev, [evId]: othersCount }))
@@ -7120,6 +7187,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     drinks: userData?.drinksPref || 'Social drinker',
     smoking: userData?.smokingPref || 'Non-smoker',
   })
+  // Keep tonightVibe in sync with userData (covers updates from ProfileTab vibe editor)
+  useEffect(() => {
+    setTonightVibe({
+      energy: userData?.socialEnergy || 'balanced',
+      drinks: userData?.drinksPref || 'Social drinker',
+      smoking: userData?.smokingPref || 'Non-smoker',
+    })
+  }, [userData?.socialEnergy, userData?.drinksPref, userData?.smokingPref])
 
   // ── Notifications ─────────────────────────────────────────────────────────
   type Notif = { id: string; type: string; title: string; body: string; emoji: string; color: string; time: number; read: boolean; chatId?: number; eventId?: number }
@@ -8413,10 +8488,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => sub.remove()
   }, [])
 
-  // Deep link handler: pareaapp://event/:id
+  // Deep link handler: works for pareaapp://event/:id (APK), exp://...--/event/:id (Expo Go), https://parea.app/event/:id (Universal Links)
   useEffect(() => {
     const handleUrl = ({ url }: { url: string }) => {
-      const match = url.match(/pareaapp:\/\/event\/(\d+)/)
+      const parsed = ExpoLinking.parse(url)
+      const path = parsed.path || ''
+      const match = path.match(/^event\/(\d+)/) || url.match(/event\/(\d+)/)
       if (match) {
         const id = parseInt(match[1])
         const allKnown = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents]
@@ -8644,7 +8721,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <SafeAreaView style={s.fill} edges={Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
-            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={setTonightVibe} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
           </View>
           <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, bottom: 0, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
           <VibeCheckTab
@@ -8766,7 +8843,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     .neq('profile_id', userData?.dbId)
                     .lte('group_size_min', 20).gte('group_size_max', 6)
                   // Filter out attendees whose profile is incomplete (not yet registered)
-                  const registeredReady = (readyData || []).filter((r: any) => r.profiles?.name && r.profiles?.id)
+                  const myPref_p = (await supabase.from('event_attendees').select('crew_pref').eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId).maybeSingle()).data?.crew_pref || 'any'
+                  const myGender_p = (userData as any)?.gender
+                  const registeredReady = (readyData || []).filter((r: any) => r.profiles?.name && r.profiles?.id && fitsCrewPref(myPref_p, myGender_p, r.crew_pref || 'any', r.profiles?.gender))
                   const othersCount = registeredReady.length
                   setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
                   if (othersCount < 1) {
@@ -8793,7 +8872,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed'])
                   .neq('profile_id', userData?.dbId)
                   .lte('group_size_min', userMax).gte('group_size_max', userMin)
-                const registeredSquadReady = (readyData || []).filter((r: any) => r.profiles?.name && r.profiles?.id)
+                const myPref_s = (await supabase.from('event_attendees').select('crew_pref').eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId).maybeSingle()).data?.crew_pref || 'any'
+                const myGender_s = (userData as any)?.gender
+                const registeredSquadReady = (readyData || []).filter((r: any) => r.profiles?.name && r.profiles?.id && fitsCrewPref(myPref_s, myGender_s, r.crew_pref || 'any', r.profiles?.gender))
                 const othersCount = registeredSquadReady.length
                 setReadyCountMap(prev => ({ ...prev, [ev.id]: othersCount }))
                 if (othersCount < 1) {
@@ -9515,134 +9596,123 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   {/* ── Step 3: Calendar + Time + Location ── */}
                   {createStep === 3 && (() => {
                     const today = new Date(); today.setHours(0,0,0,0)
-                    const firstDay = new Date(calViewYear, calViewMonth, 1)
-                    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate()
-                    const startDow = (firstDay.getDay() + 6) % 7
-                    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
-                    const DAY_LABELS = ['M','T','W','T','F','S','S']
-                    const cells: (number | null)[] = []
-                    for (let i = 0; i < startDow; i++) cells.push(null)
-                    for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-                    while (cells.length % 7 !== 0) cells.push(null)
-                    const cellW = (W - 40) / 7
+                    const todayIso = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+                    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1)
+                    const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`
+                    const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                    const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+                    const dayLabel = createDay
+                      ? createDay === todayIso ? 'Today'
+                        : createDay === tomorrowIso ? 'Tomorrow'
+                        : (() => { const d = new Date(createDay); return `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}` })()
+                      : 'Pick date'
                     return (
                       <View>
-                        {/* Calendar card */}
-                        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 14, marginBottom: 14 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                            <TouchableOpacity onPress={() => { const d = new Date(calViewYear, calViewMonth - 1); setCalViewMonth(d.getMonth()); setCalViewYear(d.getFullYear()) }}
-                              style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
-                              <Feather name="chevron-left" size={15} color="#334155" />
-                            </TouchableOpacity>
-                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B' }}>{MONTHS[calViewMonth]} {calViewYear}</Text>
-                            <TouchableOpacity onPress={() => { const d = new Date(calViewYear, calViewMonth + 1); setCalViewMonth(d.getMonth()); setCalViewYear(d.getFullYear()) }}
-                              style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
-                              <Feather name="chevron-right" size={15} color="#334155" />
-                            </TouchableOpacity>
-                          </View>
-                          <View style={{ flexDirection: 'row', marginBottom: 6 }}>
-                            {DAY_LABELS.map((l, i) => (
-                              <View key={i} style={{ width: cellW, alignItems: 'center' }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: i >= 5 ? '#818CF8' : '#94A3B8' }}>{l}</Text>
-                              </View>
-                            ))}
-                          </View>
-                          {Array.from({ length: cells.length / 7 }, (_, row) => (
-                            <View key={row} style={{ flexDirection: 'row', marginBottom: 1 }}>
-                              {cells.slice(row * 7, row * 7 + 7).map((day, col) => {
-                                if (!day) return <View key={col} style={{ width: cellW, height: 32 }} />
-                                const thisDate = new Date(calViewYear, calViewMonth, day)
-                                const isPast = thisDate < today
-                                const isToday = thisDate.getTime() === today.getTime()
-                                const selStr = `${calViewYear}-${String(calViewMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-                                const isSelected = createDay === selStr
-                                const isWeekend = col >= 5
+                        {/* When pills */}
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>When</Text>
+                        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                          <TouchableOpacity onPress={() => setDateSheetOpen(true)} activeOpacity={0.85}
+                            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 14,
+                              backgroundColor: createDay ? '#EEF2FF' : '#F8FAFC',
+                              borderWidth: 1.5, borderColor: createDay ? '#6366F1' : '#E2E8F0' }}>
+                            <Text style={{ fontSize: 17 }}>📅</Text>
+                            <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createDay ? '#1E1B4B' : '#94A3B8' }} numberOfLines={1}>{dayLabel}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => setTimeSheetOpen(true)} activeOpacity={0.85}
+                            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 14,
+                              backgroundColor: createHour ? '#EEF2FF' : '#F8FAFC',
+                              borderWidth: 1.5, borderColor: createHour ? '#6366F1' : '#E2E8F0' }}>
+                            <Text style={{ fontSize: 17 }}>🕐</Text>
+                            <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createHour ? '#1E1B4B' : '#94A3B8' }} numberOfLines={1}>{createHour || 'Pick time'}</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Date Sheet */}
+                        <Modal visible={dateSheetOpen} transparent animationType="slide" onRequestClose={() => setDateSheetOpen(false)}>
+                          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setDateSheetOpen(false)} />
+                          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 12, paddingBottom: Math.max(insets.bottom + 16, 28), maxHeight: '70%' }}>
+                            <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+                            <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', paddingHorizontal: 20, marginBottom: 14 }}>Pick a date</Text>
+                            <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+                              {Array.from({ length: 60 }).map((_, i) => {
+                                const d = new Date(today); d.setDate(d.getDate() + i)
+                                const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                                const sel = createDay === iso
+                                const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : `${WEEKDAYS[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`
                                 return (
-                                  <TouchableOpacity key={col} disabled={isPast} onPress={() => { setCreateDay(selStr); const isSelectedToday = selStr === new Date().toISOString().split('T')[0]; if (isSelectedToday && createHour) { const [hh] = createHour.split(':').map(Number); if (hh <= new Date().getHours()) setCreateHour(''); } }} activeOpacity={0.7}
-                                    style={{ width: cellW, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-                                    <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-                                      backgroundColor: isSelected ? '#6366F1' : isToday ? '#fff' : 'transparent',
-                                      borderWidth: isToday && !isSelected ? 1.5 : 0, borderColor: '#6366F1',
-                                      shadowColor: isSelected ? '#6366F1' : 'transparent', shadowOpacity: 0.35, shadowRadius: 6, elevation: isSelected ? 4 : 0 }}>
-                                      <Text style={{ fontSize: 13, fontWeight: isSelected || isToday ? '800' : '400',
-                                        color: isSelected ? '#fff' : isPast ? '#CBD5E1' : isWeekend ? '#818CF8' : '#1E1B4B' }}>
-                                        {day}
-                                      </Text>
-                                    </View>
+                                  <TouchableOpacity key={iso} activeOpacity={0.85}
+                                    onPress={() => {
+                                      setCreateDay(iso)
+                                      // Reset hour if today and selected hour passed
+                                      if (iso === todayIso && createHour) {
+                                        const [hh, mm] = createHour.split(':').map(Number)
+                                        const now = new Date()
+                                        if (hh < now.getHours() || (hh === now.getHours() && mm <= now.getMinutes())) setCreateHour('')
+                                      }
+                                      setDateSheetOpen(false)
+                                    }}
+                                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13, paddingHorizontal: 16, borderRadius: 12, backgroundColor: sel ? '#6366F1' : 'transparent', marginBottom: 2 }}>
+                                    <Text style={{ fontSize: 15, fontFamily: 'Outfit-SemiBold', color: sel ? '#fff' : '#1E1B4B' }}>{label}</Text>
+                                    {sel && <Ionicons name="checkmark" size={18} color="#fff" />}
                                   </TouchableOpacity>
                                 )
                               })}
-                            </View>
-                          ))}
-                        </View>
+                            </ScrollView>
+                          </View>
+                        </Modal>
 
-                        {/* Time chips */}
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Time</Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
-                          {['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(h => {
-                            const isToday = createDay === new Date().toISOString().split('T')[0]
-                            const [hh] = h.split(':').map(Number)
-                            const isPast = isToday && hh <= new Date().getHours()
-                            return (
-                              <TouchableOpacity key={h} onPress={() => !isPast && setCreateHour(h)} activeOpacity={isPast ? 1 : 0.8}
-                                style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
-                                  backgroundColor: createHour === h ? '#6366F1' : '#F1F5F9',
-                                  opacity: isPast ? 0.3 : 1 }}>
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: createHour === h ? '#fff' : '#64748B' }}>{h}</Text>
-                              </TouchableOpacity>
-                            )
-                          })}
-                        </View>
-
-                        {/* Cover image */}
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Cover Photo <Text style={{ fontSize: 11, fontWeight: '500', textTransform: 'none' }}>(optional)</Text></Text>
-                        <TouchableOpacity activeOpacity={0.8} onPress={() => {
-                          const pickImage = async () => {
-                            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-                            if (status !== 'granted') return
-                            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, exif: false })
-                            if (!result.canceled && result.assets[0]) {
-                              const asset = result.assets[0]
-                              if ((asset.width || 0) < 50 || (asset.height || 0) < 50) { Alert.alert('Invalid image', 'Please choose a proper photo.'); return }
-                              setCreateImage({ uri: asset.uri, base64: asset.base64 || '' })
-                            }
-                          }
-                          Alert.alert(
-                            'Community Guidelines',
-                            'By uploading a photo you confirm it does not contain nudity, violence, or inappropriate content. Violations may result in account suspension.',
-                            [{ text: 'Cancel', style: 'cancel' }, { text: 'I agree', onPress: pickImage }]
-                          )
-                        }}
-                          style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: createImage ? '#6366F1' : '#E2E8F0', borderStyle: createImage ? 'solid' : 'dashed', marginBottom: 16, alignItems: 'center', justifyContent: 'center' }}>
-                          {createImage ? (
-                            <>
-                              <Image source={{ uri: createImage.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                              <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
-                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Change</Text>
-                              </View>
-                            </>
-                          ) : (
-                            <View style={{ alignItems: 'center', gap: 8 }}>
-                              <Feather name="image" size={28} color="#94A3B8" />
-                              <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '600' }}>Add a cover photo</Text>
-                            </View>
-                          )}
-                        </TouchableOpacity>
+                        {/* Time Sheet */}
+                        <Modal visible={timeSheetOpen} transparent animationType="slide" onRequestClose={() => setTimeSheetOpen(false)}>
+                          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setTimeSheetOpen(false)} />
+                          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 12, paddingBottom: Math.max(insets.bottom + 16, 28), maxHeight: '70%' }}>
+                            <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+                            <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', paddingHorizontal: 20, marginBottom: 14 }}>Pick a time</Text>
+                            <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+                              {(() => {
+                                const slots: string[] = []
+                                for (let h = 8; h <= 23; h++) {
+                                  for (const mm of ['00','30']) slots.push(`${String(h).padStart(2,'0')}:${mm}`)
+                                }
+                                const isToday = createDay === todayIso
+                                const now = new Date()
+                                return slots.map(slot => {
+                                  const sel = createHour === slot
+                                  const [hh, mm] = slot.split(':').map(Number)
+                                  const isPast = isToday && (hh < now.getHours() || (hh === now.getHours() && mm <= now.getMinutes()))
+                                  return (
+                                    <TouchableOpacity key={slot} disabled={isPast} activeOpacity={isPast ? 1 : 0.85}
+                                      onPress={() => { setCreateHour(slot); setTimeSheetOpen(false) }}
+                                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13, paddingHorizontal: 16, borderRadius: 12, backgroundColor: sel ? '#6366F1' : 'transparent', opacity: isPast ? 0.3 : 1, marginBottom: 2 }}>
+                                      <Text style={{ fontSize: 15, fontFamily: 'Outfit-SemiBold', color: sel ? '#fff' : '#1E1B4B' }}>{slot}</Text>
+                                      {sel && <Ionicons name="checkmark" size={18} color="#fff" />}
+                                    </TouchableOpacity>
+                                  )
+                                })
+                              })()}
+                            </ScrollView>
+                          </View>
+                        </Modal>
 
                         {/* Location */}
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>Location</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase' }}>Location</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>*</Text>
+                        </View>
                         <TouchableOpacity onPress={() => setLocationPickerOpen(true)}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8FAFC', borderRadius: 14,
-                            paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1.5,
-                            borderColor: createLocation.length > 0 ? '#6366F1' : 'transparent' }}>
-                          <Feather name="map-pin" size={15} color="#6366F1" />
-                          <Text style={{ flex: 1, fontSize: 14, color: createLocation.length > 0 ? '#1E1B4B' : '#94A3B8', fontWeight: '600' }}>
-                            {createLocation.length > 0 ? createLocation : 'Café, beach, address...'}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14,
+                            paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1.5,
+                            backgroundColor: createLocation.length > 0 ? '#EEF2FF' : '#FFF7ED',
+                            borderColor: createLocation.length > 0 ? '#6366F1' : '#FB923C' }}>
+                          <Feather name="map-pin" size={16} color={createLocation.length > 0 ? '#6366F1' : '#F97316'} />
+                          <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createLocation.length > 0 ? '#1E1B4B' : '#9A3412' }} numberOfLines={1}>
+                            {createLocation.length > 0 ? createLocation : 'Tap to pick on map or search'}
                           </Text>
-                          {createLocation.length > 0 && (
+                          {createLocation.length > 0 ? (
                             <TouchableOpacity onPress={() => { setCreateLocation(''); setLocationCoords(null) }}>
-                              <Feather name="x" size={15} color="#94A3B8" />
+                              <Feather name="x" size={16} color="#94A3B8" />
                             </TouchableOpacity>
+                          ) : (
+                            <Feather name="chevron-right" size={16} color="#F97316" />
                           )}
                         </TouchableOpacity>
 
@@ -9664,7 +9734,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </Modal>
 
                         {/* Description */}
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, marginTop: 16 }}>Description</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, marginTop: 16 }}>Description <Text style={{ fontSize: 11, fontWeight: '500', textTransform: 'none' }}>(optional)</Text></Text>
                         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1.5, borderColor: createDescription.length > 0 ? '#6366F1' : 'transparent' }}>
                           <TextInput
                             value={createDescription}
@@ -9676,6 +9746,41 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             style={{ fontSize: 14, color: '#1E1B4B', fontWeight: '500', minHeight: 72, textAlignVertical: 'top' }}
                           />
                         </View>
+
+                        {/* Cover image — last, optional */}
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10, marginTop: 18 }}>Cover Photo <Text style={{ fontSize: 11, fontWeight: '500', textTransform: 'none' }}>(optional)</Text></Text>
+                        <TouchableOpacity activeOpacity={0.8} onPress={() => {
+                          const pickImage = async () => {
+                            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+                            if (status !== 'granted') return
+                            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, exif: false })
+                            if (!result.canceled && result.assets[0]) {
+                              const asset = result.assets[0]
+                              if ((asset.width || 0) < 50 || (asset.height || 0) < 50) { Alert.alert('Invalid image', 'Please choose a proper photo.'); return }
+                              setCreateImage({ uri: asset.uri, base64: asset.base64 || '' })
+                            }
+                          }
+                          Alert.alert(
+                            'Community Guidelines',
+                            'By uploading a photo you confirm it does not contain nudity, violence, or inappropriate content. Violations may result in account suspension.',
+                            [{ text: 'Cancel', style: 'cancel' }, { text: 'I agree', onPress: pickImage }]
+                          )
+                        }}
+                          style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: createImage ? '#6366F1' : '#E2E8F0', borderStyle: createImage ? 'solid' : 'dashed', alignItems: 'center', justifyContent: 'center' }}>
+                          {createImage ? (
+                            <>
+                              <Image source={{ uri: createImage.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                              <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
+                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Change</Text>
+                              </View>
+                            </>
+                          ) : (
+                            <View style={{ alignItems: 'center', gap: 8 }}>
+                              <Feather name="image" size={28} color="#94A3B8" />
+                              <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: '600' }}>Add a cover photo</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
                       </View>
                     )
                   })()}
@@ -9914,7 +10019,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
-                        const deepLink = `pareaapp://event/${eventDetail.id}`
+                        const deepLink = ExpoLinking.createURL(`event/${eventDetail.id}`)
                         const text = `${eventDetail.title}\n📅 ${eventDetail.time || ''}\n📍 ${eventDetail.location || eventDetail.city || ''}\n\nJoin me on Parea 👉 ${deepLink}`
                         Share.share({ message: text, title: eventDetail.title })
                       }}
