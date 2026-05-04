@@ -46,7 +46,7 @@
   var path = window.location.pathname || '';
   var match = path.match(/event\/(\d+)/);
   var id = match ? match[1] : null;
-  var deepLink = id ? 'pareaapp://event/' + id : 'pareaapp://';
+  var deepLink = id ? 'pareaapp:///event/' + id : 'pareaapp:///';
   document.getElementById('openBtn').href = deepLink;
   // Auto-attempt on mobile
   if (id && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
