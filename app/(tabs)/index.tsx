@@ -427,27 +427,24 @@ Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' B
 // ─── IMAGE SAFETY ─────────────────────────────────────────────────────────────
 
 async function isImageSafe(base64: string): Promise<boolean> {
-  if (!ANTHROPIC_KEY) return true
-  // Can't check without image data — skip moderation
   if (!base64 || base64.length < 100) return true
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return true // not logged in yet — skip
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
+    const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+    const res = await fetch(`${supabaseUrl}/functions/v1/moderate-photo`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001', max_tokens: 16,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-          { type: 'text', text: 'Carefully examine this image. Does it contain any of the following: nudity, partial nudity, exposed genitals, exposed breasts, sexually explicit content, or any person who appears to be under 18 years old? Answer YES or NO only. When in doubt, answer YES.' },
-        ]}],
-      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': anonKey,
+      },
+      body: JSON.stringify({ base64 }),
     })
-    const data = await res.json()
-    // If API returned an error (no content/credits), allow the photo
-    if (!data?.content?.[0]?.text) return true
-    const answer = data.content[0].text.trim().toUpperCase()
-    return !answer.startsWith('YES')
-  } catch { return true }  // Allow on network error — don't block users if API is unreachable
+    const json = await res.json()
+    return json?.safe !== false // safe by default if response malformed
+  } catch { return true }
 }
 
 // ─── LANDING SCREEN ───────────────────────────────────────────────────────────
@@ -1648,10 +1645,17 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
     )
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const pickPhoto = async (idx: number) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.4, base64: true, exif: false })
+  const pickPhoto = async (idx: number, source: 'gallery' | 'camera' = 'gallery') => {
+    let result
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      if (status !== 'granted') { Alert.alert('Camera access needed', 'Enable camera in Settings to take a selfie.'); return }
+      result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.4, base64: true, exif: false, cameraType: ImagePicker.CameraType.front })
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
+      result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.4, base64: true, exif: false })
+    }
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
 
@@ -1698,12 +1702,17 @@ function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => void; on
   const onPhotoPress = (idx: number) => {
     if (photos[idx]) {
       Alert.alert('Photo options', '', [
-        { text: 'Replace photo', onPress: () => pickPhoto(idx) },
+        { text: 'Take a selfie', onPress: () => pickPhoto(idx, 'camera') },
+        { text: 'Choose from gallery', onPress: () => pickPhoto(idx, 'gallery') },
         { text: 'Delete', style: 'destructive', onPress: () => removePhoto(idx) },
         { text: 'Cancel', style: 'cancel' },
       ])
     } else if (!photoLoading[idx]) {
-      pickPhoto(idx)
+      Alert.alert('Add a photo', '', [
+        { text: 'Take a selfie', onPress: () => pickPhoto(idx, 'camera') },
+        { text: 'Choose from gallery', onPress: () => pickPhoto(idx, 'gallery') },
+        { text: 'Cancel', style: 'cancel' },
+      ])
     }
   }
 
@@ -4162,47 +4171,43 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
           {/* Name + age */}
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
             <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
             <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{profile.age}</Text>
             <Text style={{ fontSize: 20 }}>{profile.flag}</Text>
           </View>
 
+          {/* Looking for event companions */}
+          <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: 'rgba(167,139,250,0.85)', marginBottom: 14 }}>Looking for event companions</Text>
+
           {/* Bio */}
-          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
+          {profile.bio ? (
+            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
+          ) : null}
 
-          {/* Transport + goal */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-            {[
-              profile.transport === 'car'  ? { Icon: PhCar,    label: 'Driving'     } :
-              profile.transport === 'lift' ? { Icon: ThumbsUp, label: 'Needs a ride'} :
-                                             { Icon: PhMapPin,  label: 'Meeting there'},
-              { Icon: profile.goal === 'networking' ? UsersThree : profile.goal === 'activity' ? Barbell : Couch,
-                label: profile.goal === 'networking' ? 'Networking' : profile.goal === 'activity' ? 'Activity' : 'Chill' },
-            ].map(({ Icon, label }) => (
-              <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                <Icon size={13} color="rgba(255,255,255,0.5)" weight="duotone" />
-                <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.6)' }}>{label}</Text>
+          {/* About — text rows */}
+          {(() => {
+            const interests = profile.interests || []
+            const langs = profile.langs || []
+            const usually = interests.slice(0, 3).map((t: string) => t.indexOf(' ') !== -1 ? t.slice(t.indexOf(' ') + 1) : t).join(' · ')
+            const langText = langs.map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c).join(' · ')
+            const transportText = profile.transport === 'car' ? 'Driving (open to giving a lift)' : profile.transport === 'lift' ? 'Open to carpooling' : 'Meeting there'
+            const rows = [
+              usually && { label: 'Usually goes for', value: usually },
+              langText && { label: 'Languages', value: langText },
+              { label: 'Getting there', value: transportText },
+            ].filter(Boolean) as { label: string; value: string }[]
+            return (
+              <View style={{ marginBottom: 22, gap: 8 }}>
+                {rows.map(r => (
+                  <Text key={r.label} style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 19 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Outfit-Medium' }}>{r.label}: </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'Outfit-SemiBold' }}>{r.value}</Text>
+                  </Text>
+                ))}
               </View>
-            ))}
-          </View>
-
-          {/* Languages */}
-          {(profile.langs || []).length > 0 && (
-            <>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 1, marginBottom: 8 }}>LANGUAGES</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-                {(profile.langs || []).map((l: string, i: number) => {
-                  const lang = LANGUAGES_LIST.find(x => x.code === l)
-                  return (
-                    <View key={i} style={{ paddingHorizontal: 7, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.25)' }}>
-                      <Text style={{ fontSize: 14 }}>{lang ? lang.flag : l}</Text>
-                    </View>
-                  )
-                })}
-              </View>
-            </>
-          )}
+            )
+          })()}
 
           {/* AI Match badge */}
           {profile.aiScore != null && (
@@ -4224,19 +4229,24 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
             <>
               <Text style={{ fontSize: 10, fontFamily: 'ClashDisplay-Semibold', color: 'rgba(255,255,255,0.3)', letterSpacing: 1.2, marginBottom: 10 }}>INTERESTS</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {(profile.interests || []).map((tag: string, i: number) => {
+                {(profile.interests || []).slice(0, 8).map((tag: string, i: number) => {
                   const Icon = INTEREST_ICON_MAP[tag] || Sparkle
                   const label = tag.indexOf(' ') !== -1 ? tag.slice(tag.indexOf(' ') + 1) : tag
                   const cat = INTERESTS_BY_CATEGORY.find(c => c.items.includes(tag))
                   const palette = cat ? INTEREST_CATEGORY_PALETTE[cat.id as keyof typeof INTEREST_CATEGORY_PALETTE] : null
-                  const iconColor = palette?.text || c0
+                  const chipColor = palette?.iconColor || '#A78BFA'
                   return (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: `${iconColor}18`, borderWidth: 1, borderColor: `${iconColor}35` }}>
-                      <Icon size={14} color={iconColor} weight="duotone" />
-                      <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: iconColor }}>{label}</Text>
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: `${chipColor}22`, borderWidth: 1, borderColor: `${chipColor}55` }}>
+                      <Icon size={14} color={chipColor} weight="duotone" />
+                      <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: chipColor }}>{label}</Text>
                     </View>
                   )
                 })}
+                {(profile.interests || []).length > 8 && (
+                  <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                    <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.55)' }}>+{(profile.interests || []).length - 8} more</Text>
+                  </View>
+                )}
               </View>
             </>
           )}
@@ -5486,17 +5496,23 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
   const setSlot = (idx: number, status: 'checking' | 'rejected' | null) =>
     setSlotStatus(prev => { const n = { ...prev }; if (status === null) delete n[idx]; else n[idx] = status; return n })
 
-  const pickProfilePhoto = async (replaceIdx?: number) => {
+  const pickProfilePhoto = async (replaceIdx?: number, source: 'gallery' | 'camera' = 'gallery') => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-      if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.4,
-        base64: true,
-        exif: false,
-      })
+      let result
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync()
+        if (status !== 'granted') { Alert.alert('Camera access needed', 'Enable camera in Settings to take a selfie.'); return }
+        result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.4, base64: true, exif: false, cameraType: ImagePicker.CameraType.front })
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photos.'); return }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.4,
+          base64: true,
+          exif: false,
+        })
+      }
       if (result.canceled || !result.assets?.[0]) return
       const { uri, base64 } = result.assets[0]
 
@@ -5510,7 +5526,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
       // Background moderation
-      if (ANTHROPIC_KEY && base64) {
+      if (base64) {
         setSlot(targetIdx, 'checking')
         try {
           const safe = await isImageSafe(base64)
@@ -5864,7 +5880,10 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                   <TouchableOpacity key={`${i}_${uri}`} activeOpacity={0.85}
                     onPress={() => {
                       if (isChecking || isRejected) return
-                      const acts: any[] = [{ text: '📷  Replace', onPress: () => pickProfilePhoto(i) }]
+                      const acts: any[] = [
+                        { text: '🤳  Take a selfie', onPress: () => pickProfilePhoto(i, 'camera') },
+                        { text: '🖼️  Choose from gallery', onPress: () => pickProfilePhoto(i, 'gallery') },
+                      ]
                       if (!isMain) acts.push({ text: '🗑️  Delete', style: 'destructive', onPress: () => deleteProfilePhoto(i) })
                       acts.push({ text: 'Cancel', style: 'cancel' })
                       Alert.alert(isMain ? 'Main photo' : `Photo ${i + 1}`, undefined, acts)
@@ -5878,7 +5897,11 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                   </TouchableOpacity>
                 )
                 if (i <= userPhotos.length) return (
-                  <TouchableOpacity key={i} onPress={() => pickProfilePhoto()}
+                  <TouchableOpacity key={i} onPress={() => Alert.alert('Add a photo', undefined, [
+                    { text: '🤳  Take a selfie', onPress: () => pickProfilePhoto(undefined, 'camera') },
+                    { text: '🖼️  Choose from gallery', onPress: () => pickProfilePhoto(undefined, 'gallery') },
+                    { text: 'Cancel', style: 'cancel' },
+                  ])}
                     style={{ width: SZ, height: SZ * 1.3, borderRadius: 16, backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                     <Feather name="plus" size={20} color="#94A3B8" />
                     <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>Add</Text>
@@ -5899,7 +5922,7 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
         </View>
 
         {/* Edit Profile + Settings buttons */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 32, flexDirection: 'row', gap: 10 }}>
+        <View style={{ paddingHorizontal: 20, marginBottom: 24, flexDirection: 'row', gap: 10 }}>
           <TouchableOpacity
             onPress={() => { setEditProfileOpen(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#F3EEFF', borderRadius: 16, paddingVertical: 14 }}>
@@ -5913,6 +5936,105 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
             <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Settings</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Summary blocks */}
+        {(() => {
+          const photos = userPhotos
+          const bio = (userData?.bio || '').trim()
+          const interests = userData?.interests || []
+          const langs = userData?.langs || []
+          const socialEnergy = userData?.socialEnergy
+          const musicGenres = userData?.musicGenres || []
+          const drinksPref = userData?.drinksPref
+          const transport = userData?.transport
+
+          // Profile strength scoring
+          let strength = 0
+          const tips: string[] = []
+          if (photos.length >= 1) strength += 20; else tips.push('Add a main photo')
+          if (photos.length >= 3) strength += 15; else if (photos.length < 3) tips.push(`Add ${3 - photos.length} more photo${3 - photos.length === 1 ? '' : 's'}`)
+          if (bio) strength += 15; else tips.push('Add a one-line bio')
+          if (interests.length >= 3) strength += 15; else tips.push(`Pick ${3 - interests.length} more interest${3 - interests.length === 1 ? '' : 's'}`)
+          if (langs.length >= 1) strength += 10; else tips.push('Add at least 1 language')
+          if (socialEnergy) strength += 10; else tips.push('Set your social energy')
+          if (musicGenres.length >= 1) strength += 10; else tips.push('Pick a music vibe')
+          if (drinksPref) strength += 5
+          strength = Math.min(100, strength)
+
+          const energyLabel = SOCIAL_ENERGY.find(e => e.id === socialEnergy)?.label
+          const transportLabel = transport === 'car' ? 'Has a car' : transport === 'lift' ? 'Open to carpool' : transport === 'meet' ? 'Meet there' : null
+          const langLabels = langs.slice(0, 3).map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c)
+          const vibeParts = [energyLabel, transportLabel, langLabels.join(' / ')].filter(Boolean)
+
+          return (
+            <View style={{ paddingHorizontal: 20, gap: 14, marginBottom: 32 }}>
+              {/* Profile strength */}
+              {strength < 100 && (
+                <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B', letterSpacing: -0.1 }}>Profile strength</Text>
+                    <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: strength >= 70 ? '#10B981' : strength >= 50 ? '#6366F1' : '#F97316' }}>{strength}%</Text>
+                  </View>
+                  <View style={{ height: 6, backgroundColor: '#EEF2FF', borderRadius: 99, overflow: 'hidden', marginBottom: 10 }}>
+                    <LinearGradient colors={strength >= 70 ? ['#34D399', '#10B981'] : strength >= 50 ? ['#818CF8', '#6366F1'] : ['#FBBF24', '#F97316']}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                      style={{ width: `${strength}%` as any, height: '100%' }} />
+                  </View>
+                  {tips[0] && (
+                    <TouchableOpacity onPress={() => setEditProfileOpen(true)} activeOpacity={0.8}>
+                      <Text style={{ fontSize: 12, color: '#64748B', fontFamily: 'Outfit-Medium' }}>💡 {tips[0]} <Text style={{ color: '#8B5CF6', fontFamily: 'Outfit-SemiBold' }}>→</Text></Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* Your vibe */}
+              {vibeParts.length > 0 && (
+                <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
+                  <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>Your vibe</Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-Medium', color: '#1E1B4B', lineHeight: 21 }}>{vibeParts.join(' · ')}</Text>
+                </View>
+              )}
+
+              {/* Interests preview */}
+              {interests.length > 0 && (
+                <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase' }}>Interests</Text>
+                    <TouchableOpacity onPress={() => { setDraftInterests(interests); setInterestsEditOpen(true) }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: '#8B5CF6' }}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {interests.slice(0, 6).map((it: string) => (
+                      <View key={it} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: '#F5F3FF', borderWidth: 1, borderColor: '#E9E5FF' }}>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: '#4338CA' }}>{it}</Text>
+                      </View>
+                    ))}
+                    {interests.length > 6 && (
+                      <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
+                        <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: '#6366F1' }}>+{interests.length - 6}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* Safety */}
+              <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
+                <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>Safety</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                  <Text style={{ fontSize: 13, fontFamily: 'Outfit-Medium', color: '#475569' }}>Profile visible to crew</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                  <Text style={{ fontSize: 13, fontFamily: 'Outfit-Medium', color: '#475569' }}>18+ confirmed</Text>
+                </View>
+              </View>
+            </View>
+          )
+        })()}
 
         {/* Settings Modal */}
         <Modal visible={settingsOpen} animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
@@ -5988,16 +6110,32 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Support & Legal</Text>
                   <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
                     {[
-                      { icon: 'help-circle', label: 'Help & FAQ',        iconColor: '#6366F1', bg: '#EEF2FF', action: 'faq' },
-                      { icon: 'mail',        label: 'Contact Support',   iconColor: '#06B6D4', bg: '#E0F2FE', action: 'support' },
-                      { icon: 'shield',      label: 'Privacy Policy',    iconColor: '#3B82F6', bg: '#EFF6FF', action: 'privacy' },
-                      { icon: 'file-text',   label: 'Terms of Service',  iconColor: '#F59E0B', bg: '#FFFBEB', action: 'terms' },
+                      { icon: 'help-circle', label: 'Help & FAQ',           iconColor: '#6366F1', bg: '#EEF2FF', action: 'faq' },
+                      { icon: 'mail',        label: 'Contact Support',      iconColor: '#06B6D4', bg: '#E0F2FE', action: 'support' },
+                      { icon: 'alert-octagon', label: 'Report a problem',   iconColor: '#F97316', bg: '#FFEDD5', action: 'report' },
+                      { icon: 'users',       label: 'Community Guidelines', iconColor: '#10B981', bg: '#D1FAE5', action: 'guidelines' },
+                      { icon: 'shield',      label: 'Privacy Policy',       iconColor: '#3B82F6', bg: '#EFF6FF', action: 'privacy' },
+                      { icon: 'file-text',   label: 'Terms of Service',     iconColor: '#F59E0B', bg: '#FFFBEB', action: 'terms' },
                     ].map((item, idx, arr) => (
                       <React.Fragment key={item.label}>
                         <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
                           onPress={() => {
                             if (item.action === 'faq') setSettingsSection('faq')
                             if (item.action === 'support') Linking.openURL('mailto:support@parea.app?subject=Support Request')
+                            if (item.action === 'report') {
+                              Alert.alert(
+                                'Report a problem',
+                                'What kind of problem do you want to report?',
+                                [
+                                  { text: 'A bug or glitch', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Bug%20report&body=What%20happened%3A%0A%0ASteps%20to%20reproduce%3A%0A%0ADevice%2FOS%3A%0A') },
+                                  { text: 'A problem with an event', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Event%20issue&body=Event%20name%3A%0A%0AWhat%20happened%3A%0A') },
+                                  { text: 'An unsafe profile or chat', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Safety%20report&body=User%20name%3A%0A%0AWhat%20happened%3A%0A') },
+                                  { text: 'Something else', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Report%20a%20problem&body=Describe%20the%20problem%3A%0A') },
+                                  { text: 'Cancel', style: 'cancel' },
+                                ]
+                              )
+                            }
+                            if (item.action === 'guidelines') setSettingsSection('guidelines')
                             if (item.action === 'privacy') Linking.openURL('https://parea.app/privacy')
                             if (item.action === 'terms') Linking.openURL('https://parea.app/terms')
                           }}>
@@ -6011,7 +6149,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                       </React.Fragment>
                     ))}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#CBD5E1', textAlign: 'center', marginTop: 10 }}>Parea v1.0.0</Text>
                 </View>
 
                 {/* Account */}
@@ -6019,7 +6156,10 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>Account</Text>
                   <View style={{ backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 }}>
                     <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
-                      onPress={() => { setSettingsOpen(false); setTimeout(() => onLogOut?.(), 300) }}>
+                      onPress={() => Alert.alert('Log out?', 'You can sign back in anytime.', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Log out', style: 'destructive', onPress: () => { setSettingsOpen(false); setTimeout(() => onLogOut?.(), 300) } },
+                      ])}>
                       <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
                         <Feather name="log-out" size={17} color="#EF4444" />
                       </View>
@@ -6050,6 +6190,8 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                <Text style={{ fontSize: 11, color: '#CBD5E1', textAlign: 'center', marginTop: 16, marginBottom: 8 }}>Parea v1.0.0</Text>
 
               </ScrollView>
 
@@ -6117,6 +6259,47 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                           <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 13, color: '#64748B', lineHeight: 20 }}>{item.a}</Text>
                         </View>
                       ))}
+                    </ScrollView>
+                  </SafeAreaView>
+                </View>
+              )}
+
+              {settingsSection === 'guidelines' && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#F5F3FF' }}>
+                  <SafeAreaView style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+                      <TouchableOpacity onPress={() => setSettingsSection(null)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="chevron-left" size={20} color="#475569" />
+                      </TouchableOpacity>
+                      <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 20, color: '#1E1B4B', marginLeft: 14 }}>Community Guidelines</Text>
+                    </View>
+                    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: 40 }}>
+                      <View style={{ backgroundColor: 'rgba(139,92,246,0.08)', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', borderRadius: 16, padding: 16 }}>
+                        <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 13, color: '#475569', lineHeight: 20 }}>
+                          Parea is for meeting real people in real life. Keep it kind, safe, and honest — these rules apply to chats, profiles, and offline meetups.
+                        </Text>
+                      </View>
+                      {[
+                        { emoji: '🤝', title: 'Be respectful', body: 'Treat everyone the way you\'d want to be treated. No harassment, hate speech, or discrimination based on age, gender, race, religion, or orientation.' },
+                        { emoji: '🪞', title: 'Be real', body: 'Use your real photos, real name, real age (18+). Misleading profiles are removed without warning.' },
+                        { emoji: '💬', title: 'No spam or sales', body: 'Don\'t use chats or profiles to promote services, sell things, or invite people off-platform for non-event reasons.' },
+                        { emoji: '🚫', title: 'No nudity or explicit content', body: 'Photos must be safe-for-work. Sexual content, nudity, or violence is not allowed anywhere on Parea.' },
+                        { emoji: '🌃', title: 'Show up safely', body: 'Meet in public places first. Tell a friend where you\'re going. If something feels off — leave and report the user.' },
+                        { emoji: '🔒', title: 'Respect privacy', body: 'Don\'t share other users\' photos, contacts, or personal info outside Parea without permission.' },
+                        { emoji: '📅', title: 'Honor your plans', body: 'If you can\'t make it to an event you joined — open the chat and let your crew know. Last-minute drops without notice may affect future invites.' },
+                        { emoji: '🚨', title: 'Report abuse', body: 'Use the Report and Block buttons on any profile if someone breaks the rules. We review reports quickly.' },
+                      ].map((item, idx) => (
+                        <View key={idx} style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Text style={{ fontSize: 18 }}>{item.emoji}</Text>
+                            <Text style={{ fontFamily: 'Outfit-SemiBold', fontSize: 14, color: '#1E1B4B' }}>{item.title}</Text>
+                          </View>
+                          <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 13, color: '#64748B', lineHeight: 20 }}>{item.body}</Text>
+                        </View>
+                      ))}
+                      <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 8 }}>
+                        Violating these rules may result in warnings, account suspension, or permanent ban.
+                      </Text>
                     </ScrollView>
                   </SafeAreaView>
                 </View>
