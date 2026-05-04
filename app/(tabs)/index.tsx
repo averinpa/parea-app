@@ -2520,6 +2520,13 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     if (city && e.city && e.city.toLowerCase() !== city.toLowerCase()) return false
     if (isEventPast(e.time)) return false
     if (e.type === 'official') return false
+    // Hide community events whose host's crew preference excludes this user's gender (own events always visible)
+    if (!e.isHosted) {
+      const pref = (e.crewPref || 'any').toLowerCase()
+      const myGender = ((userData as any)?.gender || '').toLowerCase()
+      if (pref === 'women' && myGender !== 'female') return false
+      if (pref === 'men'   && myGender !== 'male')   return false
+    }
     return true
   })
 
@@ -3230,7 +3237,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         {communityEvents.length > 0 ? (
           <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 8 }}>
             {communityEvents.map((ev: any) => {
-              const filled = ev.isHosted ? (approvedJoiners[ev.id] || []).length + 1 : ev.participantsCount || 0
+              const filled = ev.isHosted ? Math.max((approvedJoiners[ev.id] || []).length + 1, ev.participantsCount || 1) : ev.participantsCount || 0
               const total = ev.maxParticipants || 10
               const pct = Math.min(1, filled / total)
               const free = Math.max(0, total - filled)
@@ -3373,6 +3380,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 3</Text>
             </View>
           )}
+          {joinSheet.ev?.type === 'community' && joinSheet.step !== 4 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(99,102,241,0.2)' }} />
+                <View style={{ width: 20, height: 6, borderRadius: 3, backgroundColor: '#6366F1' }} />
+              </View>
+              <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step 2 of 2</Text>
+            </View>
+          )}
 
           {joinSheet.step === 4 ? (
             <View style={{ alignItems: 'center', paddingVertical: 28 }}>
@@ -3457,8 +3473,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               <TouchableOpacity
                 style={[s.joinSheetNext, !joinSheet.transport && { opacity: 0.4 }, joinSheet.transport && { shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 }]}
                 disabled={!joinSheet.transport}
-                onPress={() => setJoinSheet(prev => ({ ...prev, step: 3 }))}>
-                <Text style={s.joinSheetNextTxt}>Continue →</Text>
+                onPress={() => {
+                  // Community events skip crew preference step — host already set it
+                  if (joinSheet.ev?.type === 'community') confirmJoin()
+                  else setJoinSheet(prev => ({ ...prev, step: 3 }))
+                }}>
+                <Text style={s.joinSheetNextTxt}>{joinSheet.ev?.type === 'community' ? 'Send Request →' : 'Continue →'}</Text>
               </TouchableOpacity>
             </>
           ) : null}
@@ -6476,10 +6496,18 @@ function LocationPicker({ apiKey, initialCity, initialLocation, initialCoords, i
       const res = await fetch(url)
       const json = await res.json()
       const loc = json.result?.geometry?.location
-      const addr = json.result?.formatted_address || place.description
+      const name = json.result?.name
+      const addr = json.result?.formatted_address
+      // Prepend the place name if it isn't already in the address (e.g. "Klok Café, Anexartisias 12, ...")
+      let full = addr || place.description
+      if (name && full && !full.toLowerCase().startsWith(name.toLowerCase())) {
+        full = `${name}, ${full}`
+      } else if (name && !full) {
+        full = name
+      }
       if (loc) {
         setPinCoords({ lat: loc.lat, lng: loc.lng })
-        setPinAddress(addr)
+        setPinAddress(full)
         animateMapTo(loc.lat, loc.lng)
       }
     } catch {}
@@ -6639,6 +6667,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createDescription, setCreateDescription] = useState('')
   const [createDriving, setCreateDriving] = useState(false)
   const [createLangs, setCreateLangs] = useState<string[]>([])
+  const [createCrewPref, setCreateCrewPref] = useState<string>('any')
   const [calViewYear, setCalViewYear] = useState(new Date().getFullYear())
   const [calViewMonth, setCalViewMonth] = useState(new Date().getMonth())
   const [createCategory, setCreateCategory] = useState<string>('Sport')
@@ -6646,6 +6675,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createCustom, setCreateCustom] = useState('')
   const [createImage, setCreateImage] = useState<{ uri: string; base64: string } | null>(null)
   const createScrollRef = useRef<ScrollView>(null)
+  // Scroll create form to top on step change
+  useEffect(() => { createScrollRef.current?.scrollTo({ y: 0, animated: false }) }, [createStep])
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [city, setCity] = useState<string | null>(null)
@@ -6765,7 +6796,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         supabase
           .from('join_requests')
           .select('event_id')
-          .eq('status', 'confirmed'),
+          .in('status', ['approved', 'confirmed']),
       ])
       // Count only confirmed per event (approved = reserved but not yet accepted by joiner)
       const participantCounts: Record<number, number> = {}
@@ -6790,6 +6821,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           isHosted: e.host_id === userData?.dbId,
           hostId: e.host_id,
           hostTransport: e.host_transport || null,
+          crewPref: e.crew_pref || 'any',
           hostProfile: e.host ? {
             id: e.host.id,
             name: e.host.name || 'Host',
@@ -6816,7 +6848,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const jrChannel = supabase.channel('join_requests_counts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'join_requests' }, (payload: any) => {
         const r = payload.new
-        if (r.status === 'confirmed') {
+        if (r.status === 'approved' || r.status === 'confirmed') {
           setDbCommunityEvents(prev => prev.map(e =>
             e.id === r.event_id ? { ...e, participantsCount: (e.participantsCount || 1) + 1 } : e
           ))
@@ -8721,7 +8753,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <SafeAreaView style={s.fill} edges={Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
-            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents, ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents.map(uc => { const dbVer = dbCommunityEvents.find(d => d.id === uc.id); return dbVer ? { ...uc, participantsCount: dbVer.participantsCount } : uc }), ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} />
           </View>
           <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, bottom: 0, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
           <VibeCheckTab
@@ -9332,10 +9364,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               {(() => {
                 const allKnownEvs = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...feedOfficialDbEvents, ...dbCommunityEvents, ...userCreatedEvents]
                 const now = Date.now()
+                // Only official events trigger Vibe Check (joiners use it to find crew). Community events handled in chats.
                 const hasActiveJoined = Object.entries(joinedEvents).some(([id, v]) => {
                   if (!v) return false
                   const ev = allKnownEvs.find(e => e.id === Number(id))
                   if (!ev) return false
+                  if (ev.type !== 'official') return false
                   if (ev.expiresAt && ev.expiresAt <= now) return false
                   return true
                 })
@@ -9427,7 +9461,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 <View style={{ paddingHorizontal: 22, paddingBottom: 20 }}>
                   <Text style={{ fontSize: 28, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.5 }}>
                     {[
-                      { title: "Who's coming?", emoji: '' },
+                      { title: "Choose your crew size", emoji: '' },
                       { title: "What's the plan?", emoji: '' },
                       { title: "When & where?", emoji: '' },
                       { title: "Final touches", emoji: '' },
@@ -9456,19 +9490,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <View style={{ gap: 12 }}>
                       {([
                         {
-                          id: 'duo', Icon: Users, label: 'Duo', tag: '2 people',
-                          sub: 'Most personal — just you and one other person',
+                          id: 'duo', Icon: Users, label: 'Duo', tag: 'You + 1 guest',
+                          sub: 'Most personal — just the two of you',
                           grad: ['#6366F1', '#818CF8'] as [string,string],
                           bg: '#EEF2FF', accent: '#6366F1', tagBg: '#C7D2FE',
                         },
                         {
-                          id: 'squad', Icon: UsersRound, label: 'Squad', tag: 'up to 5',
+                          id: 'squad', Icon: UsersRound, label: 'Squad', tag: 'Up to 5 people',
                           sub: 'Small group energy — tight circle, good vibes',
                           grad: ['#16a34a', '#22c55e'] as [string,string],
                           bg: '#F0FDF4', accent: '#16a34a', tagBg: '#BBF7D0',
                         },
                         {
-                          id: 'party', Icon: PartyPopper, label: 'Group', tag: 'up to 20',
+                          id: 'party', Icon: PartyPopper, label: 'Group', tag: 'Up to 20 people',
                           sub: 'Open gathering — the more the merrier',
                           grad: ['#ea580c', '#f97316'] as [string,string],
                           bg: '#FFF7ED', accent: '#ea580c', tagBg: '#FED7AA',
@@ -9519,7 +9553,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       'Sport':   { PhIcon: Barbell,      color: '#3B82F6', bg: '#EFF6FF', items: [{ id:'padel',   Icon: TennisBall,     label:'Padel' },{ id:'tennis',  Icon: TennisBall,     label:'Tennis' },{ id:'yoga',    Icon: YinYang,        label:'Yoga' },{ id:'gym',     Icon: Barbell,        label:'Gym' },{ id:'water',   Icon: WaveSine,       label:'Water Sports' }] },
                       'Food':    { PhIcon: ForkKnife,   color: '#EC4899', bg: '#FDF2F8', items: [{ id:'coffee',  Icon: PhCoffee,       label:'Coffee' },{ id:'meze',    Icon: ForkKnife,      label:'Meze' },{ id:'wine',    Icon: PhWine,         label:'Wine' },{ id:'brunch',  Icon: Egg,            label:'Brunch' },{ id:'sunset',  Icon: SunHorizon,     label:'Sunset' }] },
                       'Work':    { PhIcon: PhBriefcase, color: '#8B5CF6', bg: '#F5F3FF', items: [{ id:'networking', Icon: Handshake,   label:'Networking' },{ id:'crypto',  Icon: Coins,          label:'Crypto' },{ id:'cowork',  Icon: Laptop,         label:'Co-working' }] },
-                      'Relax':   { PhIcon: PhLeaf,      color: '#10B981', bg: '#F0FDF4', items: [{ id:'beach',   Icon: Umbrella,       label:'Beach' },{ id:'hiking',  Icon: Mountains,      label:'Hiking' },{ id:'boat',    Icon: Sailboat,       label:'Boat' },{ id:'boardgames', Icon: GameController, label:'Board Games' }] },
+                      'Chill':   { PhIcon: PhLeaf,      color: '#10B981', bg: '#F0FDF4', items: [{ id:'beach',   Icon: Umbrella,       label:'Beach' },{ id:'hiking',  Icon: Mountains,      label:'Hiking' },{ id:'boat',    Icon: Sailboat,       label:'Boat' },{ id:'boardgames', Icon: GameController, label:'Board Games' }] },
                       'Culture': { PhIcon: PhPalette,   color: '#F59E0B', bg: '#FFFBEB', items: [{ id:'dance',   Icon: MusicNotes,     label:'Dance' },{ id:'concert',  Icon: MicrophoneStage, label:'Concert' },{ id:'theatre', Icon: MaskHappy,      label:'Theatre' },{ id:'music',   Icon: MusicNotes,     label:'Music' },{ id:'art',     Icon: PhPalette,      label:'Art' }] },
                     }
                     const activeCat = CATS[createCategory] || CATS['Sport']
@@ -9568,27 +9602,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             )
                           })}
                         </View>
-                        {/* Custom name input if Other selected */}
-                        {createType === 'other' && (
-                          <View style={{ marginTop: 12, backgroundColor: '#F5F3FF', borderRadius: 18, padding: 16 }}>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6', marginBottom: 10 }}>What are you planning?</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
-                              backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-                              borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#8B5CF6' : '#E2E8F0' }}>
-                              <Pencil size={15} color="#8B5CF6" strokeWidth={2} />
-                              <TextInput value={createCustom} onChangeText={setCreateCustom}
-                                placeholder="e.g. Paddle tennis, Pottery class..." placeholderTextColor="#94A3B8"
-                                returnKeyType="done"
-                                onFocus={() => setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 300)}
-                                style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} />
-                              {createCustom.length > 0 && (
-                                <TouchableOpacity onPress={() => setCreateCustom('')}>
-                                  <Feather name="x-circle" size={16} color="#94A3B8" />
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          </View>
-                        )}
+                        {/* Plan name — always visible, required */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 18, marginBottom: 8 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase' }}>Plan name</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>*</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
+                          backgroundColor: createCustom.length > 0 ? '#EEF2FF' : '#F8FAFC',
+                          borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
+                          borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#E2E8F0' }}>
+                          <Pencil size={15} color={createCustom.length > 0 ? '#6366F1' : '#94A3B8'} strokeWidth={2} />
+                          <TextInput value={createCustom} onChangeText={setCreateCustom}
+                            placeholder="e.g. Wine & chat at Marina" placeholderTextColor="#94A3B8"
+                            returnKeyType="done"
+                            onFocus={() => setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 300)}
+                            style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} />
+                          {createCustom.length > 0 && (
+                            <TouchableOpacity onPress={() => setCreateCustom('')}>
+                              <Feather name="x-circle" size={16} color="#94A3B8" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     )
                   })()}
@@ -9766,10 +9800,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             [{ text: 'Cancel', style: 'cancel' }, { text: 'I agree', onPress: pickImage }]
                           )
                         }}
-                          style={{ height: 140, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: createImage ? '#6366F1' : '#E2E8F0', borderStyle: createImage ? 'solid' : 'dashed', alignItems: 'center', justifyContent: 'center' }}>
+                          style={{ height: 180, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: createImage ? '#6366F1' : '#E2E8F0', borderStyle: createImage ? 'solid' : 'dashed', alignItems: 'center', justifyContent: 'center' }}>
                           {createImage ? (
                             <>
-                              <Image source={{ uri: createImage.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                              <Image source={{ uri: createImage.uri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
                               <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
                                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Change</Text>
                               </View>
@@ -9832,6 +9866,33 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         </View>
                         <Switch value={createDriving} onValueChange={setCreateDriving} trackColor={{ false: '#E2E8F0', true: '#818CF8' }} thumbColor={createDriving ? '#6366F1' : '#f4f3f4'} />
                       </TouchableOpacity>
+
+                      {/* Who can join */}
+                      <View>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Who can join</Text>
+                        <View style={{ gap: 8 }}>
+                          {[
+                            { id: 'any',    label: 'Anyone',       sub: 'Open to everyone' },
+                            { id: 'women',  label: 'Women only',   sub: 'Only women can join' },
+                            { id: 'men',    label: 'Men only',     sub: 'Only men can join' },
+                            { id: 'mixed',  label: 'Mixed group',  sub: 'Mix of women and men' },
+                          ].map(opt => {
+                            const sel = createCrewPref === opt.id
+                            return (
+                              <TouchableOpacity key={opt.id} onPress={() => setCreateCrewPref(opt.id)} activeOpacity={0.85}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13, borderRadius: 14,
+                                  backgroundColor: sel ? '#EEF2FF' : '#F8FAFC',
+                                  borderWidth: 1.5, borderColor: sel ? '#6366F1' : 'transparent' }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: sel ? '#4338CA' : '#1E1B4B' }}>{opt.label}</Text>
+                                  <Text style={{ fontSize: 12, fontFamily: 'Outfit-Regular', color: '#64748B', marginTop: 1 }}>{opt.sub}</Text>
+                                </View>
+                                {sel && <CheckCircle size={20} color="#6366F1" strokeWidth={2} />}
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
+                      </View>
                     </View>
                   )}
 
@@ -9840,8 +9901,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 {/* Bottom button — pinned to bottom */}
                 <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, backgroundColor: 'transparent' }}>
                   {createStep < 4 ? (() => {
-                    const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && !createType) || (createStep === 3 && (!createDay || !createHour || !createLocation.trim()))
-                    const disabledLabel = ['Pick a format', 'Pick an activity', 'Choose date & time', ''][createStep - 1]
+                    const isDisabled = (createStep === 1 && !createSize) || (createStep === 2 && (!createType || !createCustom.trim())) || (createStep === 3 && (!createDay || !createHour || !createLocation.trim()))
+                    const disabledLabel = ['Pick a format', 'Pick activity & name it', 'Choose date & time', ''][createStep - 1]
                     const activeLabel   = ['Next: Activity →', 'Next: Date & time →', 'Next: Final step →', ''][createStep - 1]
                     const STEP_COLORS: [string,string][] = [['#6366F1','#818CF8'],['#EC4899','#F472B6'],['#10B981','#34D399'],['#F59E0B','#FBBF24']]
                     if (isDisabled) return (
@@ -9919,6 +9980,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               gradient: grad,
                               host_transport: createDriving ? 'car' : null,
                               image_url: imageUrl,
+                              crew_pref: createCrewPref || 'any',
                             }).select().single()
                             if (dbErr) console.warn('community_events insert error:', dbErr.message)
                             if (dbEv?.id) newId = dbEv.id
@@ -9940,7 +10002,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           seekingCount: 0,
                           participantsCount: 1,
                           maxParticipants: SIZE_MAX[createSize || 'squad'] || 5,
-                          description: createDescription || `${actLabel}${createLocation ? ' · 📍 ' + createLocation : ''}${createDriving ? ' · 🚗 Host can give a lift' : ''}`,
+                          description: createDescription || null,
                           location: createLocation,
                           isHosted: true,
                           hostId: userData?.dbId,
@@ -10054,6 +10116,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           <Feather name="external-link" size={12} color="#6366F1" />
                         </TouchableOpacity>
                       </View>
+                      {(() => {
+                        const myT = userEventTransport[eventDetail.id] || (eventDetail.isHosted && eventDetail.hostTransport === 'car' ? 'car' : '')
+                        if (!myT) return null
+                        const tIcon = myT === 'car' ? 'truck' : myT === 'lift' ? 'thumbs-up' : 'map-pin'
+                        const tLabel = myT === 'car' ? "I'm driving · Open to giving a lift"
+                                     : myT === 'lift' ? 'I need a ride · Open to carpooling'
+                                     : "I'll meet there"
+                        return (
+                          <>
+                            <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              <View style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                                <Feather name={tIcon as any} size={16} color="#6366F1" />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Your transport</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginTop: 1 }}>{tLabel}</Text>
+                              </View>
+                            </View>
+                          </>
+                        )
+                      })()}
                     </View>
 
                     {/* Description */}
