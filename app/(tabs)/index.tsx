@@ -6191,23 +6191,23 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                         <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}
                           onPress={() => {
                             if (item.action === 'faq') setSettingsSection('faq')
-                            if (item.action === 'support') Linking.openURL('mailto:support@parea.app?subject=Support Request')
+                            if (item.action === 'support') Linking.openURL('mailto:support@joinparea.app?subject=Support Request')
                             if (item.action === 'report') {
                               Alert.alert(
                                 'Report a problem',
                                 'What kind of problem do you want to report?',
                                 [
-                                  { text: 'A bug or glitch', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Bug%20report&body=What%20happened%3A%0A%0ASteps%20to%20reproduce%3A%0A%0ADevice%2FOS%3A%0A') },
-                                  { text: 'A problem with an event', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Event%20issue&body=Event%20name%3A%0A%0AWhat%20happened%3A%0A') },
-                                  { text: 'An unsafe profile or chat', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Safety%20report&body=User%20name%3A%0A%0AWhat%20happened%3A%0A') },
-                                  { text: 'Something else', onPress: () => Linking.openURL('mailto:support@parea.app?subject=Report%20a%20problem&body=Describe%20the%20problem%3A%0A') },
+                                  { text: 'A bug or glitch', onPress: () => Linking.openURL('mailto:support@joinparea.app?subject=Bug%20report&body=What%20happened%3A%0A%0ASteps%20to%20reproduce%3A%0A%0ADevice%2FOS%3A%0A') },
+                                  { text: 'A problem with an event', onPress: () => Linking.openURL('mailto:support@joinparea.app?subject=Event%20issue&body=Event%20name%3A%0A%0AWhat%20happened%3A%0A') },
+                                  { text: 'An unsafe profile or chat', onPress: () => Linking.openURL('mailto:support@joinparea.app?subject=Safety%20report&body=User%20name%3A%0A%0AWhat%20happened%3A%0A') },
+                                  { text: 'Something else', onPress: () => Linking.openURL('mailto:support@joinparea.app?subject=Report%20a%20problem&body=Describe%20the%20problem%3A%0A') },
                                   { text: 'Cancel', style: 'cancel' },
                                 ]
                               )
                             }
                             if (item.action === 'guidelines') setSettingsSection('guidelines')
-                            if (item.action === 'privacy') Linking.openURL('https://parea.app/privacy')
-                            if (item.action === 'terms') Linking.openURL('https://parea.app/terms')
+                            if (item.action === 'privacy') Linking.openURL('https://joinparea.app/privacy')
+                            if (item.action === 'terms') Linking.openURL('https://joinparea.app/terms')
                           }}>
                           <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
                             <Feather name={item.icon as any} size={17} color={item.iconColor} />
@@ -8520,20 +8520,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => sub.remove()
   }, [])
 
-  // Deep link handler: works for pareaapp://event/:id (APK), exp://...--/event/:id (Expo Go), https://parea.app/event/:id (Universal Links)
+  // Deep link handler: works for pareaapp://event/:id (APK), exp://...--/event/:id (Expo Go), https://joinparea.app/event/:id (Universal Links)
   useEffect(() => {
+    const openById = (id: number) => {
+      const allKnown = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents]
+      const found = allKnown.find(e => e.id === id || e._dbId === id)
+      if (found) setEventDetail(found)
+    }
     const handleUrl = ({ url }: { url: string }) => {
       const parsed = ExpoLinking.parse(url)
       const path = parsed.path || ''
       const match = path.match(/^event\/(\d+)/) || url.match(/event\/(\d+)/)
-      if (match) {
-        const id = parseInt(match[1])
-        const allKnown = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents]
-        const found = allKnown.find(e => e.id === id || e._dbId === id)
-        if (found) setEventDetail(found)
-      }
+      if (match) openById(parseInt(match[1]))
     }
     Linking.getInitialURL().then(url => { if (url) handleUrl({ url }) })
+    // Pending deep link from /event/[id] route file
+    AsyncStorage.getItem('pendingDeepLinkEventId').then(stored => {
+      if (stored) {
+        AsyncStorage.removeItem('pendingDeepLinkEventId')
+        openById(parseInt(stored))
+      }
+    })
     const sub = Linking.addEventListener('url', handleUrl)
     return () => sub.remove()
   }, [dbCommunityEvents, feedOfficialDbEvents, userCreatedEvents])
@@ -10081,7 +10088,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
-                        const deepLink = ExpoLinking.createURL(`event/${eventDetail.id}`)
+                        const deepLink = `https://joinparea.app/event/${eventDetail.id}`
                         const text = `${eventDetail.title}\n📅 ${eventDetail.time || ''}\n📍 ${eventDetail.location || eventDetail.city || ''}\n\nJoin me on Parea 👉 ${deepLink}`
                         Share.share({ message: text, title: eventDetail.title })
                       }}
