@@ -7545,8 +7545,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       for (const m of memberships) {
         const chat = m.chats as any
         if (!chat || !chat.event_id) continue
-        // Already confirmed for this event — skip
-        if (joinedEventsRef.current[chat.event_id] === 'confirmed') continue
         // User explicitly left this event — don't re-add
         if (cancelledEventIdsRef.current.has(chat.event_id)) continue
         // Fetch members
