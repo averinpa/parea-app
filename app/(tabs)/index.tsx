@@ -2520,6 +2520,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     if (city && e.city && e.city.toLowerCase() !== city.toLowerCase()) return false
     if (isEventPast(e.time)) return false
     if (e.type === 'official') return false
+    // Hide private community events from non-hosts (host always sees own private plans)
+    if (!e.isHosted && e.visibility === 'private') return false
     // Hide community events whose host's crew preference excludes this user's gender (own events always visible)
     if (!e.isHosted) {
       const pref = (e.crewPref || 'any').toLowerCase()
@@ -3260,6 +3262,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                         <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                        {ev.visibility === 'private' && (
+                          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#F1F5F9' }}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>Private 🔒</Text>
+                          </View>
+                        )}
                         <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#EEF2FF' }}>
                           <Text style={{ fontSize: 10, fontWeight: '700', color: '#4338CA', textTransform: 'capitalize' }}>{ev.category}</Text>
                         </View>
@@ -4723,7 +4730,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
     if (hasHostActivity) return '👑 You have join requests'
     const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
     if (myEvents.length > 0 && totalReal > 0) return `${totalReal} ${totalReal === 1 ? 'person' : 'people'} joined · tap to review`
-    if (myEvents.length > 0) return `${myEvents.length} event${myEvents.length > 1 ? 's' : ''} · looking for crew...`
+    const lookingCount = myEvents.length + activeHosted.length
+    if (lookingCount > 0) return `${lookingCount} event${lookingCount > 1 ? 's' : ''} · looking for crew...`
     if (myApprovedCommunityEvents.length > 0) return `You're in — open the chat`
     if (myCommunityEvents.length > 0) return `${myCommunityEvents.length} request${myCommunityEvents.length > 1 ? 's' : ''} · waiting for host`
     return `${pendingHostedEvents.length} social${pendingHostedEvents.length > 1 ? 's' : ''} · waiting for host approval`
@@ -6668,6 +6676,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createDriving, setCreateDriving] = useState(false)
   const [createLangs, setCreateLangs] = useState<string[]>([])
   const [createCrewPref, setCreateCrewPref] = useState<string>('any')
+  const [createVisibility, setCreateVisibility] = useState<'public' | 'private'>('public')
   const [calViewYear, setCalViewYear] = useState(new Date().getFullYear())
   const [calViewMonth, setCalViewMonth] = useState(new Date().getMonth())
   const [createCategory, setCreateCategory] = useState<string>('Sport')
@@ -6822,6 +6831,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           hostId: e.host_id,
           hostTransport: e.host_transport || null,
           crewPref: e.crew_pref || 'any',
+          visibility: e.visibility || 'public',
           hostProfile: e.host ? {
             id: e.host.id,
             name: e.host.name || 'Host',
@@ -7392,12 +7402,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           const p = (m as any).profiles || {}
           return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
         })
-        const isDuo = chatData?.type === 'duo' || members.length === 2
+        const isCommunityChat = !!dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)
+        const isDuo = chatData?.type === 'duo' || (!isCommunityChat && members.length === 2)
         const partner = otherMembers[0]
         const eventTitle = inviteData?.event_title || dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || 'Crew Chat'
         const foundEv = dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id) || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)
         const evChatExpiry = (foundEv?.expiresAt > 0 ? foundEv.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
-        const newChat = isDuo ? {
+        const newChat: any = isDuo ? {
           id: chatId, type: 'duo', eventRefId: chatData?.event_id,
           name: partner?.name || 'Your crew',
           age: partner?.age || '',
@@ -7417,9 +7428,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           lastMsg: '🎉 You\'re in the crew! Say hi 👋',
           time: new Date().toISOString(), isNew: true, chatExpiresAt: evChatExpiry,
         }
+        if (isCommunityChat && chatData?.event_id) newChat.communityEventId = chatData.event_id
         // Don't re-add if user explicitly left this event
         if (chatData?.event_id && cancelledEventIdsRef.current.has(chatData.event_id)) return
         setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
+        if (isCommunityChat && chatData?.event_id) communityEventChatMap.current[chatData.event_id] = chatId
         if (chatData?.event_id) {
           setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
           setJoinedEvents(prev => ({ ...prev, [chatData.event_id]: 'confirmed' }))
@@ -7547,8 +7560,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           const p = (mem as any).profiles || {}
           return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
         })
-        const newChat = {
-          id: chat.id, type: 'group', eventRefId: chat.event_id,
+        const isCommunityChat = !!dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)
+        const newChat: any = {
+          id: chat.id, type: chat.type === 'duo' ? 'duo' : 'group', eventRefId: chat.event_id,
           event: dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || feedOfficialDbEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || 'Crew Chat',
           eventEmoji: '🎉', members: members.length,
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
@@ -7556,7 +7570,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           lastMsg: chat.last_msg || '🎉 You\'re in the crew!',
           time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
         }
+        if (isCommunityChat) newChat.communityEventId = chat.event_id
         setChatList(prev => prev.some(c => c.id === chat.id) ? prev : [newChat, ...prev])
+        if (isCommunityChat) communityEventChatMap.current[chat.event_id] = chat.id
         setJoinedEvents(prev => ({ ...prev, [chat.event_id]: 'confirmed' }))
         setOfficialEventChatMap(prev => ({ ...prev, [chat.event_id]: chat.id }))
         setCrewPreviewMap(prev => ({ ...prev, [chat.event_id]: null }))
@@ -8950,20 +8966,40 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 return
               }
               // Community / non-official / no real attendees → create chat immediately
-              // Для community events: обновляем статус в DB → хост увидит через poll
+              const isGroup = format !== '1+1'
+              const chatType = isGroup ? 'group' : 'duo'
+              let dbChatId: number | null = null
               if (ev.type === 'community' && !ev.isHosted && userData?.dbId) {
-                supabase.from('join_requests')
+                await supabase.from('join_requests')
                   .update({ status: 'confirmed' })
                   .eq('event_id', ev.id)
                   .eq('requester_id', userData.dbId)
-                  .then(({ error }) => { if (error) console.warn('confirm status error:', error.message) })
+                // Find or create real chat row in DB so it persists across devices
+                const { data: existingChat } = await supabase
+                  .from('chats').select('id')
+                  .eq('event_id', ev.id).eq('type', chatType).maybeSingle()
+                if (existingChat) {
+                  dbChatId = existingChat.id
+                } else {
+                  const { data: newDbChat } = await supabase
+                    .from('chats')
+                    .insert({ event_id: ev.id, type: chatType, last_msg: isGroup ? '🎉 Group chat created!' : '👋 You matched!' })
+                    .select('id').single()
+                  if (newDbChat) dbChatId = newDbChat.id
+                }
+                // Add joiner + host to chat_members so both phones can restore the chat
+                if (dbChatId) {
+                  const inserts: any[] = [{ chat_id: dbChatId, profile_id: userData.dbId }]
+                  if (ev.hostId) inserts.push({ chat_id: dbChatId, profile_id: ev.hostId })
+                  await supabase.from('chat_members').upsert(inserts, { onConflict: 'chat_id,profile_id' })
+                }
               }
               // For community events: prepend host profile to members list
               const communityHostProfile = ev.type === 'community' && ev.hostProfile && !ev.isHosted ? ev.hostProfile : null
               const chatMembers = communityHostProfile ? [communityHostProfile, ...partners] : partners
-              const isGroup = format !== '1+1'
+              const localId = dbChatId ?? Date.now()
               const newChat = isGroup ? {
-                id: Date.now(), type: 'group',
+                id: localId, type: 'group',
                 event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                 members: chatMembers.length + 1,
                 avatars: chatMembers.map((p: any) => p.photo).filter(Boolean),
@@ -8973,7 +9009,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
                 communityEventId: ev.id,
               } : {
-                id: Date.now(), type: 'duo',
+                id: localId, type: 'duo',
                 name: partners[0]?.name || 'Your match',
                 age: partners[0]?.age || '',
                 transport: partners[0]?.transport || 'meet',
@@ -9436,7 +9472,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         <Modal visible={createOpen} animationType="slide" onRequestClose={() => {
           setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
           setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
-          setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
+          setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
           setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
         }}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
@@ -9452,7 +9488,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       } else {
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
-                        setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
+                        setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                       }
                     }}
@@ -9471,7 +9507,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     onPress={() => {
                       setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                       setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDriving(false);
-                      setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
+                      setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                       setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                     }}
                     style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
@@ -9889,6 +9925,32 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <Switch value={createDriving} onValueChange={setCreateDriving} trackColor={{ false: '#E2E8F0', true: '#818CF8' }} thumbColor={createDriving ? '#6366F1' : '#f4f3f4'} />
                       </TouchableOpacity>
 
+                      {/* Plan visibility */}
+                      <View>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Plan visibility</Text>
+                        <View style={{ gap: 8 }}>
+                          {[
+                            { id: 'public',  label: 'Public',       sub: 'Visible in Community' },
+                            { id: 'private', label: 'Private 🔒',  sub: 'Only people with invite can join' },
+                          ].map(opt => {
+                            const sel = createVisibility === opt.id
+                            return (
+                              <TouchableOpacity key={opt.id} onPress={() => setCreateVisibility(opt.id as 'public' | 'private')} activeOpacity={0.85}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13, borderRadius: 14,
+                                  backgroundColor: sel ? '#EEF2FF' : '#F8FAFC',
+                                  borderWidth: 1.5, borderColor: sel ? '#6366F1' : 'transparent' }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: sel ? '#4338CA' : '#1E1B4B' }}>{opt.label}</Text>
+                                  <Text style={{ fontSize: 12, fontFamily: 'Outfit-Regular', color: '#64748B', marginTop: 1 }}>{opt.sub}</Text>
+                                </View>
+                                {sel && <CheckCircle size={20} color="#6366F1" strokeWidth={2} />}
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
+                        {/* TODO: generate/share invite link for private plans */}
+                      </View>
+
                       {/* Who can join */}
                       <View>
                         <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Who can join</Text>
@@ -10003,6 +10065,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                               host_transport: createDriving ? 'car' : null,
                               image_url: imageUrl,
                               crew_pref: createCrewPref || 'any',
+                              visibility: createVisibility,
                             }).select().single()
                             if (dbErr) console.warn('community_events insert error:', dbErr.message)
                             if (dbEv?.id) newId = dbEv.id
@@ -10034,13 +10097,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           expiresAt,
                           createdAt: Date.now(),
                           image_url: imageUrl,
+                          visibility: createVisibility,
                         }
                         setUserCreatedEvents(prev => [...prev, newEvent])
 
                         // Reset form
                         setCreateOpen(false); setCreateStep(1); setCreateSize(null); setCreateType(null);
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
-                        setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null);
+                        setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                         showToast('Others can find it in the feed now', 'Your social is live! 🎉', '🎉')
                       }}>
@@ -10096,7 +10160,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
                         {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()}{eventDetail.distance && eventDetail.distance !== '0km' ? ` · ${eventDetail.distance}` : ''}
                       </Text>
-                      <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28 }}>{eventDetail.title}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28, flexShrink: 1 }}>{eventDetail.title}</Text>
+                        {eventDetail.visibility === 'private' && (
+                          <View style={{ paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Private 🔒</Text>
+                          </View>
+                        )}
+                      </View>
                     </LinearGradient>
                     <TouchableOpacity onPress={() => setEventDetail(null)} style={[s.detailBackBtn, { position: 'absolute', top: 52, left: 20 }]}>
                       <Ionicons name="chevron-back" size={24} color="#fff" />
