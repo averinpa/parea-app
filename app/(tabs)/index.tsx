@@ -38,8 +38,8 @@ import {
   MUSIC_GENRES, PRIMARY_GENRE_COUNT, VIBE_CATS, DEALBREAKERS,
   QUEUE_PROFILES, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, VIBE_FORMAT_LABEL, GOAL_LABEL,
   REPORT_REASONS, CREATE_EVENT_TYPES, CITY_CENTERS,
-} from './_constants'
-import { prettyEventTime, scoreRequesterForHost, scoreEventForRequester } from './_helpers'
+} from '../../lib/feed-constants'
+import { prettyEventTime, scoreRequesterForHost, scoreEventForRequester } from '../../lib/feed-helpers'
 
 const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || ''
 
