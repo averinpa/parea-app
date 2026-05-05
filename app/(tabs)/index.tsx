@@ -7548,8 +7548,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (joinedEventsRef.current[chat.event_id] === 'confirmed') continue
         // User explicitly left this event — don't re-add
         if (cancelledEventIdsRef.current.has(chat.event_id)) continue
-        // Already in chatList — skip
-        if (chatListRef.current.some((c: any) => c.id === chat.id)) continue
         // Fetch members
         const { data: members } = await supabase
           .from('chat_members')
@@ -7561,17 +7559,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
         })
         const isCommunityChat = !!dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)
+        const correctType = chat.type === 'duo' ? 'duo' : 'group'
+        const existing = chatListRef.current.find((c: any) => c.id === chat.id)
+        // If chat exists but type/members are stale (e.g. cached as duo before fix), heal it
+        if (existing && existing.type === correctType && (existing.members || 0) === members.length) continue
         const newChat: any = {
-          id: chat.id, type: chat.type === 'duo' ? 'duo' : 'group', eventRefId: chat.event_id,
+          id: chat.id, type: correctType, eventRefId: chat.event_id,
           event: dbCommunityEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || feedOfficialDbEventsRef.current.find((e: any) => e.id === chat.event_id)?.title || 'Crew Chat',
           eventEmoji: '🎉', members: members.length,
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
           colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
           lastMsg: chat.last_msg || '🎉 You\'re in the crew!',
-          time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+          time: new Date().toISOString(), isNew: existing?.isNew ?? true, chatExpiresAt: existing?.chatExpiresAt || (Date.now() + 24 * 60 * 60 * 1000),
         }
         if (isCommunityChat) newChat.communityEventId = chat.event_id
-        setChatList(prev => prev.some(c => c.id === chat.id) ? prev : [newChat, ...prev])
+        setChatList(prev => {
+          const idx = prev.findIndex((c: any) => c.id === chat.id)
+          if (idx === -1) return [newChat, ...prev]
+          const updated = [...prev]
+          updated[idx] = { ...prev[idx], ...newChat }
+          return updated
+        })
         if (isCommunityChat) communityEventChatMap.current[chat.event_id] = chat.id
         setJoinedEvents(prev => ({ ...prev, [chat.event_id]: 'confirmed' }))
         setOfficialEventChatMap(prev => ({ ...prev, [chat.event_id]: chat.id }))
