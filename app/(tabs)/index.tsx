@@ -9280,12 +9280,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .eq('event_id', evId)
                   .eq('requester_id', userData.dbId)
                   .then(({ error }) => { if (error) console.warn('leave join_request delete error:', error.message) })
+                // Удаляем chat_members чтобы не восстанавливался через fallback poll
+                if (typeof leavingChat.id === 'number' && leavingChat.id < 1e12) {
+                  supabase.from('chat_members')
+                    .delete().eq('chat_id', leavingChat.id).eq('profile_id', userData.dbId)
+                    .then(({ error }) => { if (error) console.warn('leave chat_members delete error:', error.message) })
+                }
                 // Пишем системное сообщение в DB → Даша увидит через realtime
                 supabase.from('messages').insert({
                   community_event_id: evId,
                   sender_id: userData.dbId,
                   text: `${userData.name || 'Someone'} left the group`,
                 }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
+                // Помечаем как cancelled чтобы fallback poll не вернул чат
+                cancelledEventIdsRef.current.add(evId)
+                setCancelledEventIds(prev => [...new Set([...prev, evId])])
                 // Убираем ивент из планов Пети
                 setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
                 // Broadcast to host immediately
