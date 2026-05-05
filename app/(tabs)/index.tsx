@@ -8520,27 +8520,42 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     return () => sub.remove()
   }, [])
 
-  // Deep link handler: works for pareaapp://event/:id (APK), exp://...--/event/:id (Expo Go), https://joinparea.app/event/:id (Universal Links)
+  // Deep link handler: works for pareaapp:///event/:id (APK), exp://...--/event/:id (Expo Go), https://joinparea.app/event/:id (Universal Links)
+  const handledInitialUrlRef = useRef(false)
+  const pendingDeepLinkIdRef = useRef<number | null>(null)
   useEffect(() => {
-    const openById = (id: number) => {
+    const tryOpen = (id: number) => {
       const allKnown = [...MOCK_EVENTS, ...MOCK_COMMUNITY_EVENTS, ...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents]
       const found = allKnown.find(e => e.id === id || e._dbId === id)
-      if (found) setEventDetail(found)
+      if (found) {
+        setEventDetail(found)
+        pendingDeepLinkIdRef.current = null
+      } else {
+        // Event not loaded yet — keep pending; effect re-runs on data updates and will retry
+        pendingDeepLinkIdRef.current = id
+      }
     }
     const handleUrl = ({ url }: { url: string }) => {
       const parsed = ExpoLinking.parse(url)
       const path = parsed.path || ''
       const match = path.match(/^event\/(\d+)/) || url.match(/event\/(\d+)/)
-      if (match) openById(parseInt(match[1]))
+      if (match) tryOpen(parseInt(match[1]))
     }
-    Linking.getInitialURL().then(url => { if (url) handleUrl({ url }) })
-    // Pending deep link from /event/[id] route file
-    AsyncStorage.getItem('pendingDeepLinkEventId').then(stored => {
-      if (stored) {
-        AsyncStorage.removeItem('pendingDeepLinkEventId')
-        openById(parseInt(stored))
-      }
-    })
+
+    // Retry pending deep link when event data finally loads
+    if (pendingDeepLinkIdRef.current != null) tryOpen(pendingDeepLinkIdRef.current)
+
+    // Run once: initial URL + pending stash from /event/[id] route file
+    if (!handledInitialUrlRef.current) {
+      handledInitialUrlRef.current = true
+      Linking.getInitialURL().then(url => { if (url) handleUrl({ url }) })
+      AsyncStorage.getItem('pendingDeepLinkEventId').then(stored => {
+        if (stored) {
+          AsyncStorage.removeItem('pendingDeepLinkEventId')
+          tryOpen(parseInt(stored))
+        }
+      })
+    }
     const sub = Linking.addEventListener('url', handleUrl)
     return () => sub.remove()
   }, [dbCommunityEvents, feedOfficialDbEvents, userCreatedEvents])
