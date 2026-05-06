@@ -45,7 +45,7 @@ import {
   QUEUE_PROFILES, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, VIBE_FORMAT_LABEL, GOAL_LABEL,
   REPORT_REASONS, CREATE_EVENT_TYPES, CITY_CENTERS,
 } from '../../lib/feed-constants'
-import { prettyEventTime, scoreRequesterForHost, scoreEventForRequester } from '../../lib/feed-helpers'
+import { prettyEventTime, scoreRequesterForHost, scoreEventForRequester, MAX_AGE_GAP } from '../../lib/feed-helpers'
 
 const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || ''
 
@@ -122,7 +122,17 @@ async function aiScoreRealAttendees(
   candidates: { id: string; name: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string }[]
 ): Promise<{ id: string; score: number; vibe: string }[]> {
   if (candidates.length === 0) return []
-  if (!ANTHROPIC_KEY) return candidates.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' }))
+  // For official-event attendees we hard-cut beyond MAX_AGE_GAP — score=0 surfaces
+  // them as "Age mismatch" rather than a misleading 50-70% AI suggestion. (Community
+  // join requests use scoreRequesterForHost instead and have no hard cutoff there.)
+  const userAge = typeof user.age === 'string' ? parseInt(user.age || '25') : (user.age || 25)
+  const eligible = candidates.filter(c => {
+    const cAge = typeof c.age === 'string' ? parseInt((c.age as any) || '25') : ((c.age as any) || 25)
+    return Math.abs(cAge - userAge) <= MAX_AGE_GAP
+  })
+  const blocked = candidates.filter(c => !eligible.includes(c)).map(c => ({ id: c.id, score: 0, vibe: 'Age mismatch' }))
+  if (eligible.length === 0) return blocked
+  if (!ANTHROPIC_KEY) return [...eligible.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' })), ...blocked]
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -134,12 +144,13 @@ async function aiScoreRealAttendees(
           role: 'user',
           content: `You are a social compatibility matcher for Parea. Score each candidate's compatibility with the user (0-100).
 
-User: ${user.name}, age ${user.age}, langs=[${(user.langs||[]).join(',')}], interests=[${(user.interests||[]).join(',')}], drinks=${user.drinksPref||'?'}, smoking=${user.smokingPref||'?'}, transport=${user.transport||'?'}, bio="${user.bio||''}"
+User: ${user.name}, age ${userAge}, langs=[${(user.langs||[]).join(',')}], interests=[${(user.interests||[]).join(',')}], drinks=${user.drinksPref||'?'}, smoking=${user.smokingPref||'?'}, transport=${user.transport||'?'}, bio="${user.bio||''}"
 
 Candidates:
-${candidates.map((c,i) => `${i+1}. id="${c.id}" ${c.name} age=${c.age} langs=[${(c.langs||[]).join(',')}] interests=[${(c.interests||[]).join(',')}] drinks=${c.drinksPref||'?'} smoking=${c.smokingPref||'?'} transport=${c.transport||'?'} bio="${c.bio||''}"`).join('\n')}
+${eligible.map((c,i) => `${i+1}. id="${c.id}" ${c.name} age=${c.age} langs=[${(c.langs||[]).join(',')}] interests=[${(c.interests||[]).join(',')}] drinks=${c.drinksPref||'?'} smoking=${c.smokingPref||'?'} transport=${c.transport||'?'} bio="${c.bio||''}"`).join('\n')}
 
-Scoring: shared interests 40%, language overlap 25%, lifestyle (drinks+smoking) 20%, bio vibe 10%, transport complement 5%.
+Scoring weights: shared interests 35%, age proximity 20%, language overlap 20%, lifestyle (drinks+smoking) 15%, bio vibe 7%, transport complement 3%.
+Age proximity: within 3 yrs = full 20, within 7 yrs = 14, within 12 yrs = 8, beyond = 3.
 Return ONLY valid JSON array: [{"id":"exact-id-string","score":85,"vibe":"Short 2-3 word tag"}]`,
         }],
       }),
@@ -148,12 +159,13 @@ Return ONLY valid JSON array: [{"id":"exact-id-string","score":85,"vibe":"Short 
     const text = data?.content?.[0]?.text?.trim() || '[]'
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     const parsed: { id: string; score: number; vibe: string }[] = jsonMatch ? JSON.parse(jsonMatch[0]) : []
-    return candidates.map(c => {
+    const scored = eligible.map(c => {
       const m = parsed.find(p => p.id === c.id)
       return { id: c.id, score: m?.score ?? 75, vibe: m?.vibe ?? 'Real attendee' }
     })
+    return [...scored, ...blocked]
   } catch {
-    return candidates.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' }))
+    return [...eligible.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' })), ...blocked]
   }
 }
 
@@ -216,7 +228,7 @@ User profile (tonight's vibe):
 Eligible candidates (hard limits already filtered out):
 ${candidatesList}
 
-Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' Boost score for candidates whose interests align with the event context.' : ''} Weigh: shared interests & music taste (40%), lifestyle compatibility (25%), language overlap (20%), age proximity (15%). Lifestyle = compatible habits, not identical. Return ONLY valid JSON, no other text:
+Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' Boost score for candidates whose interests align with the event context.' : ''} Weigh: shared interests & music taste (35%), age proximity (25%), lifestyle compatibility (20%), language overlap (20%). Age proximity: within 3 yrs = full, within 7 yrs ≈ 0.7×, within 12 yrs ≈ 0.4×, beyond = 0.1×. Lifestyle = compatible habits, not identical. Return ONLY valid JSON, no other text:
 [{"id": <number>, "score": <0-100>, "reason": "<max 5 words, event-specific if possible>"}]`,
         }],
       }),
@@ -2101,6 +2113,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       if (pref === 'women' && myGender !== 'female') return false
       if (pref === 'men'   && myGender !== 'male')   return false
     }
+    // Hide community events whose host is too far in age — saves the joiner from
+    // sending a request that the host's approval list would silently filter out.
+    if (!e.isHosted) {
+      const hostAge = e.hostProfile?.age
+      const myAge = (userData as any)?.age
+      const ha = typeof hostAge === 'string' ? parseInt(hostAge) : hostAge
+      const ma = typeof myAge === 'string' ? parseInt(myAge) : myAge
+      if (ha && ma && Math.abs(ha - ma) > MAX_AGE_GAP) return false
+    }
     return true
   })
 
@@ -3706,12 +3727,52 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 // ─── VIBE CHECK TAB ───────────────────────────────────────────────────────────
 
 
-function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void }) {
+function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, onReport }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void }) {
   const insets = useSafeAreaInsets()
   const screenH = Dimensions.get('window').height
   const sheetMaxH = screenH - insets.top - 16
   const [photoIdx, setPhotoIdx] = useState(0)
   const slideAnim = useRef(new Animated.Value(300)).current
+  // Hydrate sparse profile (e.g. from chat memberProfiles) with full row from DB so
+  // interests/transport/langs etc. always show even when caller passed a stub.
+  const [hydrated, setHydrated] = useState<any>(null)
+  const profile = hydrated || profileProp
+  useEffect(() => {
+    let cancelled = false
+    const id = profileProp?.id
+    if (!id || typeof id !== 'string') return // skip mock profiles with non-uuid ids
+    if (profileProp.interests && profileProp.interests.length > 0 && profileProp.transport != null) return // already complete
+    supabase.from('profiles')
+      .select('id, name, age, gender, bio, photos, color, langs, interests, transport, drinks_pref, smoking_pref, music_genres, format')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data: full }) => {
+        if (cancelled || !full) return
+        // Always use language codes from DB so the rendering layer can render them
+        // consistently (label list in body + single flag next to age).
+        const langCodes: string[] = full.langs || []
+        setHydrated({
+          ...profileProp,
+          name: full.name || profileProp.name,
+          age: full.age || profileProp.age,
+          gender: full.gender ?? profileProp.gender,
+          bio: full.bio || profileProp.bio,
+          photos: full.photos || profileProp.photos,
+          photo: full.photos?.[0] || profileProp.photo,
+          color: full.color || profileProp.color,
+          colors: profileProp.colors || [full.color || profileProp.color, '#1E1B4B'],
+          interests: full.interests || profileProp.interests || [],
+          transport: full.transport ?? profileProp.transport,
+          drinksPref: full.drinks_pref ?? profileProp.drinksPref,
+          smokingPref: full.smoking_pref ?? profileProp.smokingPref,
+          musicGenres: full.music_genres || profileProp.musicGenres || [],
+          format: full.format ?? profileProp.format,
+          langs: langCodes,
+          flag: FLAG_MAP[langCodes[0]] || profileProp.flag || '🌍',
+        })
+      })
+    return () => { cancelled = true }
+  }, [profileProp?.id])
 
   useEffect(() => {
     Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start()
@@ -3785,7 +3846,6 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
             <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
             <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{profile.age}</Text>
-            <Text style={{ fontSize: 20 }}>{profile.flag}</Text>
           </View>
 
           {/* Looking for event companions */}
@@ -3799,11 +3859,17 @@ function ProfilePreviewSheet({ profile, onClose, onBlock, onReport }: { profile:
           {/* About — text rows */}
           {(() => {
             const interests = profile.interests || []
-            const langs = profile.langs || []
+            // Normalize langs: callers pass either codes ('en','ru') or pre-mapped flag emojis.
+            // For display we need codes so LANGUAGES_LIST lookup yields readable labels.
+            const flagToCode: Record<string, string> = Object.fromEntries(Object.entries(FLAG_MAP).map(([k, v]) => [v, k]))
+            const langs = (profile.langs || []).map((l: string) => flagToCode[l] || l)
             const usually = interests.slice(0, 3).map((t: string) => t.indexOf(' ') !== -1 ? t.slice(t.indexOf(' ') + 1) : t).join(' · ')
             const langText = langs.map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c).join(' · ')
             const transportText = profile.transport === 'car' ? 'Driving (open to giving a lift)' : profile.transport === 'lift' ? 'Open to carpooling' : 'Meeting there'
+            const genderRaw = (profile.gender || '').toLowerCase()
+            const genderText = genderRaw === 'female' ? 'Female' : genderRaw === 'male' ? 'Male' : genderRaw ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1) : ''
             const rows = [
+              genderText && { label: 'Gender', value: genderText },
               usually && { label: 'Usually goes for', value: usually },
               langText && { label: 'Languages', value: langText },
               { label: 'Getting there', value: transportText },
@@ -4112,11 +4178,13 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const aiRankedProfiles = aiMatches.length > 0
-    ? [...QUEUE_PROFILES].sort((a, b) => {
-        const sa = aiMatches.find(m => m.id === a.id)?.score ?? 0
-        const sb = aiMatches.find(m => m.id === b.id)?.score ?? 0
-        return sb - sa
-      })
+    ? [...QUEUE_PROFILES]
+        .filter(p => (aiMatches.find(m => m.id === p.id)?.score ?? 50) > 0) // hide dealbreaker-blocked
+        .sort((a, b) => {
+          const sa = aiMatches.find(m => m.id === a.id)?.score ?? 0
+          const sb = aiMatches.find(m => m.id === b.id)?.score ?? 0
+          return sb - sa
+        })
     : QUEUE_PROFILES
 
   const eventContext = myEvents.length > 0
@@ -4267,7 +4335,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             const slotsLeft = slotsTotal - confirmedCount // only confirmed participants fill slots
             // Full and no pending/approved requests — hide panel
             if (slotsLeft <= 0 && allRequests.length === 0 && approvedCount === 0) return null
-            // Score + sort, show top 12
+            // Score + sort, show top 12. Host sees every actual request — feed filter
+            // already prevents most age-mismatched discovery, and a request that did
+            // arrive (e.g. via shared link) is an explicit ask we want the host to decide.
             const scored = allRequests
               .map(req => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
               .sort((a, b) => b._score - a._score)

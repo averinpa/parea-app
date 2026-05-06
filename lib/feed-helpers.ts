@@ -8,6 +8,12 @@ export const prettyEventTime = (s: string | undefined | null) => {
     .replace(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/, (_, d, m, y) => `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`)
 }
 
+// Maximum age gap (in years) Parea considers compatible for social matching.
+// Tighter than dating apps (Parea = events/companions), wider than ±5 to allow
+// inter-generational social mixing. Hard-applied only at FEED discovery — once a
+// joiner has the event (e.g. via deep link), the host decides for themselves.
+export const MAX_AGE_GAP = 15
+
 // Score a join requester's compatibility with the host (0–100)
 export function scoreRequesterForHost(
   req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[] },
