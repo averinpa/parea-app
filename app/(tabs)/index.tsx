@@ -33,6 +33,8 @@ import { AuroraBg } from '../../lib/components/AuroraBg'
 import { DobBottomSheet } from '../../lib/components/DobBottomSheet'
 import { AnimatedInterestChip } from '../../lib/components/AnimatedInterestChip'
 import { ReportModal } from '../../lib/components/ReportModal'
+import { ProfilePreviewSheet } from '../../lib/components/ProfilePreviewSheet'
+import { LocationPicker } from '../../lib/components/LocationPicker'
 import { INTEREST_ICON_MAP } from '../../lib/interest-icons'
 import {
   INTERESTS_LIST, INTERESTS_BY_CATEGORY, INTEREST_CATEGORY_PALETTE, INTEREST_TO_CATEGORY,
@@ -3727,231 +3729,6 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
 // ─── VIBE CHECK TAB ───────────────────────────────────────────────────────────
 
 
-function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, onReport }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void }) {
-  const insets = useSafeAreaInsets()
-  const screenH = Dimensions.get('window').height
-  const sheetMaxH = screenH - insets.top - 16
-  const [photoIdx, setPhotoIdx] = useState(0)
-  const slideAnim = useRef(new Animated.Value(300)).current
-  // Hydrate sparse profile (e.g. from chat memberProfiles) with full row from DB so
-  // interests/transport/langs etc. always show even when caller passed a stub.
-  const [hydrated, setHydrated] = useState<any>(null)
-  const profile = hydrated || profileProp
-  useEffect(() => {
-    let cancelled = false
-    const id = profileProp?.id
-    if (!id || typeof id !== 'string') return // skip mock profiles with non-uuid ids
-    if (profileProp.interests && profileProp.interests.length > 0 && profileProp.transport != null) return // already complete
-    supabase.from('profiles')
-      .select('id, name, age, gender, bio, photos, color, langs, interests, transport, drinks_pref, smoking_pref, music_genres, format')
-      .eq('id', id)
-      .maybeSingle()
-      .then(({ data: full }) => {
-        if (cancelled || !full) return
-        // Always use language codes from DB so the rendering layer can render them
-        // consistently (label list in body + single flag next to age).
-        const langCodes: string[] = full.langs || []
-        setHydrated({
-          ...profileProp,
-          name: full.name || profileProp.name,
-          age: full.age || profileProp.age,
-          gender: full.gender ?? profileProp.gender,
-          bio: full.bio || profileProp.bio,
-          photos: full.photos || profileProp.photos,
-          photo: full.photos?.[0] || profileProp.photo,
-          color: full.color || profileProp.color,
-          colors: profileProp.colors || [full.color || profileProp.color, '#1E1B4B'],
-          interests: full.interests || profileProp.interests || [],
-          transport: full.transport ?? profileProp.transport,
-          drinksPref: full.drinks_pref ?? profileProp.drinksPref,
-          smokingPref: full.smoking_pref ?? profileProp.smokingPref,
-          musicGenres: full.music_genres || profileProp.musicGenres || [],
-          format: full.format ?? profileProp.format,
-          langs: langCodes,
-          flag: FLAG_MAP[langCodes[0]] || profileProp.flag || '🌍',
-        })
-      })
-    return () => { cancelled = true }
-  }, [profileProp?.id])
-
-  useEffect(() => {
-    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start()
-  }, [])
-
-  const close = () => {
-    Animated.timing(slideAnim, { toValue: 400, duration: 220, useNativeDriver: true }).start(onClose)
-  }
-
-  // Support both photos array and single photo fallback
-  const allPhotos: string[] = profile.photos?.filter(Boolean).length > 0
-    ? profile.photos.filter(Boolean)
-    : profile.photo ? [profile.photo] : []
-  const c0 = (profile.colors?.[0]) || profile.color || '#6366F1'
-  const c1 = (profile.colors?.[1]) || profile.color || '#818CF8'
-  const totalSlots = Math.max(allPhotos.length, 1)
-
-  return (
-    <Modal transparent animationType="none" onRequestClose={close}>
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={close} />
-      <Animated.View style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, maxHeight: sheetMaxH,
-        backgroundColor: '#100D20', borderTopLeftRadius: 32, borderTopRightRadius: 32,
-        overflow: 'hidden', transform: [{ translateY: slideAnim }],
-      }}>
-        {/* Photo carousel */}
-        <View style={{ height: 320, position: 'relative', backgroundColor: '#0A0812' }}>
-          {allPhotos[photoIdx] ? (
-            <Image source={{ uri: allPhotos[photoIdx] }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-          ) : (
-            <LinearGradient colors={[c0, c1]} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 72 }}>{profile.emoji || '👤'}</Text>
-            </LinearGradient>
-          )}
-          {/* Gradient overlay bottom */}
-          <LinearGradient colors={['transparent', '#100D20']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }} />
-          {/* Dot indicators */}
-          {totalSlots > 1 && (
-            <View style={{ position: 'absolute', bottom: 14, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-              {Array.from({ length: totalSlots }).map((_, i) => (
-                <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
-                  <View style={{ width: i === photoIdx ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: i === photoIdx ? '#fff' : 'rgba(255,255,255,0.3)' }} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          {/* Swipe areas */}
-          <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', paddingLeft: 14, opacity: photoIdx > 0 ? 1 : 0 }}
-            onPress={() => setPhotoIdx(i => Math.max(0, i - 1))}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name="chevron-left" size={22} color="#fff" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ position: 'absolute', right: 0, top: 0, width: '45%', height: '100%', justifyContent: 'center', alignItems: 'flex-end', paddingRight: 14, opacity: photoIdx < totalSlots - 1 ? 1 : 0 }}
-            onPress={() => setPhotoIdx(i => Math.min(totalSlots - 1, i + 1))}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name="chevron-right" size={22} color="#fff" />
-            </View>
-          </TouchableOpacity>
-          {/* Close */}
-          <TouchableOpacity onPress={close} style={{
-            position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16,
-            backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Feather name="x" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
-          {/* Name + age */}
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-            <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>{profile.name}</Text>
-            <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>{profile.age}</Text>
-          </View>
-
-          {/* Looking for event companions */}
-          <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: 'rgba(167,139,250,0.85)', marginBottom: 14 }}>Looking for event companions</Text>
-
-          {/* Bio */}
-          {profile.bio ? (
-            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
-          ) : null}
-
-          {/* About — text rows */}
-          {(() => {
-            const interests = profile.interests || []
-            // Normalize langs: callers pass either codes ('en','ru') or pre-mapped flag emojis.
-            // For display we need codes so LANGUAGES_LIST lookup yields readable labels.
-            const flagToCode: Record<string, string> = Object.fromEntries(Object.entries(FLAG_MAP).map(([k, v]) => [v, k]))
-            const langs = (profile.langs || []).map((l: string) => flagToCode[l] || l)
-            const usually = interests.slice(0, 3).map((t: string) => t.indexOf(' ') !== -1 ? t.slice(t.indexOf(' ') + 1) : t).join(' · ')
-            const langText = langs.map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c).join(' · ')
-            const transportText = profile.transport === 'car' ? 'Driving (open to giving a lift)' : profile.transport === 'lift' ? 'Open to carpooling' : 'Meeting there'
-            const genderRaw = (profile.gender || '').toLowerCase()
-            const genderText = genderRaw === 'female' ? 'Female' : genderRaw === 'male' ? 'Male' : genderRaw ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1) : ''
-            const rows = [
-              genderText && { label: 'Gender', value: genderText },
-              usually && { label: 'Usually goes for', value: usually },
-              langText && { label: 'Languages', value: langText },
-              { label: 'Getting there', value: transportText },
-            ].filter(Boolean) as { label: string; value: string }[]
-            return (
-              <View style={{ marginBottom: 22, gap: 8 }}>
-                {rows.map(r => (
-                  <Text key={r.label} style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 19 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Outfit-Medium' }}>{r.label}: </Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'Outfit-SemiBold' }}>{r.value}</Text>
-                  </Text>
-                ))}
-              </View>
-            )
-          })()}
-
-          {/* AI Match badge */}
-          {profile.aiScore != null && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, padding: 12, borderRadius: 16, backgroundColor: 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: 'rgba(129,140,248,0.25)' }}>
-              <Sparkle size={20} color="#818CF8" weight="duotone" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
-                  {profile.aiScore}% AI Match
-                </Text>
-                {profile.aiReason && (
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{profile.aiReason}</Text>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Interests */}
-          {(profile.interests || []).length > 0 && (
-            <>
-              <Text style={{ fontSize: 10, fontFamily: 'ClashDisplay-Semibold', color: 'rgba(255,255,255,0.3)', letterSpacing: 1.2, marginBottom: 10 }}>INTERESTS</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {(profile.interests || []).slice(0, 8).map((tag: string, i: number) => {
-                  const Icon = INTEREST_ICON_MAP[tag] || Sparkle
-                  const label = tag.indexOf(' ') !== -1 ? tag.slice(tag.indexOf(' ') + 1) : tag
-                  const cat = INTERESTS_BY_CATEGORY.find(c => c.items.includes(tag))
-                  const palette = cat ? INTEREST_CATEGORY_PALETTE[cat.id as keyof typeof INTEREST_CATEGORY_PALETTE] : null
-                  const chipColor = palette?.iconColor || '#A78BFA'
-                  return (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: `${chipColor}22`, borderWidth: 1, borderColor: `${chipColor}55` }}>
-                      <Icon size={14} color={chipColor} weight="duotone" />
-                      <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: chipColor }}>{label}</Text>
-                    </View>
-                  )
-                })}
-                {(profile.interests || []).length > 8 && (
-                  <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                    <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.55)' }}>+{(profile.interests || []).length - 8} more</Text>
-                  </View>
-                )}
-              </View>
-            </>
-          )}
-
-          {/* Block / Report */}
-          {(onBlock || onReport) && (
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>
-              {onReport && (
-                <TouchableOpacity onPress={() => { onReport(profile); close() }}
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderRadius: 14, backgroundColor: 'rgba(245,158,11,0.12)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.25)' }}>
-                  <Feather name="flag" size={15} color="#F59E0B" />
-                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#F59E0B' }}>Report</Text>
-                </TouchableOpacity>
-              )}
-              {onBlock && (
-                <TouchableOpacity onPress={() => { onBlock(profile); close() }}
-                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderRadius: 14, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.22)' }}>
-                  <Feather name="slash" size={15} color="#EF4444" />
-                  <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#EF4444' }}>Block</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </ScrollView>
-      </Animated.View>
-    </Modal>
-  )
-}
 
 
 
@@ -5992,160 +5769,6 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
 
 // ─── FEED SCREEN ──────────────────────────────────────────────────────────────
 
-
-function LocationPicker({ apiKey, initialCity, initialLocation, initialCoords, insets, onClose, onConfirm }: {
-  apiKey: string; initialCity?: string | null; initialLocation: string;
-  initialCoords: { lat: number; lng: number } | null; insets: any;
-  onClose: () => void; onConfirm: (desc: string, lat: number, lng: number) => void
-}) {
-  const startCenter = initialCoords || (initialCity && CITY_CENTERS[initialCity]) || CITY_CENTERS.Limassol
-  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number }>(startCenter)
-  const [pinAddress, setPinAddress] = useState<string>(initialLocation || '')
-  const [resolving, setResolving] = useState(false)
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<any[]>([])
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const mapRef = useRef<MapView | null>(null)
-
-  const animateMapTo = (lat: number, lng: number) => {
-    mapRef.current?.animateToRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 400)
-  }
-
-  const reverseGeocode = async (lat: number, lng: number) => {
-    setResolving(true)
-    try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=en`
-      const res = await fetch(url)
-      const json = await res.json()
-      if (json.status === 'OK' && json.results?.[0]) setPinAddress(json.results[0].formatted_address)
-      else setPinAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
-    } catch {
-      setPinAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`)
-    } finally { setResolving(false) }
-  }
-
-  const handleMapPress = (e: any) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate
-    setPinCoords({ lat: latitude, lng: longitude })
-    reverseGeocode(latitude, longitude)
-    setResults([])
-  }
-
-  const search = (text: string) => {
-    setQuery(text)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (text.length < 2) { setResults([]); return }
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en`
-        const res = await fetch(url)
-        const json = await res.json()
-        if (json.status === 'OK') setResults(json.predictions); else setResults([])
-      } catch { setResults([]) }
-    }, 350)
-  }
-
-  const pickSuggestion = async (place: any) => {
-    setQuery(place.description)
-    setResults([])
-    Keyboard.dismiss()
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&key=${apiKey}&fields=geometry,formatted_address,name`
-      const res = await fetch(url)
-      const json = await res.json()
-      const loc = json.result?.geometry?.location
-      const name = json.result?.name
-      const addr = json.result?.formatted_address
-      // Prepend the place name if it isn't already in the address (e.g. "Klok Café, Anexartisias 12, ...")
-      let full = addr || place.description
-      if (name && full && !full.toLowerCase().startsWith(name.toLowerCase())) {
-        full = `${name}, ${full}`
-      } else if (name && !full) {
-        full = name
-      }
-      if (loc) {
-        setPinCoords({ lat: loc.lat, lng: loc.lng })
-        setPinAddress(full)
-        animateMapTo(loc.lat, loc.lng)
-      }
-    } catch {}
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-        <TouchableOpacity onPress={onClose} style={{ marginRight: 12 }}>
-          <Feather name="x" size={22} color="#475569" />
-        </TouchableOpacity>
-        <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B' }}>Pick a location</Text>
-      </View>
-
-      {/* Map */}
-      <View style={{ flex: 1 }}>
-        <MapView
-          ref={mapRef}
-          style={{ flex: 1 }}
-          initialRegion={{ latitude: startCenter.lat, longitude: startCenter.lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
-          onPress={handleMapPress}
-        >
-          <Marker
-            coordinate={{ latitude: pinCoords.lat, longitude: pinCoords.lng }}
-            draggable
-            onDragEnd={handleMapPress}
-          />
-        </MapView>
-
-        {/* Search overlay */}
-        <View style={{ position: 'absolute', top: 12, left: 12, right: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, height: 44, gap: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-            <Feather name="search" size={16} color="#94A3B8" />
-            <TextInput
-              value={query}
-              onChangeText={search}
-              placeholder="Search a place or address..."
-              placeholderTextColor="#94A3B8"
-              style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-Medium', color: '#1E1B4B' }}
-            />
-            {query.length > 0 && (
-              <TouchableOpacity onPress={() => { setQuery(''); setResults([]) }}>
-                <Feather name="x-circle" size={16} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-          </View>
-          {results.length > 0 && (
-            <View style={{ marginTop: 6, backgroundColor: '#fff', borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, maxHeight: 240 }}>
-              <ScrollView keyboardShouldPersistTaps="handled">
-                {results.slice(0, 6).map((r: any) => (
-                  <TouchableOpacity key={r.place_id} onPress={() => pickSuggestion(r)} activeOpacity={0.7}
-                    style={{ paddingHorizontal: 14, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-                    <Text style={{ fontSize: 13, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} numberOfLines={1}>{r.structured_formatting?.main_text || r.description}</Text>
-                    {!!r.structured_formatting?.secondary_text && (
-                      <Text style={{ fontSize: 11, fontFamily: 'Outfit-Regular', color: '#94A3B8', marginTop: 2 }} numberOfLines={1}>{r.structured_formatting.secondary_text}</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Bottom address + confirm */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#fff' }}>
-        <Text style={{ fontSize: 11, fontFamily: 'Outfit-Medium', color: '#94A3B8', marginBottom: 4 }}>Selected location</Text>
-        <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B', marginBottom: 12, minHeight: 20 }} numberOfLines={2}>
-          {resolving ? 'Loading address…' : (pinAddress || 'Tap the map or search above')}
-        </Text>
-        <TouchableOpacity
-          disabled={!pinAddress}
-          onPress={() => onConfirm(pinAddress, pinCoords.lat, pinCoords.lng)}
-          style={{ backgroundColor: pinAddress ? '#6366F1' : '#CBD5E1', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 15, fontFamily: 'ClashDisplay-Semibold' }}>Use this location</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  )
-}
 
 function LocationSearch({ apiKey, onSelect }: { apiKey: string; onSelect: (desc: string, lat?: number, lng?: number) => void }) {
   const [query, setQuery] = useState('')
@@ -10702,6 +10325,7 @@ export default function App() {
       setUserData({
         name: profile.name,
         age: profile.age?.toString() || '',
+        gender: profile.gender || '',
         bio: profile.bio,
         photos: profile.photos || [],
         langs: profile.langs || [],
@@ -10758,6 +10382,7 @@ export default function App() {
         auth_id: userId,
         name: data.name,
         age: parseInt(data.age) || null,
+        gender: data.gender || null,
         bio: data.bio,
         photos: finalPhotos,
         langs: data.langs || [],
@@ -10854,6 +10479,7 @@ export default function App() {
       setUserData({
         name: profile.name,
         age: profile.age?.toString() || '',
+        gender: profile.gender || '',
         bio: profile.bio,
         photos: profile.photos || [],
         langs: profile.langs || [],
