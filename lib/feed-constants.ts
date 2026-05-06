@@ -153,13 +153,13 @@ export const VIBE_CATS: Record<string, string[]> = {
   party:     ['music', 'wine', 'dance', 'food'],
 }
 
+// Dealbreakers we can actually enforce against existing profile data.
+// no_drugs / no_loud / no_kids removed for now — no DB column / event flag
+// to check against. Reintroduce when those fields exist.
 export const DEALBREAKERS = [
   { id: 'no_smoking',   emoji: '🚭', label: 'No smoking',        desc: "Can't be around smoke" },
   { id: 'sober_only',   emoji: '🥛', label: 'Prefer sober',      desc: 'No heavy drinking' },
-  { id: 'no_drugs',     emoji: '🌿', label: 'No drug use',        desc: 'Hard limit for me' },
   { id: 'pets_allergy', emoji: '🐾', label: 'Pet allergy',        desc: "Can't be near pets" },
-  { id: 'no_loud',      emoji: '🔇', label: 'No loud events',     desc: 'Prefer calm venues' },
-  { id: 'no_kids',      emoji: '👶', label: 'Adults only',        desc: 'No kids around' },
 ]
 
 export const QUEUE_PROFILES = [

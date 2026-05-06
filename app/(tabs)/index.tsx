@@ -120,19 +120,31 @@ const CATEGORY_ICON: Record<string, any> = { coffee: PhCoffee, sports: Barbell, 
 type MatchResult = { id: number; score: number; reason: string }
 
 async function aiScoreRealAttendees(
-  user: { name?: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string },
-  candidates: { id: string; name: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string }[]
+  user: { name?: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string; dealbreakers?: string[] },
+  candidates: { id: string; name: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string; hasPets?: boolean }[]
 ): Promise<{ id: string; score: number; vibe: string }[]> {
   if (candidates.length === 0) return []
-  // For official-event attendees we hard-cut beyond MAX_AGE_GAP — score=0 surfaces
-  // them as "Age mismatch" rather than a misleading 50-70% AI suggestion. (Community
-  // join requests use scoreRequesterForHost instead and have no hard cutoff there.)
+  // For official-event attendees we hard-cut beyond MAX_AGE_GAP and on user's
+  // dealbreakers — score=0 surfaces them as a clear reason rather than a
+  // misleading 50-70% AI suggestion. (Community join requests use
+  // scoreRequesterForHost instead.)
   const userAge = typeof user.age === 'string' ? parseInt(user.age || '25') : (user.age || 25)
-  const eligible = candidates.filter(c => {
-    const cAge = typeof c.age === 'string' ? parseInt((c.age as any) || '25') : ((c.age as any) || 25)
-    return Math.abs(cAge - userAge) <= MAX_AGE_GAP
+  const userDb = user.dealbreakers || []
+  const blockReason = (c: any): string | null => {
+    const cAge = typeof c.age === 'string' ? parseInt(c.age || '25') : (c.age || 25)
+    if (Math.abs(cAge - userAge) > MAX_AGE_GAP) return 'Age mismatch'
+    if (userDb.includes('no_smoking') && (c.smokingPref === 'Smoker' || c.smokingPref === 'Social')) return 'Smoking dealbreaker'
+    if (userDb.includes('sober_only') && c.drinksPref === 'Social drinker') return 'Drinking dealbreaker'
+    if (userDb.includes('pets_allergy') && c.hasPets) return 'Pet allergy'
+    return null
+  }
+  const eligible: typeof candidates = []
+  const blocked: { id: string; score: number; vibe: string }[] = []
+  candidates.forEach(c => {
+    const reason = blockReason(c)
+    if (reason) blocked.push({ id: c.id, score: 0, vibe: reason })
+    else eligible.push(c)
   })
-  const blocked = candidates.filter(c => !eligible.includes(c)).map(c => ({ id: c.id, score: 0, vibe: 'Age mismatch' }))
   if (eligible.length === 0) return blocked
   if (!ANTHROPIC_KEY) return [...eligible.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' })), ...blocked]
   try {
@@ -5135,6 +5147,44 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
                 </View>
               </View>
             ))}
+
+            {/* Pets */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>🐾 Pets</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[
+                  { val: true, label: 'I have pets' },
+                  { val: false, label: "I don't" },
+                ].map(opt => {
+                  const on = !!draft.hasPets === opt.val
+                  return (
+                    <TouchableOpacity key={String(opt.val)} onPress={() => setDraft((v: any) => ({ ...v, hasPets: opt.val }))}
+                      style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: on ? '#fff' : '#475569' }}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+
+            {/* Dealbreakers */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 }}>🚫 Dealbreakers</Text>
+              <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10, lineHeight: 17 }}>People with these traits will never be suggested to you.</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {DEALBREAKERS.map(db => {
+                  const on = (draft.dealbreakers || []).includes(db.id)
+                  return (
+                    <TouchableOpacity key={db.id} onPress={() => setDraft((v: any) => ({ ...v, dealbreakers: on ? (v.dealbreakers || []).filter((x: string) => x !== db.id) : [...(v.dealbreakers || []), db.id] }))}
+                      style={{ width: '48%', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#FFF1F2' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#F43F5E' : '#E2E8F0' }}>
+                      <Text style={{ fontSize: 18 }}>{db.emoji}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: on ? '#BE123C' : '#334155', flex: 1 }} numberOfLines={1}>{db.label}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+
             <TouchableOpacity onPress={() => { onUpdateUserData?.(draft); setVibeEditOpen(false) }}
               style={{ backgroundColor: '#7C3AED', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 4 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>Save changes</Text>
@@ -5280,15 +5330,18 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
             )}
 
             {/* Vibe */}
-            <View style={{ marginBottom: 10 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Vibe</Text>
-              <TouchableOpacity onPress={() => { setDraft({ musicGenres: userData?.musicGenres || [], socialEnergy: userData?.socialEnergy, drinksPref: userData?.drinksPref, smokingPref: userData?.smokingPref }); setEditProfileOpen(false); setTimeout(() => setVibeEditOpen(true), 300) }}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, gap: 10 }}>
-                <Sparkle size={20} color="#8B5CF6" weight="duotone" />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569', flex: 1 }}>Music, energy, drinks & smoking</Text>
-                <Feather name="chevron-right" size={16} color="#CBD5E1" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Vibe</Text>
+              <TouchableOpacity onPress={() => { setDraft({ musicGenres: userData?.musicGenres || [], socialEnergy: userData?.socialEnergy, drinksPref: userData?.drinksPref, smokingPref: userData?.smokingPref, hasPets: !!userData?.hasPets, dealbreakers: userData?.dealbreakers || [] }); setEditProfileOpen(false); setTimeout(() => setVibeEditOpen(true), 300) }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Edit →</Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity onPress={() => { setDraft({ musicGenres: userData?.musicGenres || [], socialEnergy: userData?.socialEnergy, drinksPref: userData?.drinksPref, smokingPref: userData?.smokingPref, hasPets: !!userData?.hasPets, dealbreakers: userData?.dealbreakers || [] }); setEditProfileOpen(false); setTimeout(() => setVibeEditOpen(true), 300) }}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, gap: 10, marginBottom: 10 }}>
+              <Sparkle size={20} color="#8B5CF6" weight="duotone" />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569', flex: 1 }}>Music, energy, drinks, smoking, pets, dealbreakers</Text>
+              <Feather name="chevron-right" size={16} color="#CBD5E1" />
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
@@ -5861,8 +5914,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => { createScrollRef.current?.scrollTo({ y: 0, animated: false }) }, [createStep])
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null)
-  const [city, setCity] = useState<string | null>(null)
+  const [city, setCity] = useState<string | null>(userData?.city || null)
   const [cityOpen, setCityOpen] = useState(false)
+  // Keep local city in sync with userData.city when it loads from DB
+  useEffect(() => { if (userData?.city && userData.city !== city) setCity(userData.city) }, [userData?.city])
   const [feedFilter, setFeedFilter] = useState('all')
   const [eventDetail, setEventDetail] = useState<any>(null)
   const [eventParticipants, setEventParticipants] = useState<{ ev: any; members: any[] } | null>(null)
@@ -6208,7 +6263,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               color: p.color || '#818CF8', colors: [p.color || '#818CF8', p.color ? p.color + 'AA' : '#6366F1'],
               emoji: '🎵', photo: p.photos?.[0] || null, photos: p.photos || [],
               bio: p.bio || '', langs: p.langs || [],
-              interests: p.interests || [], drinksPref: p.drinksPref || '', smokingPref: p.smokingPref || '',
+              interests: p.interests || [], drinksPref: p.drinks_pref || '', smokingPref: p.smoking_pref || '',
+              hasPets: !!p.has_pets,
               transport: row.transport, groupMin: row.group_size_min, groupMax: row.group_size_max,
               _real: true, score: null as number | null, vibe: '',
             }
@@ -6219,6 +6275,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               langs: userData.langs || [], interests: userData.interests || [],
               drinksPref: userData.drinksPref || '', smokingPref: userData.smokingPref || '',
               bio: userData.bio || '', transport: userEventTransport[evId] || '',
+              dealbreakers: userData.dealbreakers || [],
             },
             candidates
           )
@@ -7010,6 +7067,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           interests: p.interests || [],
           drinksPref: p.drinks_pref || '',
           smokingPref: p.smoking_pref || '',
+          hasPets: !!p.has_pets,
           transport: req.transport || null,
           _real: true,
         })
@@ -9380,13 +9438,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           <View style={s.cityPickerSheet}>
             <Text style={s.cityPickerTitle}>Select City</Text>
             <TouchableOpacity style={[s.cityPickerItem, city === null && { backgroundColor: 'rgba(99,102,241,0.08)' }]}
-              onPress={() => { setCity(null); setCityOpen(false) }}>
+              onPress={() => { setCity(null); setCityOpen(false); onUpdateUserData?.({ city: null }) }}>
               <Text style={[{ fontSize: 16, color: '#334155' }, city === null && { color: '#6366F1', fontWeight: '700' }]}>All Cities</Text>
               {city === null && <Ionicons name="checkmark" size={18} color="#6366F1" />}
             </TouchableOpacity>
             {CITIES.map(c => (
               <TouchableOpacity key={c} style={[s.cityPickerItem, city === c && { backgroundColor: 'rgba(99,102,241,0.08)' }]}
-                onPress={() => { setCity(c); setCityOpen(false) }}>
+                onPress={() => { setCity(c); setCityOpen(false); onUpdateUserData?.({ city: c }) }}>
                 <Text style={[{ fontSize: 16, color: '#334155' }, city === c && { color: '#6366F1', fontWeight: '700' }]}>{c}</Text>
                 {city === c && <Ionicons name="checkmark" size={18} color="#6366F1" />}
               </TouchableOpacity>
@@ -10336,6 +10394,9 @@ export default function App() {
         musicGenres: profile.music_genres || [],
         transport: profile.transport,
         format: profile.format,
+        petsPref: profile.pets_pref || '',
+        hasPets: !!profile.has_pets,
+        dealbreakers: profile.dealbreakers || [],
         city: profile.city,
         color: profile.color,
         dbId: profile.id,
@@ -10393,6 +10454,8 @@ export default function App() {
         music_genres: data.musicGenres || [],
         transport: data.transport,
         format: data.format,
+        pets_pref: data.petsPref || null,
+        dealbreakers: data.dealbreakers || [],
         color,
       }).select().single()
       if (error) console.warn('Supabase save error:', error.message)
@@ -10490,6 +10553,9 @@ export default function App() {
         musicGenres: profile.music_genres || [],
         transport: profile.transport,
         format: profile.format,
+        petsPref: profile.pets_pref || '',
+        hasPets: !!profile.has_pets,
+        dealbreakers: profile.dealbreakers || [],
         city: profile.city,
         color: profile.color,
         dbId: profile.id,
@@ -10509,16 +10575,23 @@ export default function App() {
     setUserData((prev: any) => ({ ...prev, ...patch }))
     if (userData?.dbId) {
       const dbPatch: any = {}
-      // Only save photos to DB if all are public HTTPS URLs (not local file:// URIs)
-      // Local URIs are saved to DB separately after Storage upload in pickProfilePhoto
-      // Photos are saved to DB directly from pickProfilePhoto after Storage upload
-      // Skip here to avoid overwriting public URLs with local file:// URIs
+      // Photos are saved to DB directly from pickProfilePhoto after Storage upload —
+      // skip here to avoid overwriting public URLs with local file:// URIs.
+      if (patch.name        !== undefined) dbPatch.name          = patch.name
+      if (patch.age         !== undefined) dbPatch.age           = parseInt(patch.age) || null
+      if (patch.gender      !== undefined) dbPatch.gender        = patch.gender || null
       if (patch.langs       !== undefined) dbPatch.langs         = patch.langs
       if (patch.interests   !== undefined) dbPatch.interests     = patch.interests
       if (patch.musicGenres !== undefined) dbPatch.music_genres  = patch.musicGenres
       if (patch.socialEnergy!== undefined) dbPatch.social_energy = patch.socialEnergy
       if (patch.drinksPref  !== undefined) dbPatch.drinks_pref   = patch.drinksPref
       if (patch.smokingPref !== undefined) dbPatch.smoking_pref  = patch.smokingPref
+      if (patch.petsPref    !== undefined) dbPatch.pets_pref     = patch.petsPref
+      if (patch.hasPets     !== undefined) dbPatch.has_pets      = !!patch.hasPets
+      if (patch.dealbreakers!== undefined) dbPatch.dealbreakers  = patch.dealbreakers
+      if (patch.transport   !== undefined) dbPatch.transport     = patch.transport
+      if (patch.format      !== undefined) dbPatch.format        = patch.format
+      if (patch.city        !== undefined) dbPatch.city          = patch.city
       if (patch.bio         !== undefined) dbPatch.bio           = patch.bio
       if (Object.keys(dbPatch).length > 0) {
         await supabase.from('profiles').update(dbPatch).eq('id', userData.dbId)

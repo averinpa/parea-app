@@ -16,10 +16,15 @@ export const MAX_AGE_GAP = 15
 
 // Score a join requester's compatibility with the host (0–100)
 export function scoreRequesterForHost(
-  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[] },
-  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[] },
+  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[]; hasPets?: boolean },
+  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[]; dealbreakers?: string[] },
   eventCategory?: string
 ): number {
+  // Hard host dealbreakers — return 0 so they're filtered out of the approval list.
+  const hostDb = host.dealbreakers || []
+  if (hostDb.includes('no_smoking') && (req.smokingPref === 'Smoker' || req.smokingPref === 'Social')) return 0
+  if (hostDb.includes('sober_only') && req.drinksPref === 'Social drinker') return 0
+  if (hostDb.includes('pets_allergy') && req.hasPets) return 0
   let score = 0
   // Language overlap (30 pts)
   const reqLangs = req.langs || []
