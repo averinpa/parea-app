@@ -4682,27 +4682,50 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     // Show incoming invite card inline (from someone not in current queue)
                     if (!currentPerson && anyIncoming) {
                       const inviter = anyIncoming.inviter || {}
+                      // Pull AI score for the inviter from the attendees map (same source as queue cards)
+                      const inviterAttendee = (eventAttendeesMap[ev.id] || []).find((p: any) => p.id === inviter.id)
+                      const inviterScore = inviterAttendee?.score ?? null
+                      const inviterVibe = inviterAttendee?.vibe || ''
+                      const scoreColor = inviterScore != null && inviterScore >= 75 ? '#43E97B' : '#818CF8'
                       return (
-                        <View style={{ gap: 12 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            {inviter.photos?.[0] ? (
-                              <Image source={{ uri: inviter.photos[0] }} style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(99,102,241,0.4)' }} />
-                            ) : (
-                              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
-                                <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff' }}>{(inviter.name || '?')[0]}</Text>
+                        <View style={{ gap: 14 }}>
+                          {/* Profile card — tap to open preview */}
+                          <TouchableOpacity activeOpacity={0.85} onPress={() => {
+                            setPreviewProfile({
+                              ...inviter,
+                              colors: [inviter.color || '#6366F1', '#1E1B4B'],
+                              flag: FLAG_MAP[inviter.langs?.[0]] || '🌍',
+                              langs: (inviter.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                              aiScore: inviterScore,
+                              aiReason: inviterVibe || 'Wants to go together',
+                            })
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                          }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                              {inviter.photos?.[0] ? (
+                                <Image source={{ uri: inviter.photos[0] }} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: scoreColor + '60' }} />
+                              ) : (
+                                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                                  <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff' }}>{(inviter.name || '?')[0]}</Text>
+                                </View>
+                              )}
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'}</Text>
+                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>wants to go together 🎯</Text>
                               </View>
-                            )}
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'}</Text>
-                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>wants to go together 🎯</Text>
+                              {inviterScore != null && (
+                                <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: scoreColor + '22', borderWidth: 1, borderColor: scoreColor + '55' }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '900', color: scoreColor }}>{inviterScore}%</Text>
+                                </View>
+                              )}
                             </View>
-                          </View>
+                          </TouchableOpacity>
                           <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 5 }}>
-                              <Zap size={14} color="#052e16" fill="#052e16" />
-                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept</Text>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                              <Zap size={15} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Accept</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                               <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
                             </TouchableOpacity>
                           </View>
@@ -6519,6 +6542,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (officialJoined.length === 0 || !userData?.dbId) return
     const fetchAttendees = async () => {
       const map: Record<number, any[]> = {}
+      // Fetch all my passes (both directions) for joined events in one query
+      const { data: passRows } = await supabase
+        .from('passes')
+        .select('passer_id, passed_id, event_id')
+        .or(`passer_id.eq.${userData.dbId},passed_id.eq.${userData.dbId}`)
+        .in('event_id', officialJoined)
+      const passedSetByEvent: Record<number, Set<string>> = {}
+      ;(passRows || []).forEach((p: any) => {
+        const otherId = p.passer_id === userData.dbId ? p.passed_id : p.passer_id
+        if (!passedSetByEvent[p.event_id]) passedSetByEvent[p.event_id] = new Set()
+        passedSetByEvent[p.event_id].add(otherId)
+      })
       await Promise.all(officialJoined.map(async (evId) => {
         const evFormat = userEventFormat[evId] || 'squad'
         const [userMin, userMax] = FORMAT_SIZES[evFormat] || [2, 5]
@@ -6537,8 +6572,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           .lte('group_size_min', userMax)
           .gte('group_size_max', userMin)
           .limit(20)
-        // Bidirectional crew_pref + gender filter
-        const data = (rawData || []).filter((row: any) => fitsCrewPref(myPref, myGender, row.crew_pref || 'any', row.profiles?.gender))
+        // Bidirectional crew_pref + gender filter, then drop anyone we've mutually passed
+        const passedSet = passedSetByEvent[evId] || new Set<string>()
+        const data = (rawData || [])
+          .filter((row: any) => fitsCrewPref(myPref, myGender, row.crew_pref || 'any', row.profiles?.gender))
+          .filter((row: any) => !passedSet.has(row.profiles?.id))
         if (data && data.length > 0) {
           const candidates = data.map((row: any) => {
             const p = row.profiles || {}
@@ -6588,7 +6626,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
       })
       .subscribe()
-    return () => { clearInterval(interval); supabase.removeChannel(rtChannel) }
+    // Realtime: drop the other party from my queue the instant either side passes
+    const passesChannel = supabase.channel(`passes_for_${userData.dbId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'passes', filter: `passer_id=eq.${userData.dbId}` }, (payload: any) => {
+        const { passed_id, event_id } = payload.new
+        if (!passed_id || !event_id) return
+        setEventAttendeesMap(prev => prev[event_id] ? { ...prev, [event_id]: prev[event_id].filter((p: any) => p.id !== passed_id) } : prev)
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'passes', filter: `passed_id=eq.${userData.dbId}` }, (payload: any) => {
+        const { passer_id, event_id } = payload.new
+        if (!passer_id || !event_id) return
+        setEventAttendeesMap(prev => prev[event_id] ? { ...prev, [event_id]: prev[event_id].filter((p: any) => p.id !== passer_id) } : prev)
+      })
+      .subscribe()
+    return () => { clearInterval(interval); supabase.removeChannel(rtChannel); supabase.removeChannel(passesChannel) }
   }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
 
   // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 0 = only self is ready)
@@ -8680,6 +8731,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onDeclineInvite={async (invite: any) => {
               await supabase.from('crew_invites').update({ status: 'declined' }).eq('id', invite.id)
               setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
+              // Decline = explicit "I don't want them" — record a pass so they don't get
+              // suggested to me (and I don't get suggested to them) on this event again.
+              if (userData?.dbId && invite.inviter_id && invite.event_ref_id) {
+                supabase.from('passes')
+                  .insert({ passer_id: userData.dbId, passed_id: invite.inviter_id, event_id: invite.event_ref_id })
+                  .then(({ error }) => { if (error && !error.message.includes('duplicate')) console.warn('passes insert (decline) error:', error.message) })
+              }
               showToast('Invite removed', 'Declined', '👋')
             }}
             onLeave={(ev: any) => {
@@ -8791,6 +8849,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ...prev,
                 [eventId]: [...(prev[eventId] || []), passId],
               }))
+              // Persist mutual pass to DB so the other user also stops seeing us in their queue.
+              if (userData?.dbId && joiner.id && typeof joiner.id === 'string') {
+                supabase.from('passes')
+                  .insert({ passer_id: userData.dbId, passed_id: joiner.id, event_id: eventId })
+                  .then(({ error }) => { if (error && !error.message.includes('duplicate')) console.warn('passes insert error:', error.message) })
+              }
             }}
             onGoToMessages={() => {
               setMessagesInitialSubTab('messages')
