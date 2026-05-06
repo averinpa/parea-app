@@ -1,11 +1,20 @@
 import asyncio
+import os
+import sys
+from pathlib import Path
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 import re
 from supabase import create_client
+from dotenv import load_dotenv
+
+# Load .env from project root (parent of scraper/)
+load_dotenv(Path(__file__).parent.parent / '.env')
 
 SUPABASE_URL = 'https://olvwwfgzkafdgqcvskzs.supabase.co'
-SUPABASE_KEY = 'YOUR_SERVICE_ROLE_KEY'  # из Supabase → Settings → API → service_role
+SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
+if not SUPABASE_KEY:
+    raise SystemExit('SUPABASE_SERVICE_KEY missing in .env')
 BASE_URL = 'https://www.soldoutticketbox.com'
 
 CITY_KEYWORDS = ['NICOSIA', 'LIMASSOL', 'PAPHOS', 'LARNACA', 'FAMAGUSTA', 'LEFKOSIA', 'LEMESOS']
@@ -22,7 +31,7 @@ def clean_date(date_str):
     return re.sub(r'[\t\n\r]+', ' ', date_str).strip()
 
 async def get_event_links(page):
-    await page.goto(f'{BASE_URL}/en/calendar', wait_until='networkidle')
+    await page.goto(f'{BASE_URL}/en/calendar', wait_until='domcontentloaded', timeout=60000)
     await page.wait_for_timeout(2000)
     content = await page.content()
     soup = BeautifulSoup(content, 'html.parser')
@@ -38,11 +47,20 @@ async def get_event_links(page):
 
 async def scrape_event(page, url):
     try:
-        en_url = url if '/lang/en' in url else url + '/lang/en'
-        await page.goto(en_url, wait_until='networkidle')
+        en_url = url if ('lang/en' in url or 'lang=en' in url) else url + '/lang/en'
+        await page.goto(en_url, wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(1500)
         content = await page.content()
         soup = BeautifulSoup(content, 'html.parser')
+
+        # Skip events where every listed date is cancelled (CANCELLED label per row)
+        date_rows = soup.find_all('tr', class_=lambda c: c and c.startswith('row'))
+        if date_rows:
+            def is_cancelled(row):
+                span = row.find('span', class_='red')
+                return span is not None and 'CANCELLED' in span.get_text(strip=True).upper()
+            if all(is_cancelled(r) for r in date_rows):
+                return {'_cancelled': True, 'ticket_link': url}
 
         # Title
         title = ''
@@ -79,13 +97,16 @@ async def scrape_event(page, url):
             elif direct.startswith('Tickets:') and not price and len(direct) < 200:
                 price = direct.replace('Tickets:', '').strip()
 
-        # Description
+        # Description — only text after "About the event:" marker
         desc = ''
-        for el in soup.find_all(['div', 'p']):
-            text = el.get_text(strip=True)
-            if 'About the event' in text and len(text) > 100:
-                desc = text[text.find('About the event'):].replace('About the event', '').strip()[:1000]
-                break
+        full_text = soup.get_text(separator=' ', strip=True)
+        if 'About the event' in full_text:
+            after = full_text[full_text.find('About the event') + len('About the event'):].lstrip(':').strip()
+            # Remove everything after next known section markers
+            for stop in ['Event Dates', 'EventDay', 'More about', 'Ticket', 'Producer', 'Organizer', 'Phone:', 'Email:', 'Website:']:
+                if stop in after:
+                    after = after[:after.find(stop)]
+            desc = after.strip()[:800]
 
         city = extract_city(venue)
 
@@ -141,15 +162,30 @@ async def main():
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = await context.new_page()
 
-        print('Getting event links...')
-        links = await get_event_links(page)
-        print(f'Found {len(links)} events')
+        if len(sys.argv) > 1:
+            links = [sys.argv[1]]
+            print(f'Test mode — scraping only: {links[0]}')
+        else:
+            print('Getting event links...')
+            links = await get_event_links(page)
+            print(f'Found {len(links)} events')
 
         inserted = 0
         skipped = 0
+        cancelled_removed = 0
         for url in links:
             print(f'Scraping: {url}')
             event = await scrape_event(page, url)
+            if event and event.get('_cancelled'):
+                # Remove from DB if previously inserted
+                deleted = supabase.table('official_events').delete().eq('ticket_link', url).execute()
+                if deleted.data:
+                    cancelled_removed += 1
+                    print(f'  Removed cancelled')
+                else:
+                    print(f'  Skipped cancelled')
+                skipped += 1
+                continue
             if not event or not event['title']:
                 skipped += 1
                 continue
@@ -170,6 +206,6 @@ async def main():
                     print(f'  Failed: {result}')
 
         await browser.close()
-        print(f'\nDone! Inserted: {inserted}, Skipped: {skipped}')
+        print(f'\nDone! Inserted: {inserted}, Skipped: {skipped}, Cancelled removed: {cancelled_removed}')
 
 asyncio.run(main())

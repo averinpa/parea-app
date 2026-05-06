@@ -11,7 +11,7 @@ async def main():
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = await context.new_page()
 
-        await page.goto('https://www.soldoutticketbox.com/easyconsole.cfm/page/event/event_id/4368/lang/en', wait_until='networkidle')
+        await page.goto('https://www.soldoutticketbox.com/event/dinner-with-a-fool-2026?lang=en', wait_until='networkidle')
         await page.wait_for_timeout(2000)
 
         content = await page.content()
