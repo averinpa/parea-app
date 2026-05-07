@@ -30,24 +30,57 @@ def clean_date(date_str):
     # Remove tabs and extra spaces
     return re.sub(r'[\t\n\r]+', ' ', date_str).strip()
 
-async def get_event_links(page):
-    await page.goto(f'{BASE_URL}/en/calendar', wait_until='domcontentloaded', timeout=60000)
-    await page.wait_for_timeout(2000)
+async def _collect_event_links_on_page(page, links: set):
+    """Scrape modern /event/<slug>/ links — skip the old easyconsole.cfm/page/event/
+    URLs that point to an alternate template the parser can't read."""
     content = await page.content()
     soup = BeautifulSoup(content, 'html.parser')
-    links = set()
     for a in soup.find_all('a', href=True):
         href = a['href']
-        if '/event/' in href or 'event_id' in href:
-            if href.startswith('/'):
-                href = BASE_URL + href
-            href = href.split('?')[0].split('&')[0]
-            links.add(href)
+        # Only modern slug-based URLs work with the parser. Old easyconsole.cfm
+        # event URLs render a different template with no og:title and would be
+        # silently skipped, polluting the "skipped" counter.
+        if '/event/' not in href or 'easyconsole' in href:
+            continue
+        url = href if href.startswith('http') else (BASE_URL + href if href.startswith('/') else None)
+        if url:
+            links.add(url.split('?')[0].split('&')[0])
+    return None
+
+
+async def get_event_links(page):
+    """Aggregate event links from calendar + on-sale-now + each category page.
+    The calendar alone only shows a subset; category pages and on-sale-now
+    surface July/August/etc events the calendar omits."""
+    links: set = set()
+
+    sources = [
+        f'{BASE_URL}/en/calendar',
+        f'{BASE_URL}/en/events/on-sale-now',
+        # Category pages — cat_ids observed on the site nav menu
+        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/2/',  # THEATRE
+        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/3/',  # MUSIC
+        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/4/',  # DANCE
+        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/8/',  # KIDS
+    ]
+
+    for url in sources:
+        try:
+            await page.goto(url, wait_until='domcontentloaded', timeout=60000)
+            await page.wait_for_timeout(1500)
+            await _collect_event_links_on_page(page, links)
+            print(f'  collected from {url} — total so far: {len(links)}')
+        except Exception as e:
+            print(f'  source nav failed ({url}): {e}')
+
     return list(links)
 
 async def scrape_event(page, url):
     try:
-        en_url = url if ('lang/en' in url or 'lang=en' in url) else url + '/lang/en'
+        # Use the URL as-is. The /lang/en suffix used to coerce English on the
+        # old template, but on the modern slug pages it lands on a blank page
+        # — every field comes back empty. Modern URLs are English by default.
+        en_url = url
         await page.goto(en_url, wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(1500)
         content = await page.content()
@@ -154,7 +187,7 @@ async def scrape_event(page, url):
             'source': 'soldout',
         }
     except Exception as e:
-        print(f'Error: {e}')
+        print(f'Error scraping {url}: {e}')
         return None
 
 async def main():
@@ -197,6 +230,7 @@ async def main():
                 skipped += 1
                 continue
             if not event or not event['title']:
+                print(f'  SKIPPED — event={event!r}')
                 skipped += 1
                 continue
 

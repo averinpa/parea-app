@@ -2522,6 +2522,49 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           })()}
         </View>
 
+        {/* ── Global category filter chips — generated from actual categories in data ── */}
+        {!forYouFilter && (officialAll.length > 0 || communityAll.length > 0) && (() => {
+          // Collect unique categories that actually exist in the loaded events.
+          // Pre-defined ones (Sports / Coffee / etc) are appended only if they
+          // also have at least one event, so we never show a chip that yields
+          // an empty result.
+          const allEvs = [...officialAll, ...communityAll]
+          const counts = new Map<string, number>()
+          allEvs.forEach(ev => {
+            const c = (ev.category || '').toLowerCase().trim()
+            if (!c) return
+            counts.set(c, (counts.get(c) || 0) + 1)
+          })
+          // Order: predefined first (in their CAT_FILTERS order), then any extras
+          // surfaced from the data (music / theatre / etc) sorted by frequency.
+          const knownIds = new Set(CAT_FILTERS.map(f => f.id))
+          const ordered: { id: string; label: string }[] = []
+          CAT_FILTERS.forEach(f => { if (counts.has(f.id)) ordered.push(f) })
+          const extras = [...counts.entries()]
+            .filter(([id]) => !knownIds.has(id))
+            .sort((a, b) => b[1] - a[1])
+            .map(([id]) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }))
+          const chips = [...ordered, ...extras]
+          if (chips.length === 0) return null
+          return (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 4, paddingTop: 8 }}>
+              <TouchableOpacity onPress={() => setCategoryFilter(null)}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: !categoryFilter ? '#6366F1' : '#fff' }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: !categoryFilter ? '#fff' : '#64748B' }}>All</Text>
+              </TouchableOpacity>
+              {chips.map(f => {
+                const isOn = categoryFilter === f.id
+                return (
+                  <TouchableOpacity key={f.id} onPress={() => setCategoryFilter(isOn ? null : f.id)}
+                    style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: isOn ? '#6366F1' : '#fff' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : '#64748B' }}>{f.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+          )
+        })()}
+
         {/* ── FOR YOU ── */}
         {forYouFilter && (
           <View>
@@ -2776,22 +2819,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         </View>
         )}
 
-        {/* Category filter chips */}
-        {communityAll.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 14 }}>
-          <TouchableOpacity onPress={() => { setCategoryFilter(null); setForYouFilter(false) }}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: !categoryFilter ? '#6366F1' : '#fff' }}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: !categoryFilter ? '#fff' : '#64748B' }}>All</Text>
-          </TouchableOpacity>
-          {CAT_FILTERS.map(f => {
-            const isOn = categoryFilter === f.id
-            return (
-              <TouchableOpacity key={f.id} onPress={() => setCategoryFilter(isOn ? null : f.id)}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: isOn ? '#6366F1' : '#fff' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : '#64748B' }}>{f.label}</Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>}
 
         {/* Community event list */}
         {communityEvents.length > 0 ? (
