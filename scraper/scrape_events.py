@@ -62,6 +62,16 @@ async def scrape_event(page, url):
             if all(is_cancelled(r) for r in date_rows):
                 return {'_cancelled': True, 'ticket_link': url}
 
+        # Also skip when the page itself flags the event as cancelled outside the
+        # date table — some events render "When: CANCELLED" or have a CANCELLED
+        # banner in the main info block, and the date table doesn't trip the
+        # row-level check above.
+        page_text_upper = soup.get_text(separator=' ', strip=True).upper()
+        if ('WHEN: CANCELLED' in page_text_upper
+                or 'EVENT CANCELLED' in page_text_upper
+                or 'EVENT IS CANCELLED' in page_text_upper):
+            return {'_cancelled': True, 'ticket_link': url}
+
         # Title
         title = ''
         og_title = soup.find('meta', {'property': 'og:title'})

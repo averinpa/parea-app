@@ -2042,6 +2042,11 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const officialAll: any[] = officialDbLoading ? [] : [
     ...MOCK_EVENTS.filter(e => e.type === 'official' && (!e.city || e.city === city)),
     ...officialDbEvents.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))
+      // Skip CANCELLED events the scraper didn't catch (date_label/time literally "CANCELLED")
+      .filter((e: any) => {
+        const txt = `${e.date_label || ''} ${e.time || ''}`.toUpperCase()
+        return !txt.includes('CANCEL')
+      })
       .filter((e: any) => !isEventPast(e.date_label || e.time || '')),
   ].sort((a: any, b: any) => {
     if (a.is_promoted && !b.is_promoted) return -1
@@ -2448,7 +2453,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             const firstDay = new Date(calYear, calMonth, 1).getDay()
             const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
             const monthName = new Date(calYear, calMonth).toLocaleDateString('en', { month: 'long', year: 'numeric' })
-            const officialDates = new Set([...officialAll.filter((ev: any) => !ev.city || ev.city === city), ...communityAll.filter(ev => ev.type === 'official')].map(ev => parseEventDate(ev.date_label || ev.time || '')?.toDateString()).filter(Boolean))
+            const officialDates = new Set([...officialAll.filter((ev: any) => !city || !ev.city || ev.city === city), ...communityAll.filter(ev => ev.type === 'official')].map(ev => parseEventDate(ev.date_label || ev.time || '')?.toDateString()).filter(Boolean))
             const socialDates = new Set(communityAll.filter(ev => ev.type !== 'official').map(ev => parseEventDate(ev.time || ev.date_label || '')?.toDateString()).filter(Boolean))
             const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
             while (cells.length % 7 !== 0) cells.push(null)
@@ -5991,7 +5996,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   useEffect(() => {
     const fetchFeedOfficial = () => supabase.from('official_events').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
+      .then(({ data, error }) => {
+        console.log('[FETCH-OFFICIAL] count=', data?.length, 'error=', error?.message, 'ids=', data?.map((e: any) => e.id))
+        if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 })))
+      })
     fetchFeedOfficial()
     const interval = setInterval(fetchFeedOfficial, 30000)
     return () => clearInterval(interval)
@@ -9444,8 +9452,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   {/* Header */}
                   <View style={{ position: 'relative' }}>
                     {eventDetail.image_url ? (
-                      <View style={{ width: '100%', height: 280, overflow: 'hidden' }}>
-                        <Image source={{ uri: eventDetail.image_url }} style={{ width: '100%', height: 420, position: 'absolute', top: 0 }} resizeMode="cover" />
+                      <View style={{ width: '100%', height: 360, backgroundColor: '#0A0812' }}>
+                        <Image
+                          source={{ uri: eventDetail.image_url }}
+                          style={{ width: '100%', height: '100%' }}
+                          // Official events are usually portrait posters → letterbox with contain
+                          // so nothing gets cropped. Community events tend to be landscape user
+                          // photos that look fine cover-cropped.
+                          resizeMode={eventDetail.type === 'official' ? 'contain' : 'cover'}
+                        />
                       </View>
                     ) : (
                       <LinearGradient colors={eventDetail.gradient as any} style={{ height: 280 }} />
