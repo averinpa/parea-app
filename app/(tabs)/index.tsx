@@ -5363,7 +5363,10 @@ function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCityOpen, o
       <View style={{ flex: 1 }}>
 
         {/* Header */}
-        <View style={{ paddingTop: Platform.OS === 'ios' ? 16 : Math.max(insets.top, 20) + 4, paddingHorizontal: 20, paddingBottom: 12 }}>
+        {/* Outer SafeAreaView already applies insets.top on both platforms,
+            so we only add a small fixed gap here — adding insets.top again
+            doubled the spacing on Xiaomi/large-notch Android devices. */}
+        <View style={{ paddingTop: 8, paddingHorizontal: 20, paddingBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
             <MaskedView maskElement={
               <Text style={{ fontSize: 44, fontFamily: 'ClashDisplay-Bold', letterSpacing: -1, lineHeight: 50, backgroundColor: 'transparent' }}>Profile</Text>
@@ -6028,10 +6031,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
   useEffect(() => {
     const fetchFeedOfficial = () => supabase.from('official_events').select('*').order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        console.log('[FETCH-OFFICIAL] count=', data?.length, 'error=', error?.message, 'ids=', data?.map((e: any) => e.id))
-        if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 })))
-      })
+      .then(({ data }) => { if (data && data.length > 0) setFeedOfficialDbEvents(data.map(e => ({ ...e, id: e.id + 100000, _dbId: e.id, _fromDb: true, type: 'official', time: e.time || e.date_label || '', gradient: e.gradient || ['#667eea', '#764ba2'], maxParticipants: e.capacity ?? e.max_participants ?? 100, seekerColors: e.seeker_colors || ['#818CF8', '#6366F1'], seekingCount: e.seeking_count ?? 0, participantsCount: e.participants_count ?? 0 }))) })
     fetchFeedOfficial()
     const interval = setInterval(fetchFeedOfficial, 30000)
     return () => clearInterval(interval)

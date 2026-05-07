@@ -230,7 +230,6 @@ async def main():
                 skipped += 1
                 continue
             if not event or not event['title']:
-                print(f'  SKIPPED — event={event!r}')
                 skipped += 1
                 continue
 
