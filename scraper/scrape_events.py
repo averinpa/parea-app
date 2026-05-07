@@ -30,6 +30,16 @@ def clean_date(date_str):
     # Remove tabs and extra spaces
     return re.sub(r'[\t\n\r]+', ' ', date_str).strip()
 
+def _normalize_event_url(url: str) -> str:
+    """Strip query, fragment, /lang/en suffix and trailing slash so the same
+    event page always produces the same ticket_link key. Without this, the
+    same event scraped twice (once with lang/en, once without) hits the
+    insert/update lookup as two different rows."""
+    u = url.split('?')[0].split('#')[0]
+    u = u.replace('/lang/en', '').replace('/lang/el', '').replace('/lang/ru', '')
+    return u.rstrip('/')
+
+
 async def _collect_event_links_on_page(page, links: set):
     """Scrape modern /event/<slug>/ links — skip the old easyconsole.cfm/page/event/
     URLs that point to an alternate template the parser can't read."""
@@ -37,14 +47,11 @@ async def _collect_event_links_on_page(page, links: set):
     soup = BeautifulSoup(content, 'html.parser')
     for a in soup.find_all('a', href=True):
         href = a['href']
-        # Only modern slug-based URLs work with the parser. Old easyconsole.cfm
-        # event URLs render a different template with no og:title and would be
-        # silently skipped, polluting the "skipped" counter.
         if '/event/' not in href or 'easyconsole' in href:
             continue
         url = href if href.startswith('http') else (BASE_URL + href if href.startswith('/') else None)
         if url:
-            links.add(url.split('?')[0].split('&')[0])
+            links.add(_normalize_event_url(url))
     return None
 
 
