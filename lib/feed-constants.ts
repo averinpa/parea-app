@@ -192,7 +192,7 @@ export const QUEUE_PROFILES = [
 
 export const VIBE_FORMAT_MAX: Record<string, number>       = { '1+1': 2, squad: 5, party: 20 }
 export const VIBE_FORMAT_THRESHOLD: Record<string, number> = { '1+1': 2, squad: 5, party: 12 }
-export const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': '1 spot open', squad: '4 spots open', party: '19 spots open' }
+export const VIBE_FORMAT_LABEL: Record<string, string>     = { '1+1': 'Duo', squad: 'Squad', party: 'Party' }
 export const GOAL_LABEL: Record<string, string>            = { chill: '😌 Chill', networking: '🤝 Networking', activity: '⚡ Activity' }
 
 export const REPORT_REASONS = ['Inappropriate content', 'Spam or fake profile', 'Harassment', 'Underage user', 'Other']

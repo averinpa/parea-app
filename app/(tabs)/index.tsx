@@ -3498,11 +3498,12 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                             ))}
                           </View>
                           <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                            {/* Show crew members (chat members) instead of event attendees */}
+                            {/* Show crew members from chat. If user isn't in any crew yet,
+                                say so explicitly instead of misleading "1/5 in crew". */}
                             {(() => {
                               const myCrewChat = chatList?.find((c: any) => c.eventRefId === ev.id || (c.event === ev.title && c.type === 'group'))
-                              const crewCount = myCrewChat?.members || 1
-                              return `${crewCount}/${cap} in crew`
+                              if (!myCrewChat) return 'Looking for crew…'
+                              return `${myCrewChat.members}/${cap} in crew`
                             })()}
                           </Text>
                         </View>
@@ -4840,19 +4841,20 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                         </View>
                                       )}
                                     </View>
-                                    {/* Two explicit pills, stacked. View = preview, Join = commit. */}
-                                    <View style={{ gap: 6 }}>
+                                    {/* Two explicit pills, stacked with breathing room.
+                                        View = preview, Join = commit. */}
+                                    <View style={{ gap: 12 }}>
                                       <TouchableOpacity activeOpacity={0.85}
                                         onPress={openCrewPreview}
-                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 64 }}>
-                                        <Text style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 70 }}>
+                                        <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
                                       </TouchableOpacity>
                                       <TouchableOpacity activeOpacity={0.85}
                                         onPress={() => onJoinSpecificCrew?.(ev, crew.chatId)}
-                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, alignItems: 'center', minWidth: 64 }}>
-                                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#052e16' }}>Join</Text>
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 99, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, alignItems: 'center', minWidth: 70 }}>
+                                        <Text style={{ fontSize: 13, fontWeight: '900', color: '#052e16' }}>Join</Text>
                                       </TouchableOpacity>
                                     </View>
                                   </View>
@@ -5109,7 +5111,13 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             </View>
             <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 10 }}>
               {crewPreviewState.crew.members.map((m: any) => (
-                <TouchableOpacity key={m.id} activeOpacity={0.85} onPress={() => setPreviewProfile(m)}
+                <TouchableOpacity key={m.id} activeOpacity={0.85} onPress={() => {
+                  // iOS won't render Modal-over-Modal — close crew preview first,
+                  // wait for the slide-out animation, then open the profile sheet.
+                  const memberToShow = m
+                  setCrewPreviewState(null)
+                  setTimeout(() => setPreviewProfile(memberToShow), 350)
+                }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
                   {m.photo ? <Image source={{ uri: m.photo }} style={{ width: 48, height: 48, borderRadius: 24 }} /> :
                   <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
@@ -6969,22 +6977,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // Events that are confirmed but have no accepted invite → partner left
       for (const evId of confirmedEventIds) {
         if (activeEventIds.has(evId)) continue
-        // For party/squad: chat created via chat_members (no crew_invite) — verify user is still in chat
-        let chatId = officialEventChatMapRef.current[evId]
-        if (!chatId) {
-          // officialEventChatMap may not be set yet — look up by event_id
-          const { data: chatRow } = await supabase.from('chats').select('id').eq('event_id', evId).limit(1).maybeSingle()
-          if (chatRow?.id) chatId = chatRow.id
-        }
+        // Multi-chat per event: only trust the user's KNOWN chat. Don't fall
+        // back to "first chat for this event" — that could be another crew the
+        // user isn't even in, and we'd wrongly mark them as "partner left".
+        const chatId = officialEventChatMapRef.current[evId]
         if (chatId) {
           const { data: membership } = await supabase.from('chat_members').select('chat_id').eq('chat_id', chatId).eq('profile_id', userData.dbId).maybeSingle()
-          if (membership) {
-            // Update local map so next check is faster
-            if (!officialEventChatMapRef.current[evId]) setOfficialEventChatMap(prev => ({ ...prev, [evId]: chatId }))
-            continue // still in chat — not a "partner left" scenario
-          }
+          if (membership) continue // still in our crew chat — not "partner left"
+        } else {
+          // No known chat for this user on this event → query their own membership directly.
+          const { data: anyMembership } = await supabase.from('chat_members')
+            .select('chat_id, chats:chat_id(event_id)')
+            .eq('profile_id', userData.dbId)
+            .limit(20)
+          const stillInCrewForThisEvent = (anyMembership || []).some((m: any) => (m as any).chats?.event_id === evId)
+          if (stillInCrewForThisEvent) continue
         }
-        console.log('Partner left event', evId, '— resetting to looking')
         // Remove duo chat for this event
         const chatIdToRemove = officialEventChatMapRef.current[evId]
         if (chatIdToRemove) setChatList(prev => prev.filter((c: any) => c.id !== chatIdToRemove))
@@ -10039,8 +10047,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       </View>
                     )}
 
-                    {/* Participants — only for community events */}
-                    {eventDetail.type !== 'official' && (
+                    {/* Participants — community events use join_requests, official events
+                        use event_attendees (everyone interested in this event, across crews). */}
+                    {eventDetail.type !== 'official' ? (
                       <Pressable
                         onPress={async () => {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -10070,6 +10079,35 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <View style={{ backgroundColor: evIsFull ? '#fef2f2' : '#f0fdf4', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 5 }}>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: evIsFull ? '#EF4444' : '#22c55e' }}>{evIsFull ? 'Full' : 'Open'}</Text>
                         </View>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        onPress={async () => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                          // For official events: show all event_attendees (people who joined
+                          // this event in Parea, across all crews + still in pool).
+                          const evRefId = eventDetail._dbId ?? eventDetail.id
+                          const { data: attendees } = await supabase
+                            .from('event_attendees')
+                            .select('profile_id, profiles:profile_id(id, name, photos, bio, age, color)')
+                            .eq('event_ref_id', evRefId)
+                          const members = (attendees || []).map((a: any) => {
+                            const p = a.profiles || {}
+                            return { id: p.id, name: p.name || 'Member', photo: p.photos?.[0] || null, bio: p.bio || '', age: p.age || '', color: p.color || '#818CF8' }
+                          }).filter((m: any) => m.id)
+                          setEventParticipants({ ev: eventDetail, members })
+                        }}
+                        style={({ pressed }) => ({ backgroundColor: pressed ? '#F5F3FF' : '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 })}>
+                        <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Feather name="users" size={18} color="#6366F1" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Participants</Text>
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B', marginTop: 2 }}>
+                            See who's going
+                          </Text>
+                        </View>
+                        <Feather name="chevron-right" size={18} color="#94A3B8" />
                       </Pressable>
                     )}
 
@@ -10626,9 +10664,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         </Modal>
       )}
 
-      {/* Group members sheet */}
+      {/* Group members sheet — overFullScreen so iOS can stack it on top of the
+          chat Modal (default fullScreen presentationStyle blocks Modal-over-Modal). */}
       {groupMembersOpen && openChat && (
-        <Modal transparent animationType="slide" onRequestClose={() => setGroupMembersOpen(false)}>
+        <Modal transparent statusBarTranslucent presentationStyle="overFullScreen" animationType="slide" onRequestClose={() => setGroupMembersOpen(false)}>
           <View style={{ flex: 1, justifyContent: 'flex-end' }}>
             <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setGroupMembersOpen(false)} />
             <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%' }}>
@@ -10661,11 +10700,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <Text style={{ fontSize: 12, color: '#64748B' }}>That's you 👋</Text>
                   </View>
                 </View>
-                {/* Approved members */}
+                {/* Approved members — compact: photo + name + chevron, no bio/transport/flags */}
                 {(openChat.memberProfiles || []).map((p: any, i: number) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 20, backgroundColor: `${p.color}0D`, borderWidth: 1.5, borderColor: `${p.color}25` }}>
-                    {/* Photo + info — tappable to view profile */}
-                    <TouchableOpacity activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, backgroundColor: 'rgba(99,102,241,0.04)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' }}>
+                    <TouchableOpacity activeOpacity={0.8} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
                       onPress={() => {
                         setChatPartnerPreview({
                           ...p,
@@ -10679,35 +10717,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setGroupMembersOpen(false)
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                       }}>
-                      <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: p.color }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: p.color }}>
                         {p.photo
                           ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} />
-                          : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>👤</Text></View>}
+                          : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20 }}>👤</Text></View>}
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>{p.name}{p.age ? `, ${p.age}` : ''}</Text>
-                          {p._isHost && (
-                            <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#6366F1' }}>
-                              <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>{p.bio}</Text>
-                        {p.transport && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                            <Text style={{ fontSize: 12 }}>{p.transport === 'car' ? '🚗' : p.transport === 'lift' ? '🙋' : '📍'}</Text>
-                            <Text style={{ fontSize: 12, color: p.transport === 'car' ? '#6366F1' : '#64748B', fontWeight: '600' }}>
-                              {p.transport === 'car' ? 'Has a car · can give a lift' : p.transport === 'lift' ? 'Needs a lift' : 'Meeting there'}
-                            </Text>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>{p.name}{p.age ? `, ${p.age}` : ''}</Text>
+                        {p._isHost && (
+                          <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#6366F1' }}>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
                           </View>
                         )}
-                        <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                          {(p.langs || []).map((l: string) => (
-                            <Text key={l} style={{ fontSize: 14 }}>{FLAG_MAP[l] || '🌐'}</Text>
-                          ))}
-                        </View>
                       </View>
+                      <Feather name="chevron-right" size={18} color="#94A3B8" />
                     </TouchableOpacity>
 
                     {/* Remove button — only for host */}
