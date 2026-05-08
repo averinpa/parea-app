@@ -3498,7 +3498,12 @@ function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, use
                             ))}
                           </View>
                           <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
-                            {found}/{cap} joined
+                            {/* Show crew members (chat members) instead of event attendees */}
+                            {(() => {
+                              const myCrewChat = chatList?.find((c: any) => c.eventRefId === ev.id || (c.event === ev.title && c.type === 'group'))
+                              const crewCount = myCrewChat?.members || 1
+                              return `${crewCount}/${cap} in crew`
+                            })()}
                           </Text>
                         </View>
                       )}
@@ -3968,7 +3973,7 @@ function RockingTransportPill({ transport }: { transport: string }) {
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, passedIdsByEvent = {}, onPassMember, onJoinCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, passedIdsByEvent = {}, onPassMember, onJoinCrew, crewsByEvent = {}, onJoinSpecificCrew, onCreateNewCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
   // Official + approved community events — shown as crew cards
   const notExpired = (e: any) => e.expiresAt ? e.expiresAt > Date.now() : !isEventPast(e.date_label || e.time || '')
   const myEvents = (allEvents || []).filter((e: any) => {
@@ -3987,9 +3992,12 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   const pendingHostedEvents = (allEvents || []).filter((e: any) => joinedEvents?.[e.id] === 'pending' && e.isHosted && notExpired(e))
   const activeHosted = (hostedEvents || []).filter((e: any) => notExpired(e))
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
+  const insets = useSafeAreaInsets()
   const [previewProfile, setPreviewProfile] = useState<any>(null)
   // Open CrewPoolSheet for a specific event — null means closed
   const [crewPoolEv, setCrewPoolEv] = useState<any>(null)
+  // Preview a specific crew's full member list before joining
+  const [crewPreviewState, setCrewPreviewState] = useState<{ ev: any; crew: any } | null>(null)
   // Subtle live-dot heartbeat next to the title — only animation that survived.
   // Translating a gradient inside MaskedView clipped the text on tall devices,
   // and the sparkle emoji read as cheap. Static gradient + breathing dot is cleaner.
@@ -4386,6 +4394,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
           {myEvents.map((ev: any) => {
             const isCommunity = ev.type === 'community'
             const format     = userEventFormat?.[ev.id]    || (ev.type === 'official' ? '1+1' : 'squad')
+            // Crew-list mode covers all official events. Old "CREW FOUND" progress
+            // bar + partners avatars belonged to the swipe flow — they get hidden here.
+            const isCrewMode = !isCommunity
             const transport  = userEventTransport?.[ev.id] || 'meet'
             // For community events: use real participant count as crew size
             const cap        = isCommunity ? Math.min(ev.participantsCount || 5, 5) : (VIBE_FORMAT_MAX[format] || 5)
@@ -4414,9 +4425,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
             return (
               <View key={ev.id} style={{
-                borderRadius: 28, overflow: 'hidden',
-                backgroundColor: 'rgba(255,255,255,0.055)',
-                borderWidth: 1, borderColor: isActive ? 'rgba(67,233,123,0.3)' : 'rgba(255,255,255,0.08)',
+                borderRadius: 24, overflow: 'hidden',
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
               }}>
                 <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
 
@@ -4427,7 +4438,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: -0.3, lineHeight: 21 }} numberOfLines={2}>{ev.title}</Text>
                       <Text style={{ fontSize: 11, fontFamily: 'Outfit-Regular', color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>{prettyEventTime(ev.time)}{ev.distance && ev.distance !== '0km' ? ` · ${ev.distance}` : ev.location ? ` · ${ev.location}` : ''}</Text>
                     </View>
-                    <PulsingStatusBadge label={statusLabel} color={statusColor} bg={statusBg} border={statusBorder} />
+                    {/* Hide swipe-flow status badge in crew mode (was "1 found 🎯") */}
+                    {!isCrewMode && (
+                      <PulsingStatusBadge label={statusLabel} color={statusColor} bg={statusBg} border={statusBorder} />
+                    )}
                   </View>
 
                   {/* My choices pills */}
@@ -4456,7 +4470,8 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                     )
                   })()}
 
-                  {/* Progress */}
+                  {/* Progress — hidden in crew-list mode (data shown in crew cards instead) */}
+                  {!isCrewMode && (
                   <View style={{ marginBottom: 18 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                       <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', fontWeight: '700', letterSpacing: 0.6 }}>
@@ -4483,9 +4498,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       </Text>
                     )}
                   </View>
+                  )}
 
                   {/* ── DUO (1+1) official event — one person at a time ── */}
-                  {!isCommunity && format === '1+1' ? (() => {
+                  {/* Crew-list mode supersedes DUO swipe for all official events. */}
+                  {!isCrewMode && !isCommunity && format === '1+1' ? (() => {
                     const existingChatId = officialEventChatMap[ev.id]
                     // If chat already created → show Open Chat
                     if (existingChatId) {
@@ -4656,6 +4673,9 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                   })() : (
                   <>
                   {/* ── Non-duo: avatar row + CTA (squad / party / community) ── */}
+                  {/* Crew-list mode replaces this whole "YOUR CREW SO FAR" avatar grid
+                      with the existing-crews list rendered below. Hidden for clarity. */}
+                  {!isCrewMode && (
                   <View style={{ marginBottom: isActive ? 20 : 0 }}>
                     {(partners.length > 0) && (
                       <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5, marginBottom: 12 }}>
@@ -4717,6 +4737,7 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       )}
                     </View>
                   </View>
+                  )}
 
                   {/* CTA */}
                   {isCommunity && !hasRealAttendees && (
@@ -4725,24 +4746,163 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                       <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>You're approved! More people may join. Open the chat to say hi.</Text>
                     </View>
                   )}
-                  {!isActive && !isCommunity && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(251,191,36,0.07)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.18)' }}>
-                      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(251,191,36,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-                        <Search size={16} color="#FBBF24" />
-                      </View>
-                      <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.48)', lineHeight: 18 }}>We're looking for people going to this event. You'll get notified when someone matches!</Text>
-                    </View>
-                  )}
-                  {(isActive || (joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id])) && (
+                  {/* Crew-list UI takes over for ALL official events. The old "We're looking..."
+                      placeholder fired only when no real attendees were found yet, but in the new
+                      model we always show "existing crews + create your own" so the user has an
+                      action to take, even alone. */}
+                  {(isActive || !isCommunity || (joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id])) && (
                     <View style={{ gap: 10 }}>
                       {(() => {
+                        const isCrewMode = !isCommunity && (format === 'squad' || format === 'party')
                         const isAlreadyConfirmed = joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id]
-                        const crewPreview = !isCommunity && (format === 'squad' || format === 'party') && !isAlreadyConfirmed ? crewPreviewMap[ev.id] : null
-                        const readyCount = readyCountMap[ev.id] // others ready (excludes self)
-                        const isWaiting = !isCommunity && (format === 'squad' || format === 'party') && readyCount === 0 && !crewPreview && !isAlreadyConfirmed
-                        if (isAlreadyConfirmed) {
-                          const confirmedSoFar = (crewPreview?.confirmedCount || 0) + 1 // +1 for self
+
+                        // ── Crew-list mode (all official events: 1+1 / squad / party) ──
+                        // Everyone gets the same crew-list UI; the format only changes
+                        // the max chat size (2 / 5 / 20 from VIBE_FORMAT_MAX).
+                        if (isCrewMode) {
+                          const crews = crewsByEvent[ev.id] || []
+                          const myCrew = crews.find((c: any) => c.members.some((m: any) => m.id === userData?.dbId))
                           const maxSize = VIBE_FORMAT_MAX[format] || 5
+                          // Fallback when user just created/joined and the 5s polling hasn't
+                          // refreshed crewsByEvent yet — joinedEvents+officialEventChatMap
+                          // already says "they're in a crew", so show the badge immediately.
+                          const isOptimisticallyInCrew = !myCrew && joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id]
+                          if (myCrew || isOptimisticallyInCrew) {
+                            const memberCount = myCrew?.members.length ?? 1
+                            return (
+                              <View style={{ gap: 10 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
+                                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(67,233,123,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                                    <CheckCircle size={16} color="#43E97B" />
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in a crew of {memberCount}</Text>
+                                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+                                      {memberCount < maxSize ? `${maxSize - memberCount} spots left for others to join` : 'Crew is full'}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <TouchableOpacity
+                                  activeOpacity={0.85}
+                                  onPress={() => onGoToMessages?.(ev)}
+                                  style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                                  <MessageCircle size={16} color="#fff" />
+                                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>Open Chat</Text>
+                                </TouchableOpacity>
+                              </View>
+                            )
+                          }
+                          // Not in any crew yet — show existing crews + Create new.
+                          // Visual priority is JOIN (existing crews), not CREATE.
+                          // Filter out crews that are full (size >= maxSize) AND orphan
+                          // empty crews (zero members — leftovers from earlier tests).
+                          const joinable = crews.filter((c: any) => c.members.length > 0 && c.members.length < maxSize)
+                          return (
+                            <View style={{ gap: 8 }}>
+                              {joinable.length > 0 ? (
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
+                                  {joinable.length} {joinable.length === 1 ? 'crew is forming' : 'crews are forming'}
+                                </Text>
+                              ) : (
+                                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontStyle: 'italic' }}>
+                                  No one's started a crew yet — be the first.
+                                </Text>
+                              )}
+                              {joinable.map((crew: any) => {
+                                const scoreColor = crew.avgMatch >= 75 ? '#43E97B' : crew.avgMatch >= 55 ? '#FBBF24' : crew.avgMatch >= 35 ? '#A78BFA' : '#94A3B8'
+                                const openCrewPreview = () => setCrewPreviewState({ ev, crew })
+                                return (
+                                  // Card itself is non-interactive — two explicit pills on the
+                                  // right do the actions. View = preview members, Join = commit.
+                                  <View key={crew.chatId}
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                    <View style={{ flexDirection: 'row' }}>
+                                      {crew.members.slice(0, 3).map((m: any, i: number) => (
+                                        m.photo ? <Image key={m.id || i} source={{ uri: m.photo }} style={{ width: 42, height: 42, borderRadius: 21, borderWidth: 2.5, borderColor: '#0A0812', marginLeft: i > 0 ? -14 : 0 }} /> :
+                                        <View key={m.id || i} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#0A0812', marginLeft: i > 0 ? -14 : 0 }}>
+                                          <Text style={{ fontSize: 15 }}>👤</Text>
+                                        </View>
+                                      ))}
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
+                                        {crew.members.slice(0, 2).map((m: any) => m.name?.split(' ')[0] || 'Member').join(' & ')}{crew.members.length > 2 ? ` +${crew.members.length - 2}` : ''}
+                                      </Text>
+                                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 3 }}>
+                                        {crew.members.length} of {maxSize} · {maxSize - crew.members.length} {maxSize - crew.members.length === 1 ? 'spot' : 'spots'} left
+                                      </Text>
+                                      {crew.avgMatch > 0 && (
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                          <Sparkle size={10} color={scoreColor} weight="fill" />
+                                          <Text style={{ fontSize: 11, fontWeight: '700', color: scoreColor }}>
+                                            {crew.avgMatch}% vibe match
+                                          </Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    {/* Two explicit pills, stacked. View = preview, Join = commit. */}
+                                    <View style={{ gap: 6 }}>
+                                      <TouchableOpacity activeOpacity={0.85}
+                                        onPress={openCrewPreview}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 64 }}>
+                                        <Text style={{ fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity activeOpacity={0.85}
+                                        onPress={() => onJoinSpecificCrew?.(ev, crew.chatId)}
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, alignItems: 'center', minWidth: 64 }}>
+                                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#052e16' }}>Join</Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  </View>
+                                )
+                              })}
+                              {/* When no crews exist — designer primary CTA: dark glass body
+                                  with a soft gradient border + gradient text. Subtle but clear.
+                                  When crews already exist — small secondary text link. */}
+                              {joinable.length === 0 ? (
+                                <TouchableOpacity
+                                  activeOpacity={0.85}
+                                  onPress={() => onCreateNewCrew?.(ev)}
+                                  style={{ marginTop: 4 }}>
+                                  <LinearGradient
+                                    colors={['#A78BFA', '#43E97B']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={{ borderRadius: 99, padding: 1.5 }}>
+                                    <View style={{ borderRadius: 99, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: '#0F0C1F' }}>
+                                      <MaskedView
+                                        maskElement={
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                                            <Text style={{ fontSize: 14, fontWeight: '900', color: '#000' }}>✨ Start your own crew</Text>
+                                          </View>
+                                        }>
+                                        <LinearGradient
+                                          colors={['#A78BFA', '#43E97B']}
+                                          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                          style={{ flexDirection: 'row', alignItems: 'center', gap: 7, height: 18 }}>
+                                          <Text style={{ fontSize: 14, fontWeight: '900', opacity: 0 }}>✨ Start your own crew</Text>
+                                        </LinearGradient>
+                                      </MaskedView>
+                                    </View>
+                                  </LinearGradient>
+                                </TouchableOpacity>
+                              ) : (
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  onPress={() => onCreateNewCrew?.(ev)}
+                                  style={{ paddingVertical: 12, alignItems: 'center', marginTop: 4, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.55)' }}>
+                                    + or start your own
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )
+                        }
+
+                        // ── Non-crew formats (1+1 duo / community) — keep old behavior ──
+                        if (isAlreadyConfirmed) {
                           return (
                             <View style={{ gap: 10 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
@@ -4750,15 +4910,10 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                                   <CheckCircle size={16} color="#43E97B" />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in the crew!</Text>
-                                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
-                                    We'll keep looking for more people.
-                                  </Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in!</Text>
                                 </View>
                               </View>
-                              <TouchableOpacity
-                                activeOpacity={0.85}
-                                onPress={() => onGoToMessages?.(ev)}
+                              <TouchableOpacity activeOpacity={0.85} onPress={() => onGoToMessages?.(ev)}
                                 style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
                                 <MessageCircle size={16} color="#fff" />
                                 <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>Open Chat</Text>
@@ -4766,75 +4921,16 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                             </View>
                           )
                         }
-                        if (crewPreview) {
-                          // Filter out anyone the user has already passed for THIS event so the
-                          // count and avatar row reflect what they'd actually see in the sheet.
-                          const passedSet: Set<string> = passedIdsByEvent[ev.id] || new Set()
-                          const visible = (crewPreview.members || []).filter((m: any) => !passedSet.has(m.id))
-                          const visibleCount = visible.length
-                          const confirmedCount = crewPreview.confirmedCount || 0
-                          // Open the bottom sheet — preview profiles + pass + commit.
-                          const openPool = () => setCrewPoolEv(ev)
-                          if (visibleCount === 0) {
-                            // Everyone got passed — open the (now-empty) sheet so the user
-                            // gets the same flow as when there were people: confirm via the
-                            // "Be first to join" CTA inside the sheet, no surprise behaviors.
-                            return (
-                              <TouchableOpacity
-                                activeOpacity={0.85}
-                                onPress={openPool}
-                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Join crew</Text>
-                              </TouchableOpacity>
-                            )
-                          }
-                          return (
-                            <View style={{ gap: 10 }}>
-                              {/* Minimal avatar strip — tap to open the pool sheet. No status text,
-                                  no transport badges; all that lives inside the sheet now. */}
-                              <TouchableOpacity
-                                activeOpacity={0.85}
-                                onPress={openPool}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
-                                <View style={{ flexDirection: 'row' }}>
-                                  {visible.slice(0, 3).map((m: any, i: number) => (
-                                    m.photo ? <Image key={i} source={{ uri: m.photo }} style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: '#0A0812', marginLeft: i > 0 ? -10 : 0 }} /> :
-                                    <View key={i} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#0A0812', marginLeft: i > 0 ? -10 : 0 }}>
-                                      <Text style={{ fontSize: 11 }}>👤</Text>
-                                    </View>
-                                  ))}
-                                </View>
-                                <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.85)' }}>
-                                  {confirmedCount >= 2
-                                    ? `${confirmedCount} confirmed · tap to see crew`
-                                    : `${visibleCount} ${visibleCount === 1 ? 'person is' : 'people are'} looking · tap to preview`}
-                                </Text>
-                                <CaretRight size={14} color="rgba(255,255,255,0.4)" />
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                activeOpacity={0.85}
-                                onPress={openPool}
-                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>See crew & join</Text>
-                              </TouchableOpacity>
-                            </View>
-                          )
-                        }
-                        const isSquadOrParty = !isCommunity && (format === 'squad' || format === 'party')
                         return (
                           <TouchableOpacity
                             activeOpacity={inviteSentToAll ? 1 : 0.85}
                             disabled={inviteSentToAll}
-                            // For squad/party events route through the CrewPoolSheet so the user
-                            // can preview/pass anyone already in the pool before committing.
-                            // Empty pool just shows the "Be first to join" CTA inside the sheet,
-                            // which calls onJoinCrew exactly like the old direct-press did.
-                            onPress={() => isSquadOrParty ? setCrewPoolEv(ev) : onConfirm?.(ev, partners, format)}
+                            onPress={() => onConfirm?.(ev, partners, format)}
                             style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: inviteSentToAll ? 'rgba(67,233,123,0.2)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: inviteSentToAll ? 0 : 0.4, shadowRadius: 14, elevation: inviteSentToAll ? 0 : 6 }}>
                             {!inviteSentToAll && (isCommunity ? <MessageCircle size={15} color="#052e16" /> : <Zap size={15} color="#052e16" fill="#052e16" />)}
                             {inviteSentToAll && <CheckCircle size={15} color="#43E97B" />}
                             <Text style={{ fontSize: 15, fontWeight: '900', color: inviteSentToAll ? '#43E97B' : '#052e16' }}>
-                              {isCommunity ? 'Confirm & Open Chat' : inviteSentToAll ? 'Invite sent' : 'Join crew'}
+                              {isCommunity ? 'Confirm & Open Chat' : inviteSentToAll ? 'Invite sent' : 'Confirm'}
                             </Text>
                           </TouchableOpacity>
                         )
@@ -4998,6 +5094,53 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
       </View>
 
       {previewProfile && <ProfilePreviewSheet profile={previewProfile} onClose={() => setPreviewProfile(null)} onBlock={onBlockUser} onReport={onReportUser} />}
+      {/* Crew preview modal — list of all members in a specific crew with Join button */}
+      {crewPreviewState && (
+        <Modal transparent statusBarTranslucent animationType="slide" onRequestClose={() => setCrewPreviewState(null)}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={() => setCrewPreviewState(null)} />
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '85%', backgroundColor: '#0A0812', borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+            <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+              <View style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+            </View>
+            <View style={{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 14 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.4)', letterSpacing: 0.6, textTransform: 'uppercase' }}>Crew at</Text>
+              <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: '900', color: '#fff', marginTop: 2 }}>{crewPreviewState.ev?.title}</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>{crewPreviewState.crew.members.length} member{crewPreviewState.crew.members.length === 1 ? '' : 's'} · tap to view profile</Text>
+            </View>
+            <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 10 }}>
+              {crewPreviewState.crew.members.map((m: any) => (
+                <TouchableOpacity key={m.id} activeOpacity={0.85} onPress={() => setPreviewProfile(m)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
+                  {m.photo ? <Image source={{ uri: m.photo }} style={{ width: 48, height: 48, borderRadius: 24 }} /> :
+                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>👤</Text>
+                  </View>}
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{m.name}{m.age ? `, ${m.age}` : ''}</Text>
+                    {m.bio ? <Text numberOfLines={1} style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{m.bio}</Text> : null}
+                    {(m.interests || []).length > 0 && (
+                      <Text numberOfLines={1} style={{ fontSize: 11, color: 'rgba(167,139,250,0.85)', marginTop: 2 }}>
+                        {(m.interests || []).slice(0, 3).join(' · ')}
+                      </Text>
+                    )}
+                  </View>
+                  <CaretRight size={16} color="rgba(255,255,255,0.3)" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 14) + 4, borderTopWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => {
+                const { ev, crew } = crewPreviewState
+                setCrewPreviewState(null)
+                onJoinSpecificCrew?.(ev, crew.chatId)
+              }}
+                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Join this crew</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
       <CrewPoolSheet
         visible={!!crewPoolEv}
         event={crewPoolEv}
@@ -6281,6 +6424,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // lets us reuse already-computed AI scores instead of re-billing every 15s.
   const eventAttendeesMapRef = useRef<Record<number, any[]>>({})
   eventAttendeesMapRef.current = eventAttendeesMap
+  // All existing crew chats per event — populated from chats + chat_members. The user
+  // picks one to join or creates their own; multiple chats per event are allowed.
+  // Each crew = { chatId, members: [{ id, name, photo, color, age, ... }], avgMatch }.
+  const [crewsByEvent, setCrewsByEvent] = useState<Record<number, Array<{ chatId: number; members: any[]; avgMatch: number }>>>({})
   // Bidirectional crew_pref + gender check.
   // Returns true if (a) my preference allows the other person's gender AND (b) their preference allows my gender.
   const fitsCrewPref = (myPref: string, myGender: string | undefined, theirPref: string, theirGender: string | undefined) => {
@@ -6452,6 +6599,90 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .subscribe()
     return () => { clearInterval(interval); supabase.removeChannel(rtChannel); supabase.removeChannel(passesChannel) }
   }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
+
+  // Sync chatList + openChat member counts from crewsByEvent so the chat header
+  // updates when someone joins/leaves the crew. Without this, the header sticks
+  // on the count from when the chat was first added to chatList.
+  useEffect(() => {
+    const all = Object.values(crewsByEvent).flat()
+    if (all.length === 0) return
+    const refresh = (c: any) => {
+      const crew = all.find((cr: any) => cr.chatId === c.id)
+      if (!crew) return c
+      const others = crew.members.filter((m: any) => m.id !== userData?.dbId)
+      return { ...c, members: crew.members.length, memberProfiles: others, avatars: others.map((m: any) => m.photo).filter(Boolean), colors: others.map((m: any) => m.color) }
+    }
+    setChatList(prev => prev.map(refresh))
+    setOpenChat((cur: any) => cur ? refresh(cur) : cur)
+  }, [crewsByEvent, userData?.dbId])
+
+  // ─── Fetch existing crew chats per joined official event ───────────────────
+  // Runs whenever joinedEvents changes. For each official event the user is in,
+  // pulls all `chats` + `chat_members` rows so we can show "existing crews" UI.
+  // Avg vibe match for a crew is computed against the current user via cached
+  // AI scores in eventAttendeesMap (no extra AI calls).
+  useEffect(() => {
+    if (!userData?.dbId) return
+    const officialJoined = Object.keys(joinedEvents)
+      .map(Number)
+      .filter(id => joinedEvents[id] && id > 100000)
+    if (officialJoined.length === 0) { setCrewsByEvent({}); return }
+    let cancelled = false
+    const fetchCrews = async () => {
+      const result: Record<number, Array<{ chatId: number; members: any[]; avgMatch: number }>> = {}
+      await Promise.all(officialJoined.map(async (evId) => {
+        // Two-step fetch: chats first, then full member profiles separately. The
+        // nested-select form was returning null `profiles` join in some cases
+        // (the "EXISTING CREWS (1) · 0/5 · no match yet" bug) which made crews
+        // look empty to other users. Doing it as two queries is rock-solid.
+        const { data: chatsForEvent } = await supabase
+          .from('chats')
+          .select('id')
+          .eq('event_id', evId)
+          .eq('type', 'group')
+        const chatIds = (chatsForEvent || []).map((c: any) => c.id)
+        if (chatIds.length === 0) { result[evId] = []; return }
+        const { data: cms } = await supabase
+          .from('chat_members')
+          .select('chat_id, profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, drinks_pref, smoking_pref, has_pets)')
+          .in('chat_id', chatIds)
+        const attendees = eventAttendeesMapRef.current[evId] || []
+        const scoreById: Record<string, number> = {}
+        attendees.forEach((a: any) => { if (a?.id && a.score != null) scoreById[a.id] = a.score })
+        const byChat: Record<number, any[]> = {}
+        ;(cms || []).forEach((m: any) => {
+          const p = m.profiles || {}
+          if (!byChat[m.chat_id]) byChat[m.chat_id] = []
+          byChat[m.chat_id].push({
+            id: p.id || m.profile_id,
+            name: p.name || 'Member',
+            photo: p.photos?.[0] || null, photos: p.photos || [],
+            color: p.color || '#818CF8',
+            age: p.age || '',
+            bio: p.bio || '', langs: p.langs || [], interests: p.interests || [],
+            drinksPref: p.drinks_pref, smokingPref: p.smoking_pref, hasPets: !!p.has_pets,
+          })
+        })
+        result[evId] = chatIds.map((cid: number) => {
+          const members = byChat[cid] || []
+          const otherIds = members.map((m: any) => m.id).filter((id: string) => id !== userData.dbId)
+          const scores = otherIds.map(id => scoreById[id]).filter(s => typeof s === 'number')
+          const avgMatch = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
+          return { chatId: cid, members, avgMatch }
+        })
+      }))
+      if (!cancelled) setCrewsByEvent(result)
+    }
+    fetchCrews()
+    const interval = setInterval(fetchCrews, 5000) // 5s feels live without spamming
+    // Realtime: refetch when chat_members changes (someone joined/left a crew)
+    const cmChannel = supabase.channel('crews_chat_members')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, () => {
+        if (!cancelled) fetchCrews()
+      })
+      .subscribe()
+    return () => { cancelled = true; clearInterval(interval); supabase.removeChannel(cmChannel) }
+  }, [Object.keys(joinedEvents).join(','), userData?.dbId])
 
   // Poll for other 'ready' users when we're in waiting state (readyCountMap[id] === 0 = only self is ready)
   useEffect(() => {
@@ -6869,31 +7100,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           if (newProfileId === userData.dbId) return // own join, already handled
           const { data: profile } = await supabase.from('profiles').select('id, name, photos, color').eq('id', newProfileId).single()
           if (!profile) return
-          const newMember = { id: profile.id, name: profile.name || 'User', photo: (profile as any).photos?.[0] || null, color: (profile as any).color || '#818CF8' }
-          setChatList(prev => prev.map(c => {
-            if (c.id !== chatId) return c
-            const already = (c.memberProfiles || []).some((m: any) => m.id === profile.id)
-            if (already) return c
-            return {
-              ...c,
-              members: (c.members || 1) + 1,
-              memberProfiles: [...(c.memberProfiles || []), newMember],
-              avatars: [...(c.avatars || []), newMember.photo].filter(Boolean),
-              colors: [...(c.colors || []), newMember.color],
-            }
-          }))
-          setOpenChat((cur: any) => {
-            if (!cur || cur.id !== chatId) return cur
-            const already = (cur.memberProfiles || []).some((m: any) => m.id === profile.id)
-            if (already) return cur
-            return {
-              ...cur,
-              members: (cur.members || 1) + 1,
-              memberProfiles: [...(cur.memberProfiles || []), newMember],
-              avatars: [...(cur.avatars || []), newMember.photo].filter(Boolean),
-              colors: [...(cur.colors || []), newMember.color],
-            }
-          })
+          // Member counts + profile lists are now synced from crewsByEvent in a
+          // separate useEffect — that's authoritative. We only post the join
+          // toast/system message here so we don't double-increment counts.
           setChatMessages(prev => {
             const msgs = prev[chatId] || []
             const sysMsg = { from: 'system', text: `${profile.name || 'Someone'} joined`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
@@ -8239,6 +8448,72 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             readyCountMap={readyCountMap}
             crewPreviewMap={crewPreviewMap}
             passedIdsByEvent={passedIdsByEvent}
+            crewsByEvent={crewsByEvent}
+            onJoinSpecificCrew={async (ev: any, chatId: number) => {
+              if (!userData?.dbId) return
+              // User picked an existing crew from the list — just add them to that chat.
+              // Multi-chat-per-event model: the chat already exists, members are already in it.
+              const { error } = await supabase.from('chat_members')
+                .upsert({ chat_id: chatId, profile_id: userData.dbId }, { onConflict: 'chat_id,profile_id' })
+              if (error) { console.warn('chat_members insert error:', error.message); showToast('Try again', 'Could not join crew', '⚠️'); return }
+              await supabase.from('event_attendees')
+                .update({ status: 'confirmed' })
+                .eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
+              setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+              setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: chatId }))
+              // Pull fresh members for the chat list entry
+              const { data: members } = await supabase
+                .from('chat_members')
+                .select('profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, goal)')
+                .eq('chat_id', chatId)
+              const memberProfiles = (members || []).filter((m: any) => m.profile_id !== userData.dbId).map((m: any) => {
+                const p = (m as any).profiles || {}
+                return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍' }
+              })
+              // If chat already in list (e.g., user previously created their own and now
+              // is joining a different one) — merge fresh data instead of skipping update.
+              setChatList(prev => {
+                const existing = prev.find(c => c.id === chatId)
+                const entry = {
+                  id: chatId, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                  eventRefId: ev.id, eventImage: ev.image_url || null,
+                  members: (members || []).length,
+                  avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
+                  colors: memberProfiles.map((p: any) => p.color), memberProfiles,
+                  lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+                }
+                if (existing) return prev.map(c => c.id === chatId ? { ...c, ...entry } : c)
+                return [entry, ...prev]
+              })
+              showToast('Say hi to the crew!', 'Joined the crew! 🎉', '✅')
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+              setMessagesInitialSubTab('messages'); setActiveTab('messages')
+            }}
+            onCreateNewCrew={async (ev: any) => {
+              if (!userData?.dbId) return
+              // Fresh chat for this event — no get-or-create, we want multiple chats per event.
+              const { data: newChat, error } = await supabase
+                .from('chats')
+                .insert({ event_id: ev.id, type: 'group', last_msg: '⏳ Waiting for crew to join...' })
+                .select('id').single()
+              if (!newChat) { console.error('chat insert error:', error); showToast('Try again', 'Could not create crew', '⚠️'); return }
+              await supabase.from('chat_members')
+                .upsert({ chat_id: newChat.id, profile_id: userData.dbId }, { onConflict: 'chat_id,profile_id' })
+              await supabase.from('event_attendees')
+                .update({ status: 'confirmed' })
+                .eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
+              setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+              setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: newChat.id }))
+              setChatList(prev => prev.some(c => c.id === newChat.id) ? prev : [{
+                id: newChat.id, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
+                eventRefId: ev.id, eventImage: ev.image_url || null,
+                members: 1, avatars: [], colors: [], memberProfiles: [],
+                lastMsg: '⏳ Waiting for crew to join...', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+              }, ...prev])
+              showToast('Others will see your crew and can join', 'Crew created 🎉', '✨')
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+              setMessagesInitialSubTab('messages'); setActiveTab('messages')
+            }}
             onPassMember={async (eventId: number, profileId: string) => {
               if (!userData?.dbId) return
               // Optimistic local update — realtime will mirror but UI stays snappy
@@ -8589,6 +8864,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .then(({ error }) => { if (error) console.warn('event_attendees delete error:', error.message) })
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('invitee_id', userData.dbId).in('status', ['pending', 'accepted'])
+                // Remove self from any crew chats for this event so the count updates
+                // for remaining members (and delete now-empty chat rows entirely).
+                supabase.from('chats').select('id').eq('event_id', ev.id).eq('type', 'group')
+                  .then(async ({ data: evChats }) => {
+                    const chatIds = (evChats || []).map((c: any) => c.id)
+                    if (chatIds.length === 0) return
+                    await supabase.from('chat_members').delete().in('chat_id', chatIds).eq('profile_id', userData.dbId)
+                    // Cleanup orphan chats (no members left)
+                    const { data: remaining } = await supabase.from('chat_members').select('chat_id').in('chat_id', chatIds)
+                    const stillPopulated = new Set((remaining || []).map((r: any) => r.chat_id))
+                    const empties = chatIds.filter((id: number) => !stillPopulated.has(id))
+                    if (empties.length > 0) await supabase.from('chats').delete().in('id', empties)
+                  })
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
                   Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
