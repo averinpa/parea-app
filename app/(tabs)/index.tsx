@@ -35,6 +35,7 @@ import { AnimatedInterestChip } from '../../lib/components/AnimatedInterestChip'
 import { ReportModal } from '../../lib/components/ReportModal'
 import { ProfilePreviewSheet } from '../../lib/components/ProfilePreviewSheet'
 import { LocationPicker } from '../../lib/components/LocationPicker'
+import { CrewPoolSheet } from '../../lib/components/CrewPoolSheet'
 import { s } from '../../lib/feed-styles'
 import { INTEREST_ICON_MAP } from '../../lib/interest-icons'
 import {
@@ -125,20 +126,36 @@ async function aiScoreRealAttendees(
   candidates: { id: string; name: string; age?: any; langs?: string[]; interests?: string[]; drinksPref?: string; smokingPref?: string; bio?: string; transport?: string; hasPets?: boolean }[]
 ): Promise<{ id: string; score: number; vibe: string }[]> {
   if (candidates.length === 0) return []
-  // For official-event attendees we hard-cut beyond MAX_AGE_GAP and on user's
-  // dealbreakers — score=0 surfaces them as a clear reason rather than a
-  // misleading 50-70% AI suggestion. (Community join requests use
-  // scoreRequesterForHost instead.)
-  const userAge = typeof user.age === 'string' ? parseInt(user.age || '25') : (user.age || 25)
+  // For official-event attendees we hard-cut on user's explicit dealbreakers —
+  // score=0 surfaces them as a clear reason rather than a misleading 50-70% AI
+  // suggestion. Age gap is NOT hard-blocked here: both users already chose this
+  // event, so the AI's natural age-proximity weighting (low score for big gaps)
+  // is enough — let them decide. MAX_AGE_GAP only filters at primary feed
+  // discovery (community events with mismatched host age, line 2084).
   const userDb = user.dealbreakers || []
   const blockReason = (c: any): string | null => {
-    const cAge = typeof c.age === 'string' ? parseInt(c.age || '25') : (c.age || 25)
-    if (Math.abs(cAge - userAge) > MAX_AGE_GAP) return 'Age mismatch'
     if (userDb.includes('no_smoking') && (c.smokingPref === 'Smoker' || c.smokingPref === 'Social')) return 'Smoking dealbreaker'
     if (userDb.includes('sober_only') && c.drinksPref === 'Social drinker') return 'Drinking dealbreaker'
     if (userDb.includes('pets_allergy') && c.hasPets) return 'Pet allergy'
     return null
   }
+  const userAge = typeof user.age === 'string' ? parseInt(user.age || '25') : (user.age || 25)
+  // Rule-based fallback score when AI is unavailable / fails / returns garbage.
+  // Without this we'd return a flat 75% for every candidate, which is misleading
+  // (e.g. age 35 vs 18 would still read as "75% match"). scoreRequesterForHost
+  // weights interests, age proximity, langs, lifestyle — so a big age gap drops
+  // naturally to 25-40% even when interests align.
+  const fallbackScore = (c: any): number => scoreRequesterForHost(
+    {
+      langs: c.langs, age: typeof c.age === 'string' ? parseInt(c.age || '25') : (c.age || 25),
+      drinksPref: c.drinksPref, smokingPref: c.smokingPref, interests: c.interests, hasPets: c.hasPets,
+    },
+    {
+      langs: user.langs, age: userAge,
+      drinksPref: user.drinksPref, smokingPref: user.smokingPref, interests: user.interests,
+      dealbreakers: user.dealbreakers,
+    }
+  )
   const eligible: typeof candidates = []
   const blocked: { id: string; score: number; vibe: string }[] = []
   candidates.forEach(c => {
@@ -147,7 +164,7 @@ async function aiScoreRealAttendees(
     else eligible.push(c)
   })
   if (eligible.length === 0) return blocked
-  if (!ANTHROPIC_KEY) return [...eligible.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' })), ...blocked]
+  if (!ANTHROPIC_KEY) return [...eligible.map(c => ({ id: c.id, score: fallbackScore(c), vibe: 'Compatibility' })), ...blocked]
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -155,6 +172,9 @@ async function aiScoreRealAttendees(
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 800,
+        // Deterministic — same user+candidate pair always yields the same score.
+        // Without this, scores would drift on each poll even with caching disabled.
+        temperature: 0,
         messages: [{
           role: 'user',
           content: `You are a social compatibility matcher for Parea. Score each candidate's compatibility with the user (0-100).
@@ -176,11 +196,11 @@ Return ONLY valid JSON array: [{"id":"exact-id-string","score":85,"vibe":"Short 
     const parsed: { id: string; score: number; vibe: string }[] = jsonMatch ? JSON.parse(jsonMatch[0]) : []
     const scored = eligible.map(c => {
       const m = parsed.find(p => p.id === c.id)
-      return { id: c.id, score: m?.score ?? 75, vibe: m?.vibe ?? 'Real attendee' }
+      return { id: c.id, score: m?.score ?? fallbackScore(c), vibe: m?.vibe ?? 'Compatibility' }
     })
     return [...scored, ...blocked]
   } catch {
-    return [...eligible.map(c => ({ id: c.id, score: 75, vibe: 'Real attendee' })), ...blocked]
+    return [...eligible.map(c => ({ id: c.id, score: fallbackScore(c), vibe: 'Compatibility' })), ...blocked]
   }
 }
 
@@ -226,6 +246,7 @@ async function aiMatchCompanions(
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
+        temperature: 0,
         messages: [{
           role: 'user',
           content: `You are an AI companion matching system for Parea, a social app in Cyprus.
@@ -2958,26 +2979,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,8,30,0.75)' }} activeOpacity={1} onPress={closeJoinSheet} />
-        <View style={[s.joinSheetWrap, { paddingBottom: Math.max(insets.bottom + 20, 36) }]}>
+        <View style={[s.joinSheetWrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={s.joinSheetHandle} />
 
           {joinSheet.ev?.type === 'official' && joinSheet.step !== 4 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {[1, 2, 3].map(n => (
-                  <View key={n} style={{ width: joinSheet.step === n ? 20 : 6, height: 6, borderRadius: 3,
-                    backgroundColor: joinSheet.step >= n ? '#6366F1' : 'rgba(99,102,241,0.2)' }} />
-                ))}
-              </View>
+            <View style={{ alignItems: 'flex-end', marginBottom: 4 }}>
               <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step {joinSheet.step} of 3</Text>
             </View>
           )}
           {joinSheet.ev?.type === 'community' && joinSheet.step !== 4 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(99,102,241,0.2)' }} />
-                <View style={{ width: 20, height: 6, borderRadius: 3, backgroundColor: '#6366F1' }} />
-              </View>
+            <View style={{ alignItems: 'flex-end', marginBottom: 4 }}>
               <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>Step 2 of 2</Text>
             </View>
           )}
@@ -3957,7 +3968,7 @@ function RockingTransportPill({ transport }: { transport: string }) {
   )
 }
 
-function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, onJoinCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
+function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, passedIdsByEvent = {}, onPassMember, onJoinCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
   // Official + approved community events — shown as crew cards
   const notExpired = (e: any) => e.expiresAt ? e.expiresAt > Date.now() : !isEventPast(e.date_label || e.time || '')
   const myEvents = (allEvents || []).filter((e: any) => {
@@ -3977,6 +3988,20 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   const activeHosted = (hostedEvents || []).filter((e: any) => notExpired(e))
   const hasHostActivity = activeHosted.some((e: any) => (pendingJoinRequests[e.id] || []).length > 0)
   const [previewProfile, setPreviewProfile] = useState<any>(null)
+  // Open CrewPoolSheet for a specific event — null means closed
+  const [crewPoolEv, setCrewPoolEv] = useState<any>(null)
+  // Subtle live-dot heartbeat next to the title — only animation that survived.
+  // Translating a gradient inside MaskedView clipped the text on tall devices,
+  // and the sparkle emoji read as cheap. Static gradient + breathing dot is cleaner.
+  const livePulse = useRef(new Animated.Value(0.6)).current
+  useEffect(() => {
+    const live = Animated.loop(Animated.sequence([
+      Animated.timing(livePulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(livePulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+    ]))
+    live.start()
+    return () => { live.stop() }
+  }, [])
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const aiRankedProfiles = aiMatches.length > 0
@@ -3995,26 +4020,26 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
 
   useEffect(() => {
     if (!userData?.interests?.length) return
-    setAiLoading(true)
-    aiMatchCompanions(
-      {
-        interests: userData.interests,
-        bio: userData.bio || '',
-        age: userData.age || '',
-        langs: userData.langs || ['en'],
-        musicGenres: userData.musicGenres || [],
-        drinksPref: userData.drinksPref || '',
-        smokingPref: userData.smokingPref || '',
-        socialEnergy: tonightVibe?.energy || userData.socialEnergy || '',
-        dealbreakers: userData.dealbreakers || [],
-        eventContext,
-      },
-      QUEUE_PROFILES
-    ).then(results => {
-      setAiMatches(results)
-      setAiLoading(false)
+    // Rule-based scoring on QUEUE_PROFILES (static mock fallback queue, ~6 profiles).
+    // Replaces aiMatchCompanions which used to fire an AI call on every
+    // tonightVibe / eventContext change — the queue is mock data anyway, so AI
+    // ranking was overkill and steadily burned through Anthropic credits.
+    // Real attendees in the crew pool still get scored by AI in aiScoreRealAttendees.
+    const userDb = userData.dealbreakers || []
+    const results: MatchResult[] = QUEUE_PROFILES.map((p: any) => {
+      // Hard dealbreakers → score 0 (mirrors aiMatchCompanions blocklist).
+      if (userDb.includes('no_smoking') && (p.smokingPref === 'Smoker' || p.smokingPref === 'Social')) return { id: p.id, score: 0, reason: 'Smoking dealbreaker' }
+      if (userDb.includes('sober_only') && p.drinksPref === 'Social drinker') return { id: p.id, score: 0, reason: 'Drinking dealbreaker' }
+      if (userDb.includes('pets_allergy') && p.hasPets) return { id: p.id, score: 0, reason: 'Pet allergy' }
+      const score = scoreRequesterForHost(
+        { langs: p.langs, age: p.age, drinksPref: p.drinksPref, smokingPref: p.smokingPref, interests: p.interests, hasPets: p.hasPets },
+        { langs: userData.langs, age: userData.age, drinksPref: userData.drinksPref, smokingPref: userData.smokingPref, interests: userData.interests, dealbreakers: userData.dealbreakers }
+      )
+      return { id: p.id, score, reason: 'Compatibility' }
     })
-  }, [tonightVibe?.energy, eventContext])
+    setAiMatches(results)
+    setAiLoading(false)
+  }, [tonightVibe?.energy, eventContext, userData?.interests, userData?.langs, userData?.age])
 
   // aurora blob animations
   const blob1 = useRef(new Animated.Value(0)).current
@@ -4114,15 +4139,34 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0812' }}>
       <AuroraBg />
-      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 22, paddingTop: topInset + 16, paddingBottom: 26 }}>
-          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.13)', borderRadius: 99, paddingHorizontal: 13, paddingVertical: 6, marginBottom: 18, borderWidth: 1, borderColor: 'rgba(99,102,241,0.28)' }}>
-            <Radio size={10} color="#818CF8" />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#818CF8', letterSpacing: 1.5, textTransform: 'uppercase' }}>Live</Text>
-          </View>
-          <Text style={{ fontSize: 46, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -1.5, lineHeight: 52 }}>Vibe{'\n'}Check</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12 }}>
-            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: hasHostActivity ? '#FBBF24' : myEvents.length > 0 ? '#43E97B' : 'rgba(255,255,255,0.25)' }} />
+      {/* No SafeAreaView edges=['bottom'] — left a black gap above the tab bar
+          on Android (gesture nav). The ScrollView paddingBottom below already
+          accounts for the tab bar overlap; the parent View bg fills behind it. */}
+      <View style={{ flex: 1 }}>
+        <View style={{ paddingHorizontal: 22, paddingTop: topInset + 14, paddingBottom: 18 }}>
+          {/* Static gradient title — gradient fills the letterforms via MaskedView. */}
+          <MaskedView
+            style={{ height: 40, marginBottom: 8 }}
+            maskElement={
+              <View style={{ flex: 1, justifyContent: 'center' }}>
+                <Text style={{ fontSize: 32, fontFamily: 'ClashDisplay-Bold', letterSpacing: -1, color: '#000' }}>Vibe Check</Text>
+              </View>
+            }>
+            <LinearGradient
+              colors={['#A78BFA', '#7DD3FC', '#43E97B']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={{ flex: 1 }}
+            />
+          </MaskedView>
+          {/* Single status row — breathing dot only when there's actual activity,
+              static dot otherwise. No duplicate green dots in the header. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+            <Animated.View style={{
+              width: 6, height: 6, borderRadius: 3,
+              backgroundColor: hasHostActivity ? '#FBBF24' : myEvents.length > 0 ? '#43E97B' : 'rgba(255,255,255,0.25)',
+              opacity: myEvents.length > 0 || hasHostActivity ? livePulse : 1,
+            }} />
             <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.48)' }}>{subtitle}</Text>
           </View>
         </View>
@@ -4723,48 +4767,55 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                           )
                         }
                         if (crewPreview) {
+                          // Filter out anyone the user has already passed for THIS event so the
+                          // count and avatar row reflect what they'd actually see in the sheet.
+                          const passedSet: Set<string> = passedIdsByEvent[ev.id] || new Set()
+                          const visible = (crewPreview.members || []).filter((m: any) => !passedSet.has(m.id))
+                          const visibleCount = visible.length
                           const confirmedCount = crewPreview.confirmedCount || 0
-                          const confirmBtnLabel = 'Join crew'
-                          return (
-                            <View style={{ gap: 10 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(67,233,123,0.1)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.3)' }}>
-                                <Text style={{ fontSize: 15 }}>{transport === 'car' ? '🚗' : '🎯'}</Text>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>
-                                    {confirmedCount >= 2 ? `${confirmedCount} confirmed, chat started!` : 'Crew matched'}
-                                  </Text>
-                                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }} numberOfLines={1}>
-                                    {(() => {
-                                      const names = crewPreview.members.map((m: any) => m.name)
-                                      const head = names.slice(0, 2).join(', ')
-                                      const rest = names.length - 2
-                                      const namesStr = rest > 0 ? `${head} +${rest} more` : head
-                                      return confirmedCount > 0 ? `${namesStr} · ${confirmedCount} confirmed` : namesStr
-                                    })()}
-                                  </Text>
-                                  {crewPreview.members.some((m: any) => m.transport) && (
-                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-                                      {crewPreview.members.filter((m: any) => m.transport).map((m: any, i: number) => (
-                                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                                          <Text style={{ fontSize: 10 }}>{m.transport === 'car' ? '🚗' : m.transport === 'lift' ? '🙋' : '📍'}</Text>
-                                          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{m.name.split(' ')[0]} · {m.transport === 'car' ? 'has car' : m.transport === 'lift' ? 'needs lift' : 'meet there'}</Text>
-                                        </View>
-                                      ))}
-                                    </View>
-                                  )}
-                                </View>
-                                <View style={{ flexDirection: 'row', gap: -8 }}>
-                                  {crewPreview.members.slice(0, 3).map((m: any, i: number) => (
-                                    m.photo ? <Image key={i} source={{ uri: m.photo }} style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: m.status === 'confirmed' ? '#43E97B' : '#0A0812', marginLeft: i > 0 ? -8 : 0 }} /> :
-                                    <View key={i} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: m.status === 'confirmed' ? '#43E97B' : '#0A0812', marginLeft: i > 0 ? -8 : 0 }}><Text style={{ fontSize: 10 }}>👤</Text></View>
-                                  ))}
-                                </View>
-                              </View>
+                          // Open the bottom sheet — preview profiles + pass + commit.
+                          const openPool = () => setCrewPoolEv(ev)
+                          if (visibleCount === 0) {
+                            // Everyone got passed — open the (now-empty) sheet so the user
+                            // gets the same flow as when there were people: confirm via the
+                            // "Be first to join" CTA inside the sheet, no surprise behaviors.
+                            return (
                               <TouchableOpacity
                                 activeOpacity={0.85}
-                                onPress={() => onJoinCrew?.(ev)}
+                                onPress={openPool}
                                 style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>{confirmBtnLabel}</Text>
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Join crew</Text>
+                              </TouchableOpacity>
+                            )
+                          }
+                          return (
+                            <View style={{ gap: 10 }}>
+                              {/* Minimal avatar strip — tap to open the pool sheet. No status text,
+                                  no transport badges; all that lives inside the sheet now. */}
+                              <TouchableOpacity
+                                activeOpacity={0.85}
+                                onPress={openPool}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
+                                <View style={{ flexDirection: 'row' }}>
+                                  {visible.slice(0, 3).map((m: any, i: number) => (
+                                    m.photo ? <Image key={i} source={{ uri: m.photo }} style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: '#0A0812', marginLeft: i > 0 ? -10 : 0 }} /> :
+                                    <View key={i} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#0A0812', marginLeft: i > 0 ? -10 : 0 }}>
+                                      <Text style={{ fontSize: 11 }}>👤</Text>
+                                    </View>
+                                  ))}
+                                </View>
+                                <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.85)' }}>
+                                  {confirmedCount >= 2
+                                    ? `${confirmedCount} confirmed · tap to see crew`
+                                    : `${visibleCount} ${visibleCount === 1 ? 'person is' : 'people are'} looking · tap to preview`}
+                                </Text>
+                                <CaretRight size={14} color="rgba(255,255,255,0.4)" />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                activeOpacity={0.85}
+                                onPress={openPool}
+                                style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>See crew & join</Text>
                               </TouchableOpacity>
                             </View>
                           )
@@ -4774,7 +4825,11 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
                           <TouchableOpacity
                             activeOpacity={inviteSentToAll ? 1 : 0.85}
                             disabled={inviteSentToAll}
-                            onPress={() => isSquadOrParty ? onJoinCrew?.(ev) : onConfirm?.(ev, partners, format)}
+                            // For squad/party events route through the CrewPoolSheet so the user
+                            // can preview/pass anyone already in the pool before committing.
+                            // Empty pool just shows the "Be first to join" CTA inside the sheet,
+                            // which calls onJoinCrew exactly like the old direct-press did.
+                            onPress={() => isSquadOrParty ? setCrewPoolEv(ev) : onConfirm?.(ev, partners, format)}
                             style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: inviteSentToAll ? 'rgba(67,233,123,0.2)' : '#43E97B', shadowColor: '#43E97B', shadowOpacity: inviteSentToAll ? 0 : 0.4, shadowRadius: 14, elevation: inviteSentToAll ? 0 : 6 }}>
                             {!inviteSentToAll && (isCommunity ? <MessageCircle size={15} color="#052e16" /> : <Zap size={15} color="#052e16" fill="#052e16" />)}
                             {inviteSentToAll && <CheckCircle size={15} color="#43E97B" />}
@@ -4940,9 +4995,32 @@ function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTrans
             )
           })}
         </ScrollView>
-      </SafeAreaView>
+      </View>
 
       {previewProfile && <ProfilePreviewSheet profile={previewProfile} onClose={() => setPreviewProfile(null)} onBlock={onBlockUser} onReport={onReportUser} />}
+      <CrewPoolSheet
+        visible={!!crewPoolEv}
+        event={crewPoolEv}
+        // Use eventAttendeesMap (includes status='looking' members too) so the
+        // pool is visible immediately after both users join the event — no need
+        // to first go through the VibeCheck swipe flow to flip status to 'ready'.
+        members={crewPoolEv ? (eventAttendeesMap[crewPoolEv.id] || []) : []}
+        userProfile={{
+          interests: userData?.interests,
+          langs: userData?.langs,
+          age: userData?.age,
+          drinksPref: userData?.drinksPref,
+          smokingPref: userData?.smokingPref,
+          dealbreakers: userData?.dealbreakers,
+        }}
+        passedIds={crewPoolEv ? (passedIdsByEvent[crewPoolEv.id] || new Set()) : new Set()}
+        onPass={(profileId: string) => {
+          if (crewPoolEv) onPassMember?.(crewPoolEv.id, profileId)
+        }}
+        onJoin={() => { if (crewPoolEv) onJoinCrew?.(crewPoolEv) }}
+        onClose={() => setCrewPoolEv(null)}
+        onOpenProfile={(m: any) => setPreviewProfile(m)}
+      />
     </View>
   )
 }
@@ -6199,6 +6277,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [userEventTransport, setUserEventTransport] = useState<Record<number, string>>({})
   const [pendingJoinEv, setPendingJoinEv] = useState<any>(null)
   const [eventAttendeesMap, setEventAttendeesMap] = useState<Record<number, any[]>>({})
+  // Ref mirrors eventAttendeesMap for read-only access inside polling closures —
+  // lets us reuse already-computed AI scores instead of re-billing every 15s.
+  const eventAttendeesMapRef = useRef<Record<number, any[]>>({})
+  eventAttendeesMapRef.current = eventAttendeesMap
   // Bidirectional crew_pref + gender check.
   // Returns true if (a) my preference allows the other person's gender AND (b) their preference allows my gender.
   const fitsCrewPref = (myPref: string, myGender: string | undefined, theirPref: string, theirGender: string | undefined) => {
@@ -6222,17 +6304,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const partyChatBroadcastChannels = useRef<Record<number, any>>({})
   const [readyCountMap, setReadyCountMap] = useState<Record<number, number>>({})
   const [crewPreviewMap, setCrewPreviewMap] = useState<Record<number, { members: any[]; chatId: number | null } | null>>({})
+  // Per-event "I passed on this profile" map — populated from passes table + maintained
+  // on realtime + on local pass action. Used by CrewPoolSheet to filter the pool.
+  const [passedIdsByEvent, setPassedIdsByEvent] = useState<Record<number, Set<string>>>({})
 
   useEffect(() => {
     const officialJoined = Object.keys(joinedEvents)
       .map(Number)
       .filter(id => joinedEvents[id] && id > 100000) // official events have offset id
-    // Clear stale entries for events no longer joined
-    setEventAttendeesMap(prev => {
-      const cleaned: Record<number, any[]> = {}
-      officialJoined.forEach(id => { if (prev[id]) cleaned[id] = prev[id] })
-      return cleaned
-    })
+    // Keep all eventAttendeesMap entries — even for events the user is not
+    // currently in. On rejoin we want to reuse cached AI scores instead of
+    // re-billing Anthropic and seeing the score drift (Claude isn't 100%
+    // deterministic on batched prompts even at temperature 0).
+    // Stale candidates inside an active event are still cleaned up by the
+    // realtime DELETE handler below + by the next polling cycle's data fetch.
     if (officialJoined.length === 0 || !userData?.dbId) return
     const fetchAttendees = async () => {
       const map: Record<number, any[]> = {}
@@ -6248,6 +6333,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (!passedSetByEvent[p.event_id]) passedSetByEvent[p.event_id] = new Set()
         passedSetByEvent[p.event_id].add(otherId)
       })
+      // Surface to FeedScreen so CrewPoolSheet can filter the pool the same way
+      setPassedIdsByEvent(passedSetByEvent)
       await Promise.all(officialJoined.map(async (evId) => {
         const evFormat = userEventFormat[evId] || 'squad'
         const [userMin, userMax] = FORMAT_SIZES[evFormat] || [2, 5]
@@ -6285,17 +6372,30 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               _real: true, score: null as number | null, vibe: '',
             }
           })
-          const scores = await aiScoreRealAttendees(
-            {
-              name: userData.name, age: userData.age,
-              langs: userData.langs || [], interests: userData.interests || [],
-              drinksPref: userData.drinksPref || '', smokingPref: userData.smokingPref || '',
-              bio: userData.bio || '', transport: userEventTransport[evId] || '',
-              dealbreakers: userData.dealbreakers || [],
-            },
-            candidates
-          )
+          // Reuse cached scores from previous polls — AI is non-deterministic and
+          // costs money per call, so re-scoring the same pair every 15s would
+          // (a) make scores jump around in the UI and (b) burn through credits.
+          // Only call AI for genuinely new candidates the user hasn't seen yet.
+          const cachedById: Record<string, { score: number; vibe: string }> = {}
+          ;(eventAttendeesMapRef.current[evId] || []).forEach((p: any) => {
+            if (p && p.id && p.score != null) cachedById[p.id] = { score: p.score, vibe: p.vibe || '' }
+          })
+          const newCandidates = candidates.filter(c => !cachedById[c.id])
+          const scores = newCandidates.length > 0
+            ? await aiScoreRealAttendees(
+                {
+                  name: userData.name, age: userData.age,
+                  langs: userData.langs || [], interests: userData.interests || [],
+                  drinksPref: userData.drinksPref || '', smokingPref: userData.smokingPref || '',
+                  bio: userData.bio || '', transport: userEventTransport[evId] || '',
+                  dealbreakers: userData.dealbreakers || [],
+                },
+                newCandidates
+              )
+            : []
           map[evId] = candidates.map(c => {
+            const cached = cachedById[c.id]
+            if (cached) return { ...c, score: cached.score, vibe: cached.vibe }
             const s = scores.find(r => r.id === c.id)
             return s ? { ...c, score: s.score, vibe: s.vibe } : c
           })
@@ -6323,16 +6423,31 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       })
       .subscribe()
     // Realtime: drop the other party from my queue the instant either side passes
+    const recordPass = (eventId: number, otherId: string) => {
+      setPassedIdsByEvent(prev => {
+        const existing = prev[eventId] || new Set<string>()
+        if (existing.has(otherId)) return prev
+        const next = new Set(existing); next.add(otherId)
+        return { ...prev, [eventId]: next }
+      })
+      setEventAttendeesMap(prev => prev[eventId] ? { ...prev, [eventId]: prev[eventId].filter((p: any) => p.id !== otherId) } : prev)
+      setCrewPreviewMap(prev => {
+        const cur = prev[eventId]
+        if (!cur) return prev
+        const filtered = (cur.members || []).filter((m: any) => m.id !== otherId)
+        return { ...prev, [eventId]: { ...cur, members: filtered } }
+      })
+    }
     const passesChannel = supabase.channel(`passes_for_${userData.dbId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'passes', filter: `passer_id=eq.${userData.dbId}` }, (payload: any) => {
         const { passed_id, event_id } = payload.new
         if (!passed_id || !event_id) return
-        setEventAttendeesMap(prev => prev[event_id] ? { ...prev, [event_id]: prev[event_id].filter((p: any) => p.id !== passed_id) } : prev)
+        recordPass(event_id, passed_id)
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'passes', filter: `passed_id=eq.${userData.dbId}` }, (payload: any) => {
         const { passer_id, event_id } = payload.new
         if (!passer_id || !event_id) return
-        setEventAttendeesMap(prev => prev[event_id] ? { ...prev, [event_id]: prev[event_id].filter((p: any) => p.id !== passer_id) } : prev)
+        recordPass(event_id, passer_id)
       })
       .subscribe()
     return () => { clearInterval(interval); supabase.removeChannel(rtChannel); supabase.removeChannel(passesChannel) }
@@ -6371,7 +6486,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           if (eventChat) existingChatId = eventChat.id
           const memberProfiles = (readyData || []).filter((r: any) => r.profile_id !== userData.dbId).map((r: any) => {
             const p = r.profiles || {}
-            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍', status: r.status, transport: r.transport }
+            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍', status: r.status, transport: r.transport,
+              // Lifestyle fields needed by scoreRequesterForHost in CrewPoolSheet
+              drinksPref: p.drinks_pref || '', smokingPref: p.smoking_pref || '', hasPets: !!p.has_pets,
+            }
           })
           setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId, confirmedCount } }))
         }
@@ -8120,6 +8238,30 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             sentCrewInvites={sentCrewInvites}
             readyCountMap={readyCountMap}
             crewPreviewMap={crewPreviewMap}
+            passedIdsByEvent={passedIdsByEvent}
+            onPassMember={async (eventId: number, profileId: string) => {
+              if (!userData?.dbId) return
+              // Optimistic local update — realtime will mirror but UI stays snappy
+              setPassedIdsByEvent(prev => {
+                const next = new Set(prev[eventId] || []); next.add(profileId)
+                return { ...prev, [eventId]: next }
+              })
+              setCrewPreviewMap(prev => {
+                const cur = prev[eventId]
+                if (!cur) return prev
+                return { ...prev, [eventId]: { ...cur, members: cur.members.filter((m: any) => m.id !== profileId) } }
+              })
+              // CrewPoolSheet now reads from eventAttendeesMap, so update that too.
+              setEventAttendeesMap(prev => prev[eventId]
+                ? { ...prev, [eventId]: prev[eventId].filter((p: any) => p.id !== profileId) }
+                : prev)
+              const { error } = await supabase.from('passes')
+                .insert({ passer_id: userData.dbId, passed_id: profileId, event_id: eventId })
+              if (error && !error.message.includes('duplicate')) {
+                console.warn('passes insert (CrewPoolSheet) error:', error.message)
+              }
+              Haptics.selectionAsync()
+            }}
             officialEventChatMap={officialEventChatMap}
             onGoHome={() => setActiveTab('home')}
             onConfirm={async (ev: any, partners: any[], format: string) => {

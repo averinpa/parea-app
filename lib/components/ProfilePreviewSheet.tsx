@@ -76,7 +76,7 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
   const totalSlots = Math.max(allPhotos.length, 1)
 
   return (
-    <Modal transparent animationType="none" onRequestClose={close}>
+    <Modal transparent statusBarTranslucent animationType="none" onRequestClose={close}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={close} />
       <Animated.View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, maxHeight: sheetMaxH,
@@ -117,10 +117,10 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
               <Feather name="chevron-right" size={22} color="#fff" />
             </View>
           </TouchableOpacity>
-          {/* Close */}
+          {/* Close — push below the status bar / camera notch on Android tall devices */}
           <TouchableOpacity onPress={close} style={{
-            position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16,
-            backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center',
+            position: 'absolute', top: Math.max(insets.top + 8, 16), right: 16, width: 32, height: 32, borderRadius: 16,
+            backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center',
           }}>
             <Feather name="x" size={16} color="#fff" />
           </TouchableOpacity>
