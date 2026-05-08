@@ -6318,7 +6318,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             _isHost: true,
             _real: true,
           } : null,
-          description: e.description || (e.location ? `📍 ${e.location}` : ''),
+          // Don't fall back description to location — the address is already shown
+          // in its own row on the card; duplicating it as the description was noise.
+          description: e.description || '',
           expiresAt: (() => { try { const t = (e.time || '').replace(', ', 'T') + ':00'; const d = new Date(t); return isNaN(d.getTime()) ? 0 : d.getTime(); } catch { return 0 } })(),
           _dbCommunity: true,
         })))
@@ -9804,20 +9806,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           expiresAt = d.getTime()
                         }
 
-                        // Upload cover image if selected
+                        // Upload cover image if selected. Reuse the proven profile-photo
+                        // upload helper so the path matches Storage RLS rules ({userId}/...)
+                        // and we don't get a silent permission denial.
                         let imageUrl: string | null = null
                         if (createImage?.base64 && userData?.dbId) {
-                          try {
-                            const path = `events/${userData.dbId}_${Date.now()}.jpg`
-                            const byteChars = atob(createImage.base64)
-                            const byteArr = new Uint8Array(byteChars.length)
-                            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i)
-                            const { error: upErr } = await supabase.storage.from('avatars').upload(path, byteArr, { upsert: true, contentType: 'image/jpeg' })
-                            if (!upErr) {
-                              const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-                              imageUrl = urlData.publicUrl
-                            }
-                          } catch (e) { console.warn('Event image upload failed:', e) }
+                          // Use a high slot number namespace to avoid colliding with profile photos.
+                          const eventSlot = 9000 + Math.floor(Math.random() * 1000)
+                          imageUrl = await uploadPhotoToStorage(createImage.base64, userData.dbId, eventSlot)
+                          if (!imageUrl) console.warn('Event cover upload returned null')
                         }
 
                         // Save to Supabase, use DB id
