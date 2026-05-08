@@ -6295,6 +6295,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           location: e.location,
           time: e.time || 'TBD',
           distance: '',
+          // image_url was missing here — that's why other devices (e.g. Android)
+          // didn't render the cover even though the upload + DB row succeeded.
+          image_url: e.image_url || null,
           gradient: e.gradient || ['#667eea', '#764ba2'],
           maxParticipants: e.max_participants || 5,
           participantsCount: 1 + (participantCounts[e.id] || 0), // host + confirmed members
@@ -10604,6 +10607,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           </View>
         </Modal>
       )}
+      {/* Profile preview when triggered from outside chat (event detail host card,
+          etc). Rendered as a Modal here so it works on its own. The inline copy
+          above handles taps from inside the chat. */}
+      {chatPartnerPreview && !openChat && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} onBlock={handleBlock} onReport={(p) => setReportTarget(p)} />}
       {reportTarget && <ReportModal profile={reportTarget} onClose={() => setReportTarget(null)} onSubmit={(reason, details) => handleReport(reportTarget, reason, details)} />}
 
 
