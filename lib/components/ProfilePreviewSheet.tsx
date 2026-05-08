@@ -8,7 +8,7 @@ import { INTEREST_ICON_MAP } from '../interest-icons'
 import { FLAG_MAP, INTERESTS_BY_CATEGORY, INTEREST_CATEGORY_PALETTE, LANGUAGES_LIST } from '../feed-constants'
 import { supabase } from '../supabase'
 
-export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, onReport }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void }) {
+export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, onReport, inline = false }: { profile: any; onClose: () => void; onBlock?: (profile: any) => void; onReport?: (profile: any) => void; inline?: boolean }) {
   const insets = useSafeAreaInsets()
   const screenH = Dimensions.get('window').height
   const sheetMaxH = screenH - insets.top - 16
@@ -75,8 +75,15 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
   const c1 = (profile.colors?.[1]) || profile.color || '#818CF8'
   const totalSlots = Math.max(allPhotos.length, 1)
 
+  // When `inline=true` we render as an absolute-positioned overlay (no Modal),
+  // so the sheet works when called from inside another Modal on iOS (Modal-over-
+  // Modal isn't supported). Outer caller is responsible for parent Modal.
+  const Wrapper: any = inline ? View : Modal
+  const wrapperProps: any = inline
+    ? { style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, elevation: 200 } }
+    : { transparent: true, statusBarTranslucent: true, animationType: 'none', onRequestClose: close }
   return (
-    <Modal transparent statusBarTranslucent animationType="none" onRequestClose={close}>
+    <Wrapper {...wrapperProps}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)' }} activeOpacity={1} onPress={close} />
       <Animated.View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, maxHeight: sheetMaxH,
@@ -234,6 +241,6 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
           )}
         </ScrollView>
       </Animated.View>
-    </Modal>
+    </Wrapper>
   )
 }

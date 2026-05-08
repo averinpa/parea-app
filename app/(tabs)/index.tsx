@@ -10550,11 +10550,63 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   </>
                 )}
               </KeyboardAvoidingView>
+          {/* Group members sheet — RENDERED INSIDE chat Modal so it overlays on
+              top of the chat on iOS (Modal-over-Modal doesn't work on iOS). */}
+          {groupMembersOpen && openChat && (
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 100, elevation: 100 }}>
+              <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setGroupMembersOpen(false)} />
+              <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%' }}>
+                <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
+                  <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+                </View>
+                <View style={{ paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(99,102,241,0.08)' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B' }}>{openChat.event}</Text>
+                  <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '600', marginTop: 2 }}>
+                    {openChat.eventEmoji} {openChat.members} members
+                  </Text>
+                </View>
+                <ScrollView contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: Math.max(insets.bottom + 16, 40) }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, backgroundColor: 'rgba(99,102,241,0.08)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.18)' }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#6366F1', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20 }}>😊</Text>
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>You</Text>
+                  </View>
+                  {(openChat.memberProfiles || []).map((p: any, i: number) => (
+                    <TouchableOpacity key={p.id || i} activeOpacity={0.8}
+                      onPress={() => {
+                        setChatPartnerPreview({
+                          ...p,
+                          colors: p.colors || [p.color, '#1E1B4B'],
+                          flag: p.flag || FLAG_MAP[p.langs?.[0]] || '🌍',
+                          langs: (p.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                          interests: p.interests || [],
+                          goal: p.goal || 'chill',
+                          emoji: p.emoji || '👤',
+                        })
+                        setGroupMembersOpen(false)
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, backgroundColor: 'rgba(99,102,241,0.04)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)' }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: p.color }}>
+                        {p.photo
+                          ? <Image source={{ uri: p.photo }} style={{ width: '100%', height: '100%' }} />
+                          : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20 }}>👤</Text></View>}
+                      </View>
+                      <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>{p.name}{p.age ? `, ${p.age}` : ''}</Text>
+                      <Feather name="chevron-right" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+          {/* Chat partner profile preview rendered inside chat Modal as an inline
+              View overlay (Modal-over-Modal isn't supported on iOS). */}
+          {chatPartnerPreview && <ProfilePreviewSheet inline profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} onBlock={handleBlock} onReport={(p) => setReportTarget(p)} />}
           </View>
         </Modal>
       )}
-
-      {chatPartnerPreview && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} onBlock={handleBlock} onReport={(p) => setReportTarget(p)} />}
       {reportTarget && <ReportModal profile={reportTarget} onClose={() => setReportTarget(null)} onSubmit={(reason, details) => handleReport(reportTarget, reason, details)} />}
 
 
@@ -10664,12 +10716,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         </Modal>
       )}
 
-      {/* Group members sheet — overFullScreen so iOS can stack it on top of the
-          chat Modal (default fullScreen presentationStyle blocks Modal-over-Modal). */}
-      {groupMembersOpen && openChat && (
-        <Modal transparent statusBarTranslucent presentationStyle="overFullScreen" animationType="slide" onRequestClose={() => setGroupMembersOpen(false)}>
-          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-            <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setGroupMembersOpen(false)} />
+      {/* Group members sheet — outside chat Modal, kept here only so the closing
+          tags below remain syntactically balanced. The actually-used sheet is
+          rendered INSIDE the chat Modal in a sibling block earlier so iOS can
+          stack it over the chat (Modal-over-Modal doesn't work on iOS). */}
+      {false && groupMembersOpen && openChat && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 9999, elevation: 9999 }}>
+          <TouchableOpacity style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' }} activeOpacity={1} onPress={() => setGroupMembersOpen(false)} />
             <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '80%' }}>
               {/* Handle */}
               <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
@@ -10795,8 +10848,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 ))}
               </ScrollView>
             </View>
-          </View>
-        </Modal>
+        </View>
       )}
 
 
