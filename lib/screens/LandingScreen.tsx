@@ -79,13 +79,23 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
     Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start()
     // Paint the window background dark so on Android edge-to-edge devices
     // the 3-button nav bar area doesn't show as a white system strip
-    // (Xiaomi MIUI 11i etc). Gesture-nav phones are unaffected.
-    // Restore on unmount so the feed (light bg) doesn't inherit dark nav bar.
+    // (Xiaomi MIUI 11i etc). Reset is invoked explicitly in CTA handlers
+    // below (not on unmount) so the new screen doesn't briefly inherit dark.
     if (Platform.OS === 'android') {
       SystemUI.setBackgroundColorAsync('#080B16').catch(() => {})
-      return () => { SystemUI.setBackgroundColorAsync('#FFFFFF').catch(() => {}) }
     }
   }, [])
+
+  // Reset system bg before navigating away so RegistrationScreen on Android
+  // edge-to-edge devices doesn't inherit our dark nav bar.
+  const resetNavBar = () => {
+    if (Platform.OS === 'android') {
+      SystemUI.setBackgroundColorAsync('#FFFFFF').catch(() => {})
+    }
+  }
+  const handleCreateAccount = () => { resetNavBar(); onCreateAccount() }
+  const handleLogin = () => { resetNavBar(); onLogin() }
+  const handleAppleSignIn = onAppleSignIn ? () => { resetNavBar(); onAppleSignIn() } : undefined
 
   useEffect(() => { runEntrance() }, [slide])
 
@@ -192,7 +202,7 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
           </View>
 
           <TouchableOpacity
-            onPress={isLast ? onCreateAccount : () => goTo(slide + 1)}
+            onPress={isLast ? handleCreateAccount : () => goTo(slide + 1)}
             activeOpacity={1}
             style={{ marginTop: 10 }}>
             <LinearGradient
@@ -206,7 +216,7 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
             </LinearGradient>
           </TouchableOpacity>
 
-          {isLast && Platform.OS === 'ios' && onAppleSignIn && (
+          {isLast && Platform.OS === 'ios' && handleAppleSignIn && (
             <>
               <View style={ls.dividerRow}>
                 <View style={ls.dividerLine} />
@@ -214,7 +224,7 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
                 <View style={ls.dividerLine} />
               </View>
               <View style={ls.socialRow}>
-                <TouchableOpacity style={ls.socialBtn} onPress={onAppleSignIn}>
+                <TouchableOpacity style={ls.socialBtn} onPress={handleAppleSignIn}>
                   <Svg width={16} height={16} viewBox="0 0 814 1000">
                     <Path fill="#fff" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 70.1 0 128.4 46.4 172.5 46.4 42.8 0 109.6-49 192.5-49 30.8 0 108.2 2.6 168.6 74.1zm-56.4-173.7c24.3-29.4 41.5-70.5 41.5-111.5 0-5.8-.6-11.7-1.9-16.2-39.5 1.3-86.2 26.3-114.4 55.7-22.7 25.3-43.5 66.3-43.5 108 0 6.4 1.3 13 1.9 14.9 2.6.6 6.5 1.3 10.4 1.3 35.7 0 79.8-23.9 105.9-52.2z"/>
                   </Svg>
@@ -224,7 +234,7 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
             </>
           )}
 
-          <TouchableOpacity style={ls.loginRow} onPress={onLogin}>
+          <TouchableOpacity style={ls.loginRow} onPress={handleLogin}>
             <Text style={ls.loginText}>
               {isLast ? 'Already a member?' : 'Already have an account?'}
               {'  '}<Text style={ls.loginLink}>Log in</Text>
