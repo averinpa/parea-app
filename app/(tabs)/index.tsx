@@ -2094,15 +2094,8 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       if (pref === 'women' && myGender !== 'female') return false
       if (pref === 'men'   && myGender !== 'male')   return false
     }
-    // Hide community events whose host is too far in age — saves the joiner from
-    // sending a request that the host's approval list would silently filter out.
-    if (!e.isHosted) {
-      const hostAge = e.hostProfile?.age
-      const myAge = (userData as any)?.age
-      const ha = typeof hostAge === 'string' ? parseInt(hostAge) : hostAge
-      const ma = typeof myAge === 'string' ? parseInt(myAge) : myAge
-      if (ha && ma && Math.abs(ha - ma) > MAX_AGE_GAP) return false
-    }
+    // Age filter for community events removed by request — show events to all
+    // ages regardless of host's age. Inter-generational socializing OK.
     return true
   })
 
@@ -6317,7 +6310,30 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           // Don't fall back description to location — the address is already shown
           // in its own row on the card; duplicating it as the description was noise.
           description: e.description || '',
-          expiresAt: (() => { try { const t = (e.time || '').replace(', ', 'T') + ':00'; const d = new Date(t); return isNaN(d.getTime()) ? 0 : d.getTime(); } catch { return 0 } })(),
+          expiresAt: (() => {
+            try {
+              const raw = (e.time || '').trim()
+              if (!raw) return 0
+              // Try ISO-ish first ("2026-05-09, 10:30")
+              const isoTry = new Date(raw.replace(', ', 'T') + ':00')
+              if (!isNaN(isoTry.getTime())) return isoTry.getTime()
+              // "9 May, 10:30" or "May 9, 10:30" without year — assume current year.
+              const months: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11, янв: 0, фев: 1, мар: 2, апр: 3, май: 4, мая: 4, июн: 5, июл: 6, авг: 7, сен: 8, окт: 9, ноя: 10, дек: 11 }
+              const m1 = raw.match(/^(\d{1,2})\s+([A-Za-zА-Яа-я]+),\s*(\d{1,2}):(\d{2})/)
+              if (m1) {
+                const monIdx = months[m1[2].toLowerCase().slice(0, 3)]
+                if (monIdx == null) return 0
+                return new Date(new Date().getFullYear(), monIdx, +m1[1], +m1[3], +m1[4]).getTime()
+              }
+              const m2 = raw.match(/^([A-Za-zА-Яа-я]+)\s+(\d{1,2}),\s*(\d{1,2}):(\d{2})/)
+              if (m2) {
+                const monIdx = months[m2[1].toLowerCase().slice(0, 3)]
+                if (monIdx == null) return 0
+                return new Date(new Date().getFullYear(), monIdx, +m2[2], +m2[3], +m2[4]).getTime()
+              }
+              return 0
+            } catch { return 0 }
+          })(),
           _dbCommunity: true,
         })))
       }
@@ -6834,6 +6850,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           setOfficialEventChatMap(saved.officialEventChatMap)
           officialEventChatMapRef.current = saved.officialEventChatMap
         }
+        if (Array.isArray(saved.notifications)) {
+          setNotifications(saved.notifications)
+          // Seed seen-keys set so dedupe also catches notifs we currently have
+          // visible (in case user dismisses then polling re-fires within session)
+          saved.notifications.forEach((n: any) => {
+            seenNotifKeysRef.current.add(`${n.type}|${n.title}|${n.body || ''}|${n.chatId || 0}`)
+          })
+        }
+        // Restore the cumulative seen-notif keys list — survives across reloads
+        // even after user dismissed the notif, so polling can't re-fire it
+        if (Array.isArray(saved.seenNotifKeys)) {
+          saved.seenNotifKeys.forEach((k: string) => seenNotifKeysRef.current.add(k))
+        }
       } catch {}
       persistLoaded.current = true
       setPersistLoadedState(true)
@@ -6846,8 +6875,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests,
       approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap,
+      // Persist notifications so dismissed/read state survives app reload and we
+      // don't re-add the same "X joined" notif from each polling cycle.
+      notifications,
+      // Persist seen-keys atomically with everything else — separate AsyncStorage
+      // entries created a race where polling fired before seen-keys loaded.
+      seenNotifKeys: [...seenNotifKeysRef.current],
     }))
-  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, notifications])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   useEffect(() => {
@@ -6897,12 +6932,44 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const notifPanelY = useRef(new Animated.Value(-600)).current
   const prevPendingRef = useRef<Record<number, any[]>>({})
   const prevChatCountRef = useRef(0)
+  // Keys of notifications ever seen (persisted) — dedupe across app restarts
+  // even after user dismissed them. Otherwise polling keeps re-firing the
+  // same "Host approved your request!" / "Group chat is live!" on every reload
+  // because dedupe only looks at currently-visible notifs in `prev`.
+  const seenNotifKeysRef = useRef<Set<string>>(new Set())
 
   const unreadCount = notifications.filter(n => !n.read).length
 
+  const notifKey = (n: { type: string; title: string; body?: string; chatId?: number }) =>
+    `${n.type}|${n.title}|${n.body || ''}|${n.chatId || 0}`
+
   const addNotif = (n: Omit<Notif, 'id' | 'time' | 'read'>) => {
-    const newN: Notif = { ...n, id: `${Date.now()}-${Math.random()}`, time: Date.now(), read: false }
-    setNotifications(prev => [newN, ...prev].slice(0, 30))
+    // Skip until persist load completes — otherwise polling fires before
+    // seen-keys is restored from storage, bypassing dedupe → dupe notifs.
+    if (!persistLoaded.current) return
+    const key = notifKey(n as any)
+    // First check the persistent seen set — covers dismissed notifs too
+    if (seenNotifKeysRef.current.has(key)) return
+    let isDup = false
+    setNotifications(prev => {
+      const dup = prev.find(p =>
+        p.type === n.type
+        && p.title === n.title
+        && (p.body || '') === (n.body || '')
+        && (p.chatId || 0) === ((n as any).chatId || 0)
+      )
+      if (dup) { isDup = true; return prev }
+      const newN: Notif = { ...n, id: `${Date.now()}-${Math.random()}`, time: Date.now(), read: false }
+      return [newN, ...prev].slice(0, 30)
+    })
+    if (isDup) return
+    seenNotifKeysRef.current.add(key)
+    // Keep most-recent 200 keys to avoid unbounded growth across months of use
+    if (seenNotifKeysRef.current.size > 200) {
+      const trimmed = [...seenNotifKeysRef.current].slice(-200)
+      seenNotifKeysRef.current = new Set(trimmed)
+    }
+    // Seen-keys now persisted inside PERSIST_KEY payload — no separate setItem needed
     // Bell shake animation
     bellShake.setValue(0)
     Animated.sequence([
@@ -7052,6 +7119,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const partner = otherMembers[0]
         const eventTitle = inviteData?.event_title || dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)?.title || 'Crew Chat'
         const foundEv = dbCommunityEventsRef.current?.find((e: any) => e.id === chatData?.event_id) || feedOfficialDbEventsRef.current?.find((e: any) => e.id === chatData?.event_id)
+        // Skip re-creating chat if event ended 24h+ ago. Realtime can replay
+        // chat_members INSERTs on reconnect and resurrect chats for past events.
+        if (foundEv?.expiresAt > 0 && foundEv.expiresAt + 24 * 60 * 60 * 1000 < Date.now()) {
+          console.log('[skip-resurrect-chat] event expired', chatData?.event_id, eventTitle)
+          return
+        }
         const evChatExpiry = (foundEv?.expiresAt > 0 ? foundEv.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
         const newChat: any = isDuo ? {
           id: chatId, type: 'duo', eventRefId: chatData?.event_id,
@@ -7076,7 +7149,45 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (isCommunityChat && chatData?.event_id) newChat.communityEventId = chatData.event_id
         // Don't re-add if user explicitly left this event
         if (chatData?.event_id && cancelledEventIdsRef.current.has(chatData.event_id)) return
-        setChatList(prev => prev.some(c => c.id === chatId) ? prev : [newChat, ...prev])
+        // Dedup: the polling path (line ~7517) may have already created a local chat
+        // for this event with a stable local id (-1_000_000 - evId). Match by chat
+        // id OR by event id and REPLACE in place — otherwise host sees two chats:
+        // one with local stable id (lastMsg "Jopa joined the group"), one with
+        // real DB id (lastMsg "You're in the crew!"). Same for joiner side.
+        const evId = chatData?.event_id
+        setChatList(prev => {
+          const existingIdx = prev.findIndex((c: any) =>
+            c.id === chatId ||
+            (evId != null && (c.hostEventId === evId || c.communityEventId === evId || c.eventRefId === evId))
+          )
+          if (existingIdx >= 0) {
+            const existing = prev[existingIdx]
+            const merged = { ...existing, ...newChat, id: chatId }
+            // Preserve hostEventId if this user is host of the event
+            if (existing.hostEventId) merged.hostEventId = existing.hostEventId
+            // Preserve user's existing chat state — don't reset to placeholders
+            if (existing.lastMsg) merged.lastMsg = existing.lastMsg
+            if (existing.time) merged.time = existing.time
+            if (existing.isNew === false) merged.isNew = false
+            const updated = [...prev]
+            updated[existingIdx] = merged
+            return updated
+          }
+          return [newChat, ...prev]
+        })
+        // Migrate any messages that were attached to the stable local id to the real DB chat id
+        if (evId != null) {
+          const stableLocalId = -1_000_000 - evId
+          if (stableLocalId !== chatId) {
+            setChatMessages((prev: any) => {
+              if (!prev[stableLocalId]) return prev
+              const merged = [...(prev[stableLocalId] || []), ...(prev[chatId] || [])]
+              const next = { ...prev, [chatId]: merged }
+              delete next[stableLocalId]
+              return next
+            })
+          }
+        }
         if (isCommunityChat && chatData?.event_id) communityEventChatMap.current[chatData.event_id] = chatId
         if (chatData?.event_id) {
           setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
@@ -7200,12 +7311,35 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         if (isCommunityChat) newChat.communityEventId = chat.event_id
         setChatList(prev => {
-          const idx = prev.findIndex((c: any) => c.id === chat.id)
+          // Match by chat id OR by event id — local polling may have created a
+          // chat with stable local id (-1_000_000 - evId) that should be replaced
+          // with the real DB id once this poll observes it. Otherwise: dupe chats.
+          const evRefId = chat.event_id
+          const idx = prev.findIndex((c: any) =>
+            c.id === chat.id ||
+            (evRefId != null && (c.hostEventId === evRefId || c.communityEventId === evRefId || c.eventRefId === evRefId))
+          )
           if (idx === -1) return [newChat, ...prev]
+          const existing = prev[idx]
+          const merged = { ...existing, ...newChat }
+          if (existing.hostEventId) merged.hostEventId = existing.hostEventId
           const updated = [...prev]
-          updated[idx] = { ...prev[idx], ...newChat }
+          updated[idx] = merged
           return updated
         })
+        // Migrate chatMessages from stable local id to real DB id
+        if (chat.event_id != null) {
+          const stableLocalId = -1_000_000 - chat.event_id
+          if (stableLocalId !== chat.id) {
+            setChatMessages((prev: any) => {
+              if (!prev[stableLocalId]) return prev
+              const merged = [...(prev[stableLocalId] || []), ...(prev[chat.id] || [])]
+              const next = { ...prev, [chat.id]: merged }
+              delete next[stableLocalId]
+              return next
+            })
+          }
+        }
         if (isCommunityChat) communityEventChatMap.current[chat.event_id] = chat.id
         setJoinedEvents(prev => ({ ...prev, [chat.event_id]: 'confirmed' }))
         setOfficialEventChatMap(prev => ({ ...prev, [chat.event_id]: chat.id }))
@@ -7469,7 +7603,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const evId = +evIdStr
         const ev = userCreatedEvents.find(e => e.id === evId)
         if (!ev) return
-        if (ev.expiresAt > 0 && ev.expiresAt < Date.now()) return
+        // Skip recreating chat for events that ended 24h+ ago — otherwise every
+        // app start would resurrect the chat for past events based on the still-
+        // existing 'confirmed' join_requests in DB.
+        if (ev.expiresAt > 0 && ev.expiresAt + 24 * 60 * 60 * 1000 < Date.now()) return
         setChatList(prev => {
           // Look up existing chat by any event-pointing key — realtime/joiner-confirm
           // creates chats with communityEventId/eventRefId, this poll uses hostEventId.
@@ -7529,6 +7666,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             const stableLocalId = -1_000_000 - evId
             if (prev.some((c: any) => c.id === stableLocalId)) return prev
             addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${confirmedJoiners[0]?.name} joined the group`, body: ev.title || '', chatId: 0 })
+            // Anchor chat expiry to the event time, not "now + 24h". Otherwise
+            // every fresh app start the local chat gets re-created with a new
+            // 24h window — past events would never clean up locally.
+            const eventChatExpiry = (ev.expiresAt && ev.expiresAt > 0 ? ev.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
             return [{
               // All three event-pointing keys so any other path's dedup matches.
               id: stableLocalId, type: 'group', hostEventId: evId, communityEventId: evId, eventRefId: evId,
@@ -7538,7 +7679,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               avatars: confirmedJoiners.map((p: any) => p.photo).filter(Boolean),
               colors: confirmedJoiners.map((p: any) => p.color),
               lastMsg: `✅ ${confirmedJoiners[0]?.name} joined the group`,
-              time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+              time: new Date().toISOString(), isNew: true, chatExpiresAt: eventChatExpiry,
             }, ...prev]
           }
         })
@@ -7822,21 +7963,51 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         })
         return prev.filter(ev => !expiredIds.has(ev.id))
       })
-      // Remove chats that have explicit chatExpiresAt in the past
-      // Also remove community event chats (legacy, no chatExpiresAt) linked to events that ended 24h+ ago
+      // Remove chats linked to events that already passed (and 24h+ grace).
+      // Also remove chats whose event is gone from DB entirely (orphan from
+      // an event the host deleted) — local chatList still has it but there's
+      // nothing left to anchor it to.
+      const cancelledByCleanup: number[] = []
       setChatList(cl => cl.filter(c => {
-        if (c.chatExpiresAt) return c.chatExpiresAt > now
-        if (c.communityEventId) {
-          const ev = dbCommunityEventsRef.current.find((e: any) => e.id === c.communityEventId)
-          if (ev?.expiresAt > 0 && ev.expiresAt + EXPIRE_AFTER < now) return false
+        const eventId = c.communityEventId || c.hostEventId || c.eventRefId
+        if (eventId) {
+          // Look in community events first, then official events.
+          const ev = dbCommunityEventsRef.current.find((e: any) => e.id === eventId)
+            || feedOfficialDbEventsRef.current?.find?.((e: any) => e.id === eventId)
+          if (ev) {
+            if (ev.expiresAt > 0 && ev.expiresAt + EXPIRE_AFTER < now) {
+              cancelledByCleanup.push(eventId)
+              return false
+            }
+          } else if (eventId < 100000) {
+            // Community event not in DB → it was deleted → drop orphan chat.
+            cancelledByCleanup.push(eventId)
+            return false
+          }
+        }
+        if (c.chatExpiresAt && c.chatExpiresAt < now) {
+          if (eventId) cancelledByCleanup.push(eventId)
+          return false
         }
         return true
       }))
+      if (cancelledByCleanup.length > 0) {
+        // Persist the cancellation so realtime chat_members INSERT replays
+        // (e.g., reconnecting on app load) can't resurrect these chats. The
+        // listener at line ~7097 already skips when event_id is here.
+        cancelledByCleanup.forEach(id => cancelledEventIdsRef.current.add(id))
+        setCancelledEventIds(prev => [...new Set([...prev, ...cancelledByCleanup])])
+      }
     }
     check()
-    const interval = setInterval(check, 60 * 60 * 1000) // check every hour
+    // Re-check every 5 min instead of hourly so orphan chats get pruned
+    // quickly once dbCommunityEvents loads / events get deleted.
+    const interval = setInterval(check, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [persistLoadedState])
+    // Re-run when dbCommunityEvents changes — initial mount may not have DB events
+    // loaded yet, so the first check() can't distinguish orphan chats from "still
+    // loading". Re-fire when fresh event data arrives.
+  }, [persistLoadedState, dbCommunityEvents.length])
 
   // Watch for crew/partner found on joined events
   const prevActiveEventsRef = useRef<Set<number>>(new Set())
@@ -8504,6 +8675,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const p = (m as any).profiles || {}
                 return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍' }
               })
+              // Anchor chat expiry to event time, not now. Otherwise joining a
+              // crew for an event in the past would give the chat a fresh 24h
+              // window and cleanup would never catch it.
+              const evChatExpiry = (ev.expiresAt && ev.expiresAt > 0 ? ev.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
               // If chat already in list (e.g., user previously created their own and now
               // is joining a different one) — merge fresh data instead of skipping update.
               setChatList(prev => {
@@ -8514,7 +8689,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   members: (members || []).length,
                   avatars: memberProfiles.map((p: any) => p.photo).filter(Boolean),
                   colors: memberProfiles.map((p: any) => p.color), memberProfiles,
-                  lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+                  lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: evChatExpiry,
                 }
                 if (existing) return prev.map(c => c.id === chatId ? { ...c, ...entry } : c)
                 return [entry, ...prev]
@@ -8538,11 +8713,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 .eq('event_ref_id', ev.id).eq('profile_id', userData.dbId)
               setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
               setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: newChat.id }))
+              // Anchor chat expiry to event time so creating a crew for a past
+              // event doesn't give it a fresh 24h window.
+              const newCrewChatExpiry = (ev.expiresAt && ev.expiresAt > 0 ? ev.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
               setChatList(prev => prev.some(c => c.id === newChat.id) ? prev : [{
                 id: newChat.id, type: 'group', event: ev.title, eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉',
                 eventRefId: ev.id, eventImage: ev.image_url || null,
                 members: 1, avatars: [], colors: [], memberProfiles: [],
-                lastMsg: '⏳ Waiting for crew to join...', time: new Date().toISOString(), isNew: true, chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+                lastMsg: '⏳ Waiting for crew to join...', time: new Date().toISOString(), isNew: true, chatExpiresAt: newCrewChatExpiry,
               }, ...prev])
               showToast('Others will see your crew and can join', 'Crew created 🎉', '✨')
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -9073,10 +9251,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const hostEvId = leavingChat.memberProfiles?.find((p: any) => p._isHost)?.id
                   || (dbCommunityEvents.find((e: any) => e.id === evId)?.hostId)
                 if (hostEvId) {
-                  supabase.channel(`host-events-${hostEvId}`).send({
-                    type: 'broadcast', event: 'member_left',
-                    payload: { eventId: evId, requesterId: userData.dbId },
-                  })
+                  // httpSend (REST) — explicit one-off broadcast without subscribing.
+                  // Replaces the deprecated .send() implicit REST fallback.
+                  supabase.channel(`host-events-${hostEvId}`).httpSend('member_left', { eventId: evId, requesterId: userData.dbId })
                 }
               }
 
@@ -9165,10 +9342,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const partnerId = partnerChat?.partnerProfile?.id
                   || partnerChat?.memberProfiles?.find((p: any) => p.id !== userData.dbId)?.id
                 if (partnerId) {
-                  supabase.channel(`crew-partner-${partnerId}`).send({
-                    type: 'broadcast', event: 'partner_left',
-                    payload: { eventId: ev.id, eventTitle: ev.title || partnerChat?.title || '' },
-                  })
+                  supabase.channel(`crew-partner-${partnerId}`).httpSend('partner_left', { eventId: ev.id, eventTitle: ev.title || partnerChat?.title || '' })
                 }
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
@@ -9180,11 +9354,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 supabase.from('join_requests').delete().eq('event_id', ev.id).eq('requester_id', userData.dbId)
                   .then(() => {
                     if (ev.hostId) {
-                      supabase.channel(`host-events-${ev.hostId}`).send({
-                        type: 'broadcast',
-                        event: 'member_left',
-                        payload: { eventId: ev.id, requesterId: userData.dbId },
-                      })
+                      supabase.channel(`host-events-${ev.hostId}`).httpSend('member_left', { eventId: ev.id, requesterId: userData.dbId })
                     }
                   })
               }
