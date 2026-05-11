@@ -9458,20 +9458,34 @@ export default function App() {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Use Linking.createURL so the redirect scheme matches the runtime:
+      // - In Expo Go: exp://192.168.x.x:8081/--/
+      // - In dev-client / prod build: pareaapp://
+      // The static 'pareaapp://' redirectTo only works in standalone builds —
+      // testing via Expo Go would hang on the loading screen because the
+      // browser tries to open pareaapp:// which Expo Go isn't registered for.
+      const redirectTo = ExpoLinking.createURL('/')
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'pareaapp://', skipBrowserRedirect: true },
+        options: { redirectTo, skipBrowserRedirect: true },
       })
       if (error) { Alert.alert('Google Sign In failed', error.message); return }
       if (!data?.url) return
-      const result = await WebBrowser.openAuthSessionAsync(data.url, 'pareaapp://')
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
       if (result.type === 'success' && result.url) {
         const url = result.url
         const hashPart = url.includes('#') ? url.split('#')[1] : url.split('?')[1] || ''
         const params = new URLSearchParams(hashPart)
+        // PKCE flow returns ?code=xxx; implicit flow returns #access_token=xxx.
+        // Supabase JS v2 defaults to PKCE — handle both for safety.
+        const code = params.get('code')
         const access_token = params.get('access_token')
         const refresh_token = params.get('refresh_token')
-        if (access_token) {
+        if (code) {
+          const { data: s, error: exErr } = await supabase.auth.exchangeCodeForSession(code)
+          if (exErr) { Alert.alert('Google Sign In failed', exErr.message); return }
+          if (s?.user) await loadProfileForUser(s.user.id)
+        } else if (access_token) {
           const { data: s } = await supabase.auth.setSession({ access_token, refresh_token: refresh_token || '' })
           if (s.user) await loadProfileForUser(s.user.id)
         }
