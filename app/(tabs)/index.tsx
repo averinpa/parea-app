@@ -6993,12 +6993,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>*</Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10,
-                          backgroundColor: createCustom.length > 0 ? '#EEF2FF' : '#F8FAFC',
+                          backgroundColor: createCustom.length > 0 ? '#EEF2FF' : '#FFF7ED',
                           borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
-                          borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#E2E8F0' }}>
-                          <Pencil size={15} color={createCustom.length > 0 ? '#6366F1' : '#94A3B8'} strokeWidth={2} />
+                          borderWidth: 1.5, borderColor: createCustom.length > 0 ? '#6366F1' : '#FB923C' }}>
+                          <Pencil size={15} color={createCustom.length > 0 ? '#6366F1' : '#F97316'} strokeWidth={2} />
                           <TextInput value={createCustom} onChangeText={setCreateCustom}
-                            placeholder="e.g. Wine & chat at Marina" placeholderTextColor="#94A3B8"
+                            placeholder="e.g. Wine & chat at Marina" placeholderTextColor="#9A3412"
                             returnKeyType="done"
                             onFocus={() => setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 300)}
                             style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} />
@@ -7028,21 +7028,24 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     return (
                       <View>
                         {/* When pills */}
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>When</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.6, textTransform: 'uppercase' }}>When</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>*</Text>
+                        </View>
                         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
                           <TouchableOpacity onPress={() => setDateSheetOpen(true)} activeOpacity={0.85}
                             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 14,
-                              backgroundColor: createDay ? '#EEF2FF' : '#F8FAFC',
-                              borderWidth: 1.5, borderColor: createDay ? '#6366F1' : '#E2E8F0' }}>
+                              backgroundColor: createDay ? '#EEF2FF' : '#FFF7ED',
+                              borderWidth: 1.5, borderColor: createDay ? '#6366F1' : '#FB923C' }}>
                             <Text style={{ fontSize: 17 }}>📅</Text>
-                            <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createDay ? '#1E1B4B' : '#94A3B8' }} numberOfLines={1}>{dayLabel}</Text>
+                            <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createDay ? '#1E1B4B' : '#9A3412' }} numberOfLines={1}>{dayLabel}</Text>
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => setTimeSheetOpen(true)} activeOpacity={0.85}
                             style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 14,
-                              backgroundColor: createHour ? '#EEF2FF' : '#F8FAFC',
-                              borderWidth: 1.5, borderColor: createHour ? '#6366F1' : '#E2E8F0' }}>
+                              backgroundColor: createHour ? '#EEF2FF' : '#FFF7ED',
+                              borderWidth: 1.5, borderColor: createHour ? '#6366F1' : '#FB923C' }}>
                             <Text style={{ fontSize: 17 }}>🕐</Text>
-                            <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createHour ? '#1E1B4B' : '#94A3B8' }} numberOfLines={1}>{createHour || 'Pick time'}</Text>
+                            <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: createHour ? '#1E1B4B' : '#9A3412' }} numberOfLines={1}>{createHour || 'Pick time'}</Text>
                           </TouchableOpacity>
                         </View>
 
