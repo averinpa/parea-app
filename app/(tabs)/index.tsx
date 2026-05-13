@@ -2952,6 +2952,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
   const inboxChannelRef = useRef<any>(null)
+  const seenInboxMsgIdsRef = useRef<Set<any>>(new Set())
   const duoBroadcastRef = useRef<any>(null)
   const communityBroadcastRef = useRef<any>(null)
   const duoBroadcastQueueRef = useRef<any[]>([])
@@ -3978,8 +3979,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           if (openChatRef.current?.id === chatId) {
             // Chat is open — append in real-time
             const sender = (openChatRef.current?.memberProfiles || []).find((p: any) => p.id === payload.sender_id)
-            const newMsg = { from: 'them', text: payload.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || payload.sender_name || '', senderPhoto: sender?.photo || payload.sender_photo || null, senderColor: sender?.color || payload.sender_color || '#818CF8' }
-            setChatMessages((prev: any) => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+            const newMsg = { from: 'them', text: payload.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || payload.sender_name || '', senderPhoto: sender?.photo || payload.sender_photo || null, senderColor: sender?.color || payload.sender_color || '#818CF8', _dbId: payload._dbId, _senderId: payload.sender_id }
+            setChatMessages((prev: any) => {
+              const existing = prev[chatId] || []
+              const recent = existing.slice(-8)
+              const isDup = recent.some((m: any) =>
+                (payload._dbId && m._dbId === payload._dbId) ||
+                (m.text === payload.text && m.from === 'them' && m._senderId === payload.sender_id)
+              )
+              if (isDup) return prev
+              return { ...prev, [chatId]: [...existing, newMsg] }
+            })
             setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time } : c))
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
           } else {
@@ -4962,21 +4972,30 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     if (isChatDuoSend && openChat.id && userData?.dbId) {
       const payload = { text, sender_id: userData.dbId, created_at: new Date().toISOString(), reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null, sender_name: userData.name || '', sender_photo: (userData as any).photos?.[0] || null, sender_color: (userData as any).color || '#818CF8' }
       // Skip DB insert if chat has a fake local ID (Date.now() > 1e12) — not a real DB chat
+      const sendBroadcast = (extraPayload: any = {}) => {
+        const bcast = { type: 'broadcast', event: 'message', payload: { ...payload, ...extraPayload } }
+        if (duoBroadcastRef.current) { console.log('broadcasting on duo_chat_' + openChat.id); duoBroadcastRef.current.send(bcast) }
+        else { console.log('queuing broadcast'); duoBroadcastQueueRef.current.push(bcast) }
+      }
       if (openChat.id < 1e12) {
+        // INSERT first so we can broadcast with the real DB id — receivers dedup
+        // via _dbId across broadcast/inbox/loadHistory paths.
         supabase.from('messages').insert({ chat_id: openChat.id, sender_id: userData.dbId, text, reply_to_text: replyTo?.text || null, reply_to_sender: replyTo?.senderName || null })
-          .then(({ error }) => {
+          .select('id').single()
+          .then(({ data, error }) => {
             if (error) {
               console.warn('duo message insert error:', error.message)
               if (error.code === '42501' || error.message?.includes('policy')) {
                 setChatMessages(prev => ({ ...prev, [openChat.id]: (prev[openChat.id] || []).slice(0, -1) }))
                 Alert.alert('Cannot send', 'You cannot message this person.')
+                return
               }
             }
+            sendBroadcast({ _dbId: data?.id })
           })
+      } else {
+        sendBroadcast()
       }
-      const bcast = { type: 'broadcast', event: 'message', payload }
-      if (duoBroadcastRef.current) { console.log('broadcasting on duo_chat_' + openChat.id); duoBroadcastRef.current.send(bcast) }
-      else { console.log('queuing broadcast'); duoBroadcastQueueRef.current.push(bcast) }
       return
     }
 
@@ -5051,6 +5070,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               senderColor: isMe ? undefined : (sender?.color || '#818CF8'),
               replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
               _dbId: m.id,
+              _senderId: m.sender_id,
             }
           })
           setChatMessages(prev => ({ ...prev, [chatId]: msgs }))
@@ -5072,8 +5092,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           if (openChatRef.current?.id === chatId) {
             const sender = (openChatRef.current?.memberProfiles || []).find((p: any) => p.id === payload.sender_id)
-            const newMsg = { from: 'them', text: payload.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || payload.sender_name || '', senderPhoto: sender?.photo || payload.sender_photo || null, senderColor: sender?.color || payload.sender_color || '#818CF8' }
-            setChatMessages((prev: any) => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+            const newMsg = { from: 'them', text: payload.text, time, date: t.toISOString().slice(0, 10), senderName: sender?.name || payload.sender_name || '', senderPhoto: sender?.photo || payload.sender_photo || null, senderColor: sender?.color || payload.sender_color || '#818CF8', _dbId: payload._dbId, _senderId: payload.sender_id }
+            setChatMessages((prev: any) => {
+              const existing = prev[chatId] || []
+              const recent = existing.slice(-8)
+              const isDup = recent.some((m: any) =>
+                (payload._dbId && m._dbId === payload._dbId) ||
+                (m.text === payload.text && m.from === 'them' && m._senderId === payload.sender_id)
+              )
+              if (isDup) return prev
+              return { ...prev, [chatId]: [...existing, newMsg] }
+            })
             setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time } : c))
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
           } else {
@@ -5103,8 +5132,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
           if (payload.sender_id === userData.dbId) return
           const time = new Date(payload.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), senderName: payload.sender_name || '', senderPhoto: payload.sender_photo || null, senderColor: payload.sender_color || '#818CF8', replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined }
-          setChatMessages(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMsg] }))
+          const newMsg = { from: 'them', text: payload.text, time, date: new Date(payload.created_at).toISOString().slice(0, 10), senderName: payload.sender_name || '', senderPhoto: payload.sender_photo || null, senderColor: payload.sender_color || '#818CF8', replyTo: payload.reply_to_text ? { text: payload.reply_to_text, senderName: payload.reply_to_sender || '' } : undefined, _dbId: payload._dbId, _senderId: payload.sender_id }
+          setChatMessages(prev => {
+            const existing = prev[chatId] || []
+            const recent = existing.slice(-8)
+            const isDup = recent.some((m: any) =>
+              (payload._dbId && m._dbId === payload._dbId) ||
+              (m.text === payload.text && m.from === 'them' && (m as any)._senderId === payload.sender_id)
+            )
+            if (isDup) return prev
+            return { ...prev, [chatId]: [...existing, newMsg] }
+          })
           setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
         })
@@ -5303,6 +5341,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const channel = supabase.channel('inbox_background')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload: any) => {
         const m = payload.new
+        // Guard against duplicate INSERT events (React StrictMode dev double-mount,
+        // brief overlap during channel re-subscribe). Each message id processed once.
+        if (seenInboxMsgIdsRef.current.has(m.id)) return
+        seenInboxMsgIdsRef.current.add(m.id)
+        // Prevent unbounded growth — keep only most recent 200 ids
+        if (seenInboxMsgIdsRef.current.size > 200) {
+          const arr = Array.from(seenInboxMsgIdsRef.current)
+          seenInboxMsgIdsRef.current = new Set(arr.slice(-200))
+        }
         if (m.sender_id === userData.dbId) return // своё сообщение
         if (m.text?.includes('left the group')) return // системные скипаем
         // Найти чат по community_event_id или по chat_id (дуо + group)
@@ -5335,8 +5382,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         setChatMessages(prev => {
           const existing = prev[chat.id] || []
-          if (existing.some((msg: any) => msg._dbId === m.id)) return prev // dedupe
-          return { ...prev, [chat.id]: [...existing, inboxMsg] }
+          // Dedup by _dbId (preferred) OR by recent text+sender (covers broadcast-added msg without _dbId)
+          const recent = existing.slice(-8)
+          const isDup = recent.some((msg: any) =>
+            msg._dbId === m.id ||
+            (msg.text === m.text && msg.from === 'them' && (msg as any)._senderId === m.sender_id)
+          )
+          if (isDup) return prev
+          return { ...prev, [chat.id]: [...existing, { ...inboxMsg, _senderId: m.sender_id }] }
         })
       })
       .subscribe()
