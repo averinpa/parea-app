@@ -1865,9 +1865,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
     return () => { clearInterval(interval); supabase.removeChannel(jrChannel) }
   }, [userData?.dbId])
-  // Group chat: refresh members from DB on open (covers cases where realtime missed updates)
+  // Group chat: refresh members from DB on open AND on any chat_members change
+  // (realtime) so the header member count + avatars stay in sync without waiting
+  // for crewsByEvent polling.
   useEffect(() => {
     if (!openChat || openChat.type !== 'group' || !openChat.id || !userData?.dbId) return
+    if (typeof openChat.id !== 'number' || openChat.id >= 1e12) return
     const chatId = openChat.id
     const refresh = async () => {
       const { data: members } = await supabase
@@ -1897,6 +1900,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       } : c))
     }
     refresh()
+    const ch = supabase.channel(`open_chat_members_${chatId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members', filter: `chat_id=eq.${chatId}` }, refresh)
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
   }, [openChat?.id, openChat?.type, userData?.dbId])
 
   const persistLoaded = useRef(false)
@@ -2128,35 +2135,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setChatList(prev => prev.map(refresh))
     setOpenChat((cur: any) => cur ? refresh(cur) : cur)
   }, [crewsByEvent, userData?.dbId])
-
-  // Direct subscription to chat_members changes for the currently OPEN chat,
-  // so the header member count updates immediately on join/leave without
-  // waiting for the crewsByEvent polling cycle (which can lag a few seconds).
-  useEffect(() => {
-    if (!openChat?.id || typeof openChat.id !== 'number' || openChat.id >= 1e12) return
-    const chatId = openChat.id
-    const refreshMembers = async () => {
-      const { data: members } = await supabase.from('chat_members')
-        .select('profile_id, profiles:profile_id(id, name, photos, color, age)')
-        .eq('chat_id', chatId)
-      if (!members) return
-      const otherMembers = members.filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
-        const p = (m as any).profiles || {}
-        return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, color: p.color || '#818CF8', age: p.age }
-      })
-      setOpenChat((cur: any) => cur && cur.id === chatId
-        ? { ...cur, members: members.length, memberProfiles: otherMembers, avatars: otherMembers.map((p: any) => p.photo).filter(Boolean), colors: otherMembers.map((p: any) => p.color) }
-        : cur)
-      setChatList(prev => prev.map((c: any) => c.id === chatId
-        ? { ...c, members: members.length, memberProfiles: otherMembers, avatars: otherMembers.map((p: any) => p.photo).filter(Boolean), colors: otherMembers.map((p: any) => p.color) }
-        : c))
-    }
-    refreshMembers()
-    const ch = supabase.channel(`open_chat_members_${chatId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members', filter: `chat_id=eq.${chatId}` }, refreshMembers)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [openChat?.id, userData?.dbId])
 
   // Backfill userEventFormat from event_attendees on login. AsyncStorage on a
   // fresh device install has no userEventFormat, which made VibeCheck fall back
@@ -3976,6 +3954,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             return
           }
           const msgs = data.map((m: any) => {
+            const isSystem = (m.text || '').includes('left the group')
+            if (isSystem) {
+              return { from: 'system', text: m.text, time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), _dbId: m.id }
+            }
             const isMe = m.sender_id === userData.dbId
             const t = new Date(m.created_at)
             const time = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -4170,6 +4152,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         if (!data) return
         const profilesInChat: any[] = openChat.memberProfiles || []
         const msgs = data.map((m: any) => {
+          const isSystem = (m.text || '').includes('left the group')
+          if (isSystem) {
+            return { from: 'system', text: m.text, time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), _dbId: m.id }
+          }
           const isMe = m.sender_id === userData.dbId
           const sender = profilesInChat.find((p: any) => p.id === m.sender_id)
           const t = new Date(m.created_at)
@@ -4847,12 +4833,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .then(async ({ data: evChats }) => {
                     const chatIds = (evChats || []).map((c: any) => c.id)
                     if (chatIds.length === 0) return
+                    // Find chats where we were a member (so we only post the system
+                    // message in chats remaining members can actually see)
+                    const { data: myMemberships } = await supabase.from('chat_members')
+                      .select('chat_id').in('chat_id', chatIds).eq('profile_id', userData.dbId)
+                    const myChatIds = (myMemberships || []).map((r: any) => r.chat_id)
                     await supabase.from('chat_members').delete().in('chat_id', chatIds).eq('profile_id', userData.dbId)
                     // Cleanup orphan chats (no members left)
                     const { data: remaining } = await supabase.from('chat_members').select('chat_id').in('chat_id', chatIds)
                     const stillPopulated = new Set((remaining || []).map((r: any) => r.chat_id))
                     const empties = chatIds.filter((id: number) => !stillPopulated.has(id))
                     if (empties.length > 0) await supabase.from('chats').delete().in('id', empties)
+                    // Write "X left the group" system message in chats that survive
+                    const survivingChatIds = myChatIds.filter((id: number) => stillPopulated.has(id))
+                    if (survivingChatIds.length > 0) {
+                      const inserts = survivingChatIds.map((cid: number) => ({
+                        chat_id: cid, sender_id: userData.dbId,
+                        text: `${userData.name || 'Someone'} left the group`,
+                      }))
+                      supabase.from('messages').insert(inserts)
+                        .then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
+                    }
                   })
                 setSentCrewInvites(prev => {
                   const next = { ...prev }
@@ -5020,6 +5021,26 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   // Replaces the deprecated .send() implicit REST fallback.
                   supabase.channel(`host-events-${hostEvId}`).httpSend('member_left', { eventId: evId, requesterId: userData.dbId })
                 }
+              }
+
+              // Group official crew chat (no communityEventId, no hostEventId — multi-crew)
+              if (!leavingChat?.communityEventId && !leavingChat?.hostEventId && leavingChat?.eventRefId
+                  && typeof leavingChat.id === 'number' && leavingChat.id < 1e12 && userData?.dbId) {
+                supabase.from('chat_members')
+                  .delete().eq('chat_id', leavingChat.id).eq('profile_id', userData.dbId)
+                  .then(async () => {
+                    // Check if anyone else still in the chat — if so, post "X left", otherwise delete it
+                    const { data: remaining } = await supabase.from('chat_members')
+                      .select('profile_id').eq('chat_id', leavingChat.id)
+                    if (!remaining || remaining.length === 0) {
+                      supabase.from('chats').delete().eq('id', leavingChat.id)
+                    } else {
+                      supabase.from('messages').insert({
+                        chat_id: leavingChat.id, sender_id: userData.dbId,
+                        text: `${userData.name || 'Someone'} left the group`,
+                      }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
+                    }
+                  })
               }
 
               // Если хост уходит из своего чата → удаляем ивент (cascade удалит chat у участников)
@@ -6354,6 +6375,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         { text: 'Leave chat', style: 'destructive', onPress: () => {
                           const chatId = openChat.id
                           const evId = openChat.communityEventId
+                          const officialEvRefId = !evId && !openChat.hostEventId ? openChat.eventRefId : null
                           if (evId && !openChat.hostEventId && userData?.dbId) {
                             // Удаляем join_request
                             supabase.from('join_requests').delete().eq('event_id', evId).eq('requester_id', userData.dbId)
@@ -6371,6 +6393,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             cancelledEventIdsRef.current.add(evId)
                             setCancelledEventIds(prev => [...new Set([...prev, evId])])
                             setJoinedEvents(prev => { const n = { ...prev }; delete n[evId]; return n })
+                          } else if (officialEvRefId && typeof chatId === 'number' && chatId < 1e12 && userData?.dbId) {
+                            // Group official multi-crew chat — same teardown pattern as
+                            // community leave, otherwise fallback poll re-adds the chat.
+                            supabase.from('chat_members')
+                              .delete().eq('chat_id', chatId).eq('profile_id', userData.dbId)
+                              .then(async () => {
+                                // If others remain, post "X left the group"; if empty, delete the chat row.
+                                const { data: remaining } = await supabase.from('chat_members')
+                                  .select('profile_id').eq('chat_id', chatId)
+                                if (!remaining || remaining.length === 0) {
+                                  supabase.from('chats').delete().eq('id', chatId)
+                                } else {
+                                  supabase.from('messages').insert({
+                                    chat_id: chatId, sender_id: userData.dbId,
+                                    text: `${userData.name || 'Someone'} left the group`,
+                                  }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
+                                }
+                              })
+                            cancelledEventIdsRef.current.add(officialEvRefId)
+                            setCancelledEventIds(prev => [...new Set([...prev, officialEvRefId])])
+                            setJoinedEvents(prev => { const n = { ...prev }; delete n[officialEvRefId]; return n })
+                            setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[officialEvRefId]; return n })
                           }
                           setChatMessages(prev => ({
                             ...prev,
