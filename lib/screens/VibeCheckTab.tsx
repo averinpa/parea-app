@@ -496,9 +496,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
             // [2,5] default in event_attendees. Was '1+1' which forced Duo (1/2)
             // display for users who joined via flows that didn't set userEventFormat.
             const format     = userEventFormat?.[ev.id]    || 'squad'
-            // Crew-list mode covers all official events. Old "CREW FOUND" progress
-            // bar + partners avatars belonged to the swipe flow — they get hidden here.
-            const isCrewMode = !isCommunity
+            // Crew-list mode covers squad/party official events. 1+1 has its own
+            // dedicated UI below (per-person Invite + "Searching..." when alone) —
+            // sending it through crew-list would show a bulk Confirm button that
+            // invites a phantom partner when there's stale event_attendees data.
+            const isCrewMode = !isCommunity && format !== '1+1'
             const transport  = userEventTransport?.[ev.id] || 'meet'
             // For community events: use real participant count as crew size
             const cap        = isCommunity ? Math.min(ev.participantsCount || 5, 5) : (VIBE_FORMAT_MAX[format] || 5)
@@ -643,46 +645,53 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                       const inviterScore = inviterAttendee?.score ?? null
                       const inviterVibe = inviterAttendee?.vibe || ''
                       const scoreColor = inviterScore != null && inviterScore >= 75 ? '#43E97B' : '#818CF8'
+                      const openInviterPreview = () => {
+                        setPreviewProfile({
+                          ...inviter,
+                          colors: [inviter.color || '#6366F1', '#1E1B4B'],
+                          flag: FLAG_MAP[inviter.langs?.[0]] || '🌍',
+                          langs: (inviter.langs || []).map((l: string) => FLAG_MAP[l] || l),
+                          aiScore: inviterScore,
+                          aiReason: inviterVibe || 'Wants to go together',
+                        })
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                      }
                       return (
                         <View style={{ gap: 14 }}>
-                          {/* Profile card — tap to open preview */}
-                          <TouchableOpacity activeOpacity={0.85} onPress={() => {
-                            setPreviewProfile({
-                              ...inviter,
-                              colors: [inviter.color || '#6366F1', '#1E1B4B'],
-                              flag: FLAG_MAP[inviter.langs?.[0]] || '🌍',
-                              langs: (inviter.langs || []).map((l: string) => FLAG_MAP[l] || l),
-                              aiScore: inviterScore,
-                              aiReason: inviterVibe || 'Wants to go together',
-                            })
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                          }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-                              {inviter.photos?.[0] ? (
-                                <Image source={{ uri: inviter.photos[0] }} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: scoreColor + '60' }} />
-                              ) : (
-                                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
-                                  <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff' }}>{(inviter.name || '?')[0]}</Text>
-                                </View>
-                              )}
-                              <View style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'}</Text>
-                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>wants to go together 🎯</Text>
+                          {/* Profile card — non-interactive body + View pill on the right
+                              (matches group-crew card layout). */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                            {inviter.photos?.[0] ? (
+                              <Image source={{ uri: inviter.photos[0] }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: scoreColor + '60' }} />
+                            ) : (
+                              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                                <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff' }}>{(inviter.name || '?')[0]}</Text>
                               </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{inviter.name || 'Someone'}</Text>
+                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>wants to go together 🎯</Text>
                               {inviterScore != null && (
-                                <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: scoreColor + '22', borderWidth: 1, borderColor: scoreColor + '55' }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '900', color: scoreColor }}>{inviterScore}%</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                  <Sparkle size={10} color={scoreColor} weight="fill" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: scoreColor }}>{inviterScore}% vibe match</Text>
                                 </View>
                               )}
                             </View>
-                          </TouchableOpacity>
-                          <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
-                              <Zap size={15} color="#052e16" fill="#052e16" />
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Accept</Text>
+                            <TouchableOpacity activeOpacity={0.85}
+                              onPress={openInviterPreview}
+                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                              style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 70 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ paddingHorizontal: 26, borderRadius: 99, paddingVertical: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, minWidth: 110 }}>
+                              <Zap size={14} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(anyIncoming)} style={{ paddingHorizontal: 20, borderRadius: 99, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', minWidth: 80 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -693,43 +702,50 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     const inviteSent = !!sentCrewInvites[`${ev.id}_${currentPerson!.id}`]
                     const scoreVal = currentPerson!.score
                     const scoreColor = scoreVal != null && scoreVal >= 75 ? '#43E97B' : '#818CF8'
+                    const openPreview = () => {
+                      setPreviewProfile({ ...currentPerson, flag: FLAG_MAP[currentPerson.langs?.[0]] || '🌍', langs: (currentPerson.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: scoreVal, aiReason: currentPerson.vibe || 'Real attendee' })
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    }
                     return (
                       <View style={{ gap: 14 }}>
-                        {/* Profile card */}
-                        <TouchableOpacity activeOpacity={0.85} onPress={() => {
-                          setPreviewProfile({ ...currentPerson, flag: FLAG_MAP[currentPerson.langs?.[0]] || '🌍', langs: (currentPerson.langs || []).map((l: string) => FLAG_MAP[l] || l), aiScore: scoreVal, aiReason: currentPerson.vibe || 'Real attendee' })
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                        }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-                            {currentPerson!.photo ? (
-                              <Image source={{ uri: currentPerson!.photo }} style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: scoreColor + '60' }} />
-                            ) : (
-                              <LinearGradient colors={currentPerson!.colors || ['#6366F1','#818CF8']} style={{ width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
-                                <Text style={{ fontSize: 28 }}>{currentPerson!.emoji || '🎵'}</Text>
-                              </LinearGradient>
-                            )}
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{currentPerson!.name}</Text>
-                              {currentPerson!.bio ? <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3, lineHeight: 17 }} numberOfLines={2}>{currentPerson!.bio}</Text> : null}
-                            </View>
+                        {/* Profile card — matches group-crew card layout: non-interactive
+                            body + stacked View pill on the right (View opens preview). */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                          {currentPerson!.photo ? (
+                            <Image source={{ uri: currentPerson!.photo }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: scoreColor + '60' }} />
+                          ) : (
+                            <LinearGradient colors={currentPerson!.colors || ['#6366F1','#818CF8']} style={{ width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.15)' }}>
+                              <Text style={{ fontSize: 24 }}>{currentPerson!.emoji || '🎵'}</Text>
+                            </LinearGradient>
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{currentPerson!.name}</Text>
                             {scoreVal != null && (
-                              <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: scoreColor + '22', borderWidth: 1, borderColor: scoreColor + '55' }}>
-                                <Text style={{ fontSize: 13, fontWeight: '900', color: scoreColor }}>{scoreVal}%</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                <Sparkle size={10} color={scoreColor} weight="fill" />
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: scoreColor }}>{scoreVal}% vibe match</Text>
                               </View>
                             )}
+                            {currentPerson!.bio ? <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3, lineHeight: 16 }} numberOfLines={1}>{currentPerson!.bio}</Text> : null}
                           </View>
-                        </TouchableOpacity>
+                          <TouchableOpacity activeOpacity={0.85}
+                            onPress={openPreview}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 70 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
+                          </TouchableOpacity>
+                        </View>
 
                         {/* Action buttons */}
                         {incomingFromCurrent ? (
-                          // B sees A pressed Let's go → show Accept / Decline
-                          <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
-                              <Zap size={15} color="#052e16" fill="#052e16" />
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Accept</Text>
+                          // B sees A pressed Let's go → Accept / Decline (centered, Accept first + larger)
+                          <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+                            <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(incomingFromCurrent)} style={{ paddingHorizontal: 26, borderRadius: 99, paddingVertical: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, minWidth: 110 }}>
+                              <Zap size={14} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(incomingFromCurrent)} style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-                              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
+                            <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(incomingFromCurrent)} style={{ paddingHorizontal: 20, borderRadius: 99, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', minWidth: 80 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.35)' }}>Decline</Text>
                             </TouchableOpacity>
                           </View>
                         ) : inviteSent ? (
@@ -744,20 +760,20 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                             </TouchableOpacity>
                           </View>
                         ) : (
-                          // Default: Invite + Skip
-                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                          // Default: Invite + Skip — centered, Invite first and slightly larger
+                          <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
                             <TouchableOpacity
                               activeOpacity={0.85}
                               onPress={() => { onConfirm?.(ev, [currentPerson], format); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
-                              style={{ flex: 1, borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
-                              <Zap size={15} color="#052e16" fill="#052e16" />
-                              <Text style={{ fontSize: 15, fontWeight: '900', color: '#052e16' }}>Invite</Text>
+                              style={{ paddingHorizontal: 26, borderRadius: 99, paddingVertical: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, minWidth: 110 }}>
+                              <Zap size={14} color="#052e16" fill="#052e16" />
+                              <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Invite</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               activeOpacity={0.8}
                               onPress={() => { onPassJoiner?.(ev.id, currentPerson); Haptics.selectionAsync() }}
-                              style={{ paddingHorizontal: 22, borderRadius: 99, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                              <Text style={{ fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.45)' }}>Skip</Text>
+                              style={{ paddingHorizontal: 20, borderRadius: 99, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', minWidth: 80 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.45)' }}>Skip</Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -841,11 +857,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                       <Text style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18 }}>You're approved! More people may join. Open the chat to say hi.</Text>
                     </View>
                   )}
-                  {/* Crew-list UI takes over for ALL official events. The old "We're looking..."
-                      placeholder fired only when no real attendees were found yet, but in the new
-                      model we always show "existing crews + create your own" so the user has an
-                      action to take, even alone. */}
-                  {(isActive || !isCommunity || (joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id])) && (
+                  {/* Crew-list UI takes over for squad/party official + community events.
+                      1+1 official has its own dedicated UI above — skip this whole block,
+                      otherwise the bulk Confirm button shows up and invites phantom partners
+                      when there are stale event_attendees rows. */}
+                  {!(format === '1+1' && !isCommunity) && (isActive || !isCommunity || (joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id])) && (
                     <View style={{ gap: 10 }}>
                       {(() => {
                         const isCrewMode = !isCommunity && (format === 'squad' || format === 'party')

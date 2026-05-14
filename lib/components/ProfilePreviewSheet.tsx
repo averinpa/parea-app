@@ -146,58 +146,28 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
 
           {/* Bio */}
           {profile.bio ? (
-            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 21, marginBottom: 18 }}>{profile.bio}</Text>
+            <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 21, marginBottom: 18, fontFamily: 'Outfit-Regular' }}>{profile.bio}</Text>
           ) : null}
 
-          {/* About — text rows */}
-          {(() => {
-            const interests = profile.interests || []
-            // Normalize langs: callers pass either codes ('en','ru') or pre-mapped flag emojis.
-            // For display we need codes so LANGUAGES_LIST lookup yields readable labels.
-            const flagToCode: Record<string, string> = Object.fromEntries(Object.entries(FLAG_MAP).map(([k, v]) => [v, k]))
-            const langs = (profile.langs || []).map((l: string) => flagToCode[l] || l)
-            const usually = interests.slice(0, 3).map((t: string) => t.indexOf(' ') !== -1 ? t.slice(t.indexOf(' ') + 1) : t).join(' · ')
-            const langText = langs.map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c).join(' · ')
-            const transportText = profile.transport === 'car' ? 'Driving (open to giving a lift)' : profile.transport === 'lift' ? 'Open to carpooling' : 'Meeting there'
-            const genderRaw = (profile.gender || '').toLowerCase()
-            const genderText = genderRaw === 'female' ? 'Female' : genderRaw === 'male' ? 'Male' : genderRaw ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1) : ''
-            const rows = [
-              genderText && { label: 'Gender', value: genderText },
-              usually && { label: 'Usually goes for', value: usually },
-              langText && { label: 'Languages', value: langText },
-              { label: 'Getting there', value: transportText },
-            ].filter(Boolean) as { label: string; value: string }[]
-            return (
-              <View style={{ marginBottom: 22, gap: 8 }}>
-                {rows.map(r => (
-                  <Text key={r.label} style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 19 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Outfit-Medium' }}>{r.label}: </Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'Outfit-SemiBold' }}>{r.value}</Text>
-                  </Text>
-                ))}
-              </View>
-            )
-          })()}
-
-          {/* AI Match badge */}
+          {/* AI Match badge — moved up: most interesting + personalized info */}
           {profile.aiScore != null && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, padding: 12, borderRadius: 16, backgroundColor: 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: 'rgba(129,140,248,0.25)' }}>
-              <Sparkle size={20} color="#818CF8" weight="duotone" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18, padding: 14, borderRadius: 16, backgroundColor: profile.aiScore >= 75 ? 'rgba(67,233,123,0.10)' : 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: profile.aiScore >= 75 ? 'rgba(67,233,123,0.28)' : 'rgba(129,140,248,0.25)' }}>
+              <Sparkle size={22} color={profile.aiScore >= 75 ? '#43E97B' : '#818CF8'} weight="fill" />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
-                  {profile.aiScore}% AI Match
+                <Text style={{ fontSize: 15, fontWeight: '900', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
+                  {profile.aiScore}% vibe match
                 </Text>
                 {profile.aiReason && (
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{profile.aiReason}</Text>
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 3, lineHeight: 17 }}>{profile.aiReason}</Text>
                 )}
               </View>
             </View>
           )}
 
-          {/* Interests */}
+          {/* Interests — moved up: visual + colorful, gives instant personality */}
           {(profile.interests || []).length > 0 && (
-            <>
-              <Text style={{ fontSize: 10, fontFamily: 'ClashDisplay-Semibold', color: 'rgba(255,255,255,0.3)', letterSpacing: 1.2, marginBottom: 10 }}>INTERESTS</Text>
+            <View style={{ marginBottom: 22 }}>
+              <Text style={{ fontSize: 10, fontFamily: 'ClashDisplay-Semibold', color: 'rgba(255,255,255,0.3)', letterSpacing: 1.2, marginBottom: 12 }}>INTERESTS</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {(profile.interests || []).slice(0, 8).map((tag: string, i: number) => {
                   const Icon = INTEREST_ICON_MAP[tag] || Sparkle
@@ -218,8 +188,34 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
                   </View>
                 )}
               </View>
-            </>
+            </View>
           )}
+
+          {/* About — compact text rows (no "Usually goes for" — that just duplicated interests) */}
+          {(() => {
+            // Normalize langs: callers pass either codes ('en','ru') or pre-mapped flag emojis.
+            const flagToCode: Record<string, string> = Object.fromEntries(Object.entries(FLAG_MAP).map(([k, v]) => [v, k]))
+            const langs = (profile.langs || []).map((l: string) => flagToCode[l] || l)
+            const langText = langs.map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c).join(' · ')
+            const transportText = profile.transport === 'car' ? 'Driving (open to giving a lift)' : profile.transport === 'lift' ? 'Open to carpooling' : 'Meeting there'
+            const genderRaw = (profile.gender || '').toLowerCase()
+            const genderText = genderRaw === 'female' ? 'Female' : genderRaw === 'male' ? 'Male' : genderRaw ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1) : ''
+            const rows = [
+              genderText && { label: 'Gender', value: genderText },
+              langText && { label: 'Languages', value: langText },
+              { label: 'Getting there', value: transportText },
+            ].filter(Boolean) as { label: string; value: string }[]
+            return (
+              <View style={{ marginBottom: 6, gap: 8 }}>
+                {rows.map(r => (
+                  <Text key={r.label} style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 19 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Outfit-Medium' }}>{r.label}: </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'Outfit-SemiBold' }}>{r.value}</Text>
+                  </Text>
+                ))}
+              </View>
+            )
+          })()}
 
           {/* Block / Report */}
           {(onBlock || onReport) && (

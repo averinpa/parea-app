@@ -2023,9 +2023,28 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           .limit(20)
         // Bidirectional crew_pref + gender filter, then drop anyone we've mutually passed
         const passedSet = passedSetByEvent[evId] || new Set<string>()
+        // Bidirectional dealbreaker filter — if either side's dealbreakers conflict
+        // with the other's lifestyle, hide them entirely (don't just score=0).
+        const myDb: string[] = (userData as any)?.dealbreakers || []
+        const conflicts = (myDbList: string[], them: any) => {
+          if (myDbList.includes('no_smoking') && (them?.smoking_pref === 'Smoker' || them?.smoking_pref === 'Social')) return true
+          if (myDbList.includes('sober_only') && them?.drinks_pref === 'Social drinker') return true
+          if (myDbList.includes('pets_allergy') && them?.has_pets) return true
+          return false
+        }
+        const me = userData as any
         const data = (rawData || [])
           .filter((row: any) => fitsCrewPref(myPref, myGender, row.crew_pref || 'any', row.profiles?.gender))
           .filter((row: any) => !passedSet.has(row.profiles?.id))
+          .filter((row: any) => {
+            const p = row.profiles || {}
+            // My dealbreakers vs their profile
+            if (conflicts(myDb, p)) return false
+            // Their dealbreakers vs my profile
+            const theirDb: string[] = p.dealbreakers || []
+            if (conflicts(theirDb, { smoking_pref: me?.smokingPref, drinks_pref: me?.drinksPref, has_pets: me?.hasPets })) return false
+            return true
+          })
         if (data && data.length > 0) {
           const candidates = data.map((row: any) => {
             const p = row.profiles || {}
