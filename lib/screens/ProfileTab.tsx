@@ -132,16 +132,19 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
   const [faqOpen, setFaqOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<string | null>(null)
 
+  // Re-fetch when the blocked-users section is opened so users freshly blocked
+  // in chat appear in the list (the section is the only place they can unblock).
   useEffect(() => {
     if (!userData?.dbId) return
+    if (settingsSection !== 'blocked' && blockedUsers.length === 0) return
     supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData.dbId)
       .then(async ({ data }) => {
-        if (!data || data.length === 0) return
+        if (!data || data.length === 0) { setBlockedUsers([]); return }
         const ids = data.map((r: any) => r.blocked_id)
         const { data: profiles } = await supabase.from('profiles').select('id, name, photos').in('id', ids)
         if (profiles) setBlockedUsers(profiles.map((p: any) => ({ id: p.id, name: p.name, photo: p.photos?.[0] })))
       })
-  }, [userData?.dbId])
+  }, [userData?.dbId, settingsSection])
 
   const unblockUser = async (userId: string) => {
     if (!userData?.dbId) return

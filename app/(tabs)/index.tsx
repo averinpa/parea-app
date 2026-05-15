@@ -44,6 +44,7 @@ import { ProfileTab } from '../../lib/screens/ProfileTab'
 import { MessagesTab } from '../../lib/screens/MessagesTab'
 import { VibeCheckTab } from '../../lib/screens/VibeCheckTab'
 import { ChatScreen } from '../../lib/screens/ChatScreen'
+import { useChats } from '../../lib/hooks/useChats'
 import { uploadPhotoToStorage, isImageSafe } from '../../lib/photo-helpers'
 import { SOCIAL_ENERGY } from '../../lib/social-energy'
 import { s } from '../../lib/feed-styles'
@@ -1643,73 +1644,101 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [eventParticipants, setEventParticipants] = useState<{ ev: any; members: any[] } | null>(null)
   const [matchedWith, setMatchedWith] = useState<any>(null)
   const [vibeResults, setVibeResults] = useState<Record<number, string>>({})
-  const [openChat, setOpenChat] = useState<any>(null)
-  const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
-  const [chatInput, setChatInput] = useState('')
-  const [chatSpacerH, setChatSpacerH] = useState(0)
-  const [chatKeyboardVisible, setChatKeyboardVisible] = useState(false)
-  const chatBodyMaxH = useRef(0)
-  const chatBodyCurH = useRef(0)
+  const {
+    chatList, setChatList,
+    chatMessages, setChatMessages,
+    openChat, setOpenChat,
+    chatInput, setChatInput,
+    chatSpacerH, setChatSpacerH,
+    chatKeyboardVisible, setChatKeyboardVisible,
+    replyTo, setReplyTo,
+    chatPartnerPreview, setChatPartnerPreview,
+    groupMembersOpen, setGroupMembersOpen,
+    blockedIds, setBlockedIds,
+    blockedByIds,
+    reportTarget, setReportTarget,
+    chatBodyMaxH, chatBodyCurH,
+    chatListRef, openChatRef, replyToRef,
+    blockClearChats, handleReport,
+  } = useChats({
+    userDbId: userData?.dbId,
+    userName: userData?.name,
+    // Called when realtime DELETE on chats removes one of our chats (e.g., the
+    // other side blocked us and tore down the chat). Mirror the cleanup the
+    // blocker did locally so VibeCheck/Plans don't show stale "Open Chat".
+    // Duo chats often miss `eventRefId` (DB has no event_id column carried over)
+    // — fall back to matching the event by title.
+    onChatRemoved: (chat: any) => {
+      let evId: number | undefined = chat?.eventRefId
+      if (!evId && chat?.event) {
+        const ev = [...feedOfficialDbEventsRef.current, ...dbCommunityEventsRef.current].find((e: any) => e.title === chat.event)
+        evId = ev?.id
+      }
+      // Defensive fallback for older chats without eventRefId/title match — scan
+      // officialEventChatMap for any event whose chat_id matches the removed chat.
+      if (!evId && chat?.id) {
+        for (const [eId, cId] of Object.entries(officialEventChatMapRef.current)) {
+          if (cId === chat.id) { evId = Number(eId); break }
+        }
+      }
+      if (!evId) return
+      setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[evId!]; return n })
+      setCrewPreviewMap(prev => { const n = { ...prev }; delete n[evId!]; return n })
+      setReadyCountMap(prev => { const n = { ...prev }; delete n[evId!]; return n })
+    },
+  })
 
-  useEffect(() => {
-    if (!userData?.dbId) return
-    supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData.dbId)
-      .then(({ data }) => {
-        if (data) setBlockedIds(new Set(data.map((r: any) => r.blocked_id)))
-      })
-  }, [userData?.dbId])
-
+  // Block wrapper: hook does chat-level cleanup (delete duo chats + crew_invites
+  // between us, auto-leave groups). We follow with minimal event-state cleanup
+  // — just clear `officialEventChatMap` / `crewPreviewMap` entries pointing to
+  // deleted chats so VibeCheck doesn't render "Open Chat" into nothing.
+  //
+  // We deliberately DON'T delete the blocker's `event_attendees` or remove from
+  // `joinedEvents`: the block is about the *person*, not the event. The blocker
+  // stays in the event and can join a different crew. VibeCheck's bidirectional
+  // block filter keeps the two of them invisible to each other.
   const handleBlock = async (profile: any) => {
     if (!userData?.dbId || !profile?.id) return
-    await supabase.from('blocked_users').upsert({ blocker_id: userData.dbId, blocked_id: profile.id }, { onConflict: 'blocker_id,blocked_id' })
-    setBlockedIds(prev => new Set([...prev, profile.id]))
-    // Duo chats — delete entirely from DB and local state
-    const duoChats = chatList.filter(c => c.type === 'duo' && c.partnerProfile?.id === profile.id)
-    for (const chat of duoChats) {
-      await supabase.from('messages').delete().eq('chat_id', chat.id)
-      await supabase.from('chat_members').delete().eq('chat_id', chat.id)
-      await supabase.from('chats').delete().eq('id', chat.id)
+    const { duoChats, groupChats } = await blockClearChats(profile)
+    const deletedChatIds = new Set([...duoChats, ...groupChats].map((c: any) => c.id))
+    const affectedEventIds = new Set<number>()
+    Object.entries(officialEventChatMapRef.current).forEach(([evId, chatId]) => {
+      if (deletedChatIds.has(chatId)) affectedEventIds.add(Number(evId))
+    })
+    if (affectedEventIds.size > 0) {
+      setOfficialEventChatMap(prev => {
+        const n = { ...prev }
+        affectedEventIds.forEach(id => delete n[id])
+        return n
+      })
+      setCrewPreviewMap(prev => {
+        const n = { ...prev }
+        affectedEventIds.forEach(id => delete n[id])
+        return n
+      })
+      setReadyCountMap(prev => {
+        const n = { ...prev }
+        affectedEventIds.forEach(id => delete n[id])
+        return n
+      })
     }
-    setChatList(prev => prev.filter(c => !(c.type === 'duo' && c.partnerProfile?.id === profile.id)))
+    // Clear local sentCrewInvites for this person — `blockClearChats` already
+    // cancelled them in DB so leaving local state stale would show "Waiting for X".
+    setSentCrewInvites(prev => {
+      const n: typeof prev = {}
+      for (const k of Object.keys(prev)) {
+        if (!k.endsWith(`_${profile.id}`)) n[k] = prev[k]
+      }
+      return n
+    })
+    // Same for the "already processed accepted invites" memo — without this,
+    // re-matching the same pair after unblock would skip processing because
+    // the key is already in the set.
+    for (const k of Array.from(acceptedInviteKeysRef.current)) {
+      if (k.endsWith(`_${profile.id}`)) acceptedInviteKeysRef.current.delete(k)
+    }
     Alert.alert('Blocked', `${profile.name} has been blocked.`)
   }
-
-  const handleReport = async (profile: any, reason: string, details?: string) => {
-    if (!userData?.dbId || !profile?.id) return
-    await supabase.from('reports').insert({ reporter_id: userData.dbId, reported_id: profile.id, reason, details: details || null })
-    Alert.alert('Report submitted', "Thank you. We'll review it shortly.")
-  }
-
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const show = Keyboard.addListener('keyboardDidShow', e => {
-        const kbH = e.endCoordinates.height
-        // After keyboard is fully shown, give layout one frame to update
-        requestAnimationFrame(() => {
-          const maxH = chatBodyMaxH.current
-          const curH = chatBodyCurH.current
-          const containerShrank = maxH > 0 && curH < maxH - 50
-          if (!containerShrank) {
-            setChatSpacerH(kbH)
-          }
-        })
-      })
-      const hide = Keyboard.addListener('keyboardDidHide', () => setChatSpacerH(0))
-      return () => { show.remove(); hide.remove() }
-    } else {
-      const show = Keyboard.addListener('keyboardWillShow', () => setChatKeyboardVisible(true))
-      const hide = Keyboard.addListener('keyboardWillHide', () => setChatKeyboardVisible(false))
-      return () => { show.remove(); hide.remove() }
-    }
-  }, [])
-  const [replyTo, setReplyTo] = useState<{ text: string; senderName: string } | null>(null)
-  const replyToRef = useRef<{ text: string; senderName: string } | null>(null)
-  useEffect(() => { replyToRef.current = replyTo }, [replyTo])
-  const [chatList, setChatList] = useState(MOCK_CHATS)
-  const [chatPartnerPreview, setChatPartnerPreview] = useState<any>(null)
-  const [groupMembersOpen, setGroupMembersOpen] = useState(false)
-  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set())
-  const [reportTarget, setReportTarget] = useState<any>(null)
   const scrollRef = useRef<ScrollView>(null)
   const realtimeChatRef = useRef<any>(null)
   const inboxChannelRef = useRef<any>(null)
@@ -1718,10 +1747,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const communityBroadcastRef = useRef<any>(null)
   const duoBroadcastQueueRef = useRef<any[]>([])
   const communityBroadcastQueueRef = useRef<any[]>([])
-  const chatListRef = useRef<any[]>([])
-  const openChatRef = useRef<any>(null)
-  chatListRef.current = chatList
-  openChatRef.current = openChat
 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [cancelledEventIds, setCancelledEventIds] = useState<number[]>([])
@@ -1995,6 +2020,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .select('passer_id, passed_id, event_id')
         .or(`passer_id.eq.${userData.dbId},passed_id.eq.${userData.dbId}`)
         .in('event_id', officialJoined)
+      // Bidirectional block relationships fetched fresh each cycle — realtime
+      // doesn't always fire (depends on Supabase replication / RLS / online
+      // status), so pulling from DB here makes the filter reliable. Two queries
+      // — Supabase .or() with UUIDs has been unreliable in practice.
+      const [{ data: iBlocked }, { data: blockedMe }] = await Promise.all([
+        supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData.dbId),
+        supabase.from('blocked_users').select('blocker_id').eq('blocked_id', userData.dbId),
+      ])
+      const blockedSet = new Set<string>([
+        ...(iBlocked || []).map((b: any) => b.blocked_id),
+        ...(blockedMe || []).map((b: any) => b.blocker_id),
+      ])
       const passedSetByEvent: Record<number, Set<string>> = {}
       ;(passRows || []).forEach((p: any) => {
         const otherId = p.passer_id === userData.dbId ? p.passed_id : p.passer_id
@@ -2036,6 +2073,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const data = (rawData || [])
           .filter((row: any) => fitsCrewPref(myPref, myGender, row.crew_pref || 'any', row.profiles?.gender))
           .filter((row: any) => !passedSet.has(row.profiles?.id))
+          // Bidirectional block filter — hide users I blocked AND users who blocked me.
+          // Uses fresh blockedSet pulled from DB just above (more reliable than
+          // realtime-synced blockedIds/blockedByIds state).
+          .filter((row: any) => !blockedSet.has(row.profiles?.id))
           .filter((row: any) => {
             const p = row.profiles || {}
             // My dealbreakers vs their profile
@@ -2095,6 +2136,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     fetchAttendees()
     // Poll every 15 seconds for new attendees
     const interval = setInterval(fetchAttendees, 15000)
+    // Realtime: immediate refresh on block changes — without this the blocker
+    // / blockee see each other in VibeCheck until next 15s poll, which Daria
+    // (rightly) called confusing UX.
+    const blockChannel = supabase.channel(`blocked_users_vibe_${userData.dbId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blocked_users' }, (payload: any) => {
+        const b = payload.new
+        if (b?.blocker_id === userData.dbId || b?.blocked_id === userData.dbId) fetchAttendees()
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'blocked_users' }, () => {
+        // Can't filter by user on DELETE (only PK comes through) — refetch always.
+        fetchAttendees()
+      })
+      .subscribe()
     // Realtime: remove attendee instantly when they leave
     const rtChannel = supabase.channel('event_attendees_rt')
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'event_attendees' }, (payload: any) => {
@@ -2137,7 +2191,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         recordPass(event_id, passer_id)
       })
       .subscribe()
-    return () => { clearInterval(interval); supabase.removeChannel(rtChannel); supabase.removeChannel(passesChannel) }
+    return () => { clearInterval(interval); supabase.removeChannel(rtChannel); supabase.removeChannel(passesChannel); supabase.removeChannel(blockChannel) }
   }, [Object.keys(joinedEvents).join(','), userData?.dbId, JSON.stringify(userEventFormat)])
 
   // Sync chatList + openChat member counts from crewsByEvent so the chat header
@@ -2603,12 +2657,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   useEffect(() => {
     if (!userData?.dbId) return
     const fetchIncoming = async () => {
-      const { data } = await supabase
-        .from('crew_invites')
-        .select('*, inviter:profiles!crew_invites_inviter_id_fkey(*)')
-        .eq('invitee_id', userData.dbId)
-        .eq('status', 'pending')
-      if (data) setIncomingCrewInvites(data)
+      const [{ data }, { data: iBlocked }, { data: blockedMe }] = await Promise.all([
+        supabase.from('crew_invites')
+          .select('*, inviter:profiles!crew_invites_inviter_id_fkey(*)')
+          .eq('invitee_id', userData.dbId)
+          .eq('status', 'pending'),
+        // Hide invites from people involved in a block with me — two queries
+        // (`.or()` with UUIDs unreliable). Forward + reverse.
+        supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData.dbId),
+        supabase.from('blocked_users').select('blocker_id').eq('blocked_id', userData.dbId),
+      ])
+      const blocked = new Set<string>([
+        ...(iBlocked || []).map((b: any) => b.blocked_id),
+        ...(blockedMe || []).map((b: any) => b.blocker_id),
+      ])
+      if (data) setIncomingCrewInvites(data.filter((inv: any) => !blocked.has(inv.inviter_id)))
     }
     fetchIncoming()
     const interval = setInterval(fetchIncoming, 15000)
@@ -2710,8 +2773,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const [{ data: chatData }, { data: members }, { data: inviteData }] = await Promise.all([
           supabase.from('chats').select('type, event_id').eq('id', chatId).single(),
           supabase.from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', chatId),
-          supabase.from('crew_invites').select('event_title').eq('chat_id', chatId).limit(1).single(),
+          // Pull event_ref_id too — duo chats lack chats.event_id, so the invite
+          // row is the only way to know which event this chat belongs to.
+          supabase.from('crew_invites').select('event_title, event_ref_id').eq('chat_id', chatId).limit(1).single(),
         ])
+        // Treat invite's event_ref_id as the effective event id when chats.event_id is null.
+        const effectiveEventId: number | null = chatData?.event_id ?? (inviteData as any)?.event_ref_id ?? null
         if (!members || members.length < 2) return
         const otherMembers = members.filter((m: any) => m.profile_id !== userData.dbId).map((m: any) => {
           const p = (m as any).profiles || {}
@@ -2733,7 +2800,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         const evChatExpiry = (foundEv?.expiresAt > 0 ? foundEv.expiresAt : Date.now()) + 24 * 60 * 60 * 1000
         const newChat: any = isDuo ? {
-          id: chatId, type: 'duo', eventRefId: chatData?.event_id,
+          id: chatId, type: 'duo', eventRefId: effectiveEventId,
           name: partner?.name || 'Your crew',
           age: partner?.age || '',
           color: partner?.color || '#818CF8',
@@ -2744,7 +2811,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           partnerProfile: partner,
           eventImage: (foundEv as any)?.image_url || null,
         } : {
-          id: chatId, type: 'group', eventRefId: chatData?.event_id,
+          id: chatId, type: 'group', eventRefId: effectiveEventId,
           eventImage: (foundEv as any)?.image_url || null,
           event: eventTitle, eventEmoji: '🎉',
           members: members.length,
@@ -2756,13 +2823,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         if (isCommunityChat && chatData?.event_id) newChat.communityEventId = chatData.event_id
         // Don't re-add if user explicitly left this event
-        if (chatData?.event_id && cancelledEventIdsRef.current.has(chatData.event_id)) return
+        if (effectiveEventId && cancelledEventIdsRef.current.has(effectiveEventId)) return
         // Dedup: the polling path (line ~7517) may have already created a local chat
         // for this event with a stable local id (-1_000_000 - evId). Match by chat
         // id OR by event id and REPLACE in place — otherwise host sees two chats:
         // one with local stable id (lastMsg "Jopa joined the group"), one with
         // real DB id (lastMsg "You're in the crew!"). Same for joiner side.
-        const evId = chatData?.event_id
+        const evId = effectiveEventId
         setChatList(prev => {
           const existingIdx = prev.findIndex((c: any) =>
             c.id === chatId ||
@@ -2797,13 +2864,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }
         }
         if (isCommunityChat && chatData?.event_id) communityEventChatMap.current[chatData.event_id] = chatId
-        if (chatData?.event_id) {
-          setOfficialEventChatMap(prev => ({ ...prev, [chatData.event_id]: chatId }))
-          setJoinedEvents(prev => ({ ...prev, [chatData.event_id]: 'confirmed' }))
-          setCrewPreviewMap(prev => ({ ...prev, [chatData.event_id]: null }))
-          setReadyCountMap(prev => { const n = { ...prev }; delete n[chatData.event_id]; return n })
+        if (effectiveEventId) {
+          setOfficialEventChatMap(prev => ({ ...prev, [effectiveEventId]: chatId }))
+          setJoinedEvents(prev => ({ ...prev, [effectiveEventId]: 'confirmed' }))
+          setCrewPreviewMap(prev => ({ ...prev, [effectiveEventId]: null }))
+          setReadyCountMap(prev => { const n = { ...prev }; delete n[effectiveEventId]; return n })
           // Mark self as confirmed so we don't appear in others' VibeCheck
-          supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', chatData.event_id).eq('profile_id', userData.dbId).then(() => {})
+          supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', effectiveEventId).eq('profile_id', userData.dbId).then(() => {})
         }
         showToast('Check your Messages tab for the chat', 'You\'re in! 🎉', '✅')
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
@@ -2883,41 +2950,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
   }, [officialEventChatMap, userData?.dbId])
 
-  // ── Hydrate chat previews on mount: fetch the latest message for each chat in
-  // the list so the Chats tab shows accurate lastMsg/time immediately after login,
-  // without waiting for the user to open each chat.
-  useEffect(() => {
-    if (!userData?.dbId) return
-    const chatIds = chatList.map((c: any) => c.id).filter((id: any) => typeof id === 'number' && id < 1e12)
-    if (chatIds.length === 0) return
-    let cancelled = false
-    ;(async () => {
-      const { data: lastMsgs } = await supabase
-        .from('messages')
-        .select('chat_id, text, sender_id, created_at')
-        .in('chat_id', chatIds)
-        .order('created_at', { ascending: false })
-      if (cancelled || !lastMsgs) return
-      // DISTINCT ON chat_id — keep only the most recent per chat
-      const latestByChat: Record<number, any> = {}
-      for (const m of lastMsgs) if (!latestByChat[m.chat_id]) latestByChat[m.chat_id] = m
-      setChatList(prev => prev.map((c: any) => {
-        const last = latestByChat[c.id]
-        if (!last) return c
-        const isMe = last.sender_id === userData.dbId
-        const isSystem = (last.text || '').includes('left the group')
-        if (isSystem) return { ...c, lastMsg: last.text, time: last.created_at }
-        const sender = (c.memberProfiles || []).find((p: any) => p.id === last.sender_id)
-        const previewText = isMe
-          ? `You: ${last.text}`
-          : (sender?.name ? `${sender.name}: ${last.text}` : last.text)
-        return { ...c, lastMsg: previewText, time: last.created_at }
-      }))
-    })()
-    return () => { cancelled = true }
-  }, [chatList.map((c: any) => c.id).join(','), userData?.dbId])
-
-  // ── Fallback poll: check chat_members every 30s for chats added via party/squad flow ──
+// ── Fallback poll: check chat_members every 30s for chats added via party/squad flow ──
   useEffect(() => {
     if (!userData?.dbId) return
     const poll = async () => {
@@ -3038,17 +3071,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
       const acceptedData = (data || []).filter((inv: any) => inv.status === 'accepted')
       if (!data) return
-      // Check which events the user is still attending (not cancelled)
-      const { data: attendeeRows } = await supabase
-        .from('event_attendees').select('event_ref_id').eq('profile_id', userData.dbId)
-      const stillAttending = new Set((attendeeRows || []).map((r: any) => r.event_ref_id))
       for (const inv of acceptedData) {
         const key = `${inv.event_ref_id}_${inv.invitee_id}`
         if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
-        // Skip if user explicitly cancelled this event
+        // Skip if user explicitly cancelled this event. We used to also require
+        // `event_attendees` row, but that broke flows where the row got cleaned
+        // (e.g., earlier block cycle) — the accepted invite is itself evidence
+        // the inviter still wants this match, so trust it.
         if (cancelledEventIdsRef.current.has(inv.event_ref_id)) continue
-        // Skip if user already left this event (not in event_attendees)
-        if (!stillAttending.has(inv.event_ref_id)) continue
         acceptedInviteKeysRef.current.add(key)
         setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
         setOfficialEventChatMap(prev => ({ ...prev, [inv.event_ref_id]: inv.chat_id }))
@@ -3056,7 +3086,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           if (prev.some(c => c.id === inv.chat_id)) return prev
           const partner = inv.invitee
           return [{
-            id: inv.chat_id, type: 'duo',
+            id: inv.chat_id, type: 'duo', eventRefId: inv.event_ref_id,
             name: partner?.name || 'Your crew',
             age: partner?.age || '',
             color: partner?.color || '#818CF8',
@@ -3073,7 +3103,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     }
     check()
     const interval = setInterval(check, 15000)
-    return () => clearInterval(interval)
+    // Realtime: when our sent invite changes status (accepted/declined/cancelled),
+    // run the same poll logic right away instead of waiting up to 15s. Otherwise
+    // the inviter UI shows stale "Waiting for X" after X already accepted.
+    const channel = supabase.channel(`crew_invites_outgoing_${userData.dbId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'crew_invites', filter: `inviter_id=eq.${userData.dbId}` }, () => {
+        check()
+      })
+      .subscribe()
+    return () => { clearInterval(interval); supabase.removeChannel(channel) }
   }, [userData?.dbId])
 
   const openNotifPanel = () => {
@@ -4583,6 +4621,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (ev.type === 'official' && realPartners.length > 0) {
                 // ── 1+1: mutual invite flow ──────────────────────────────────
                 if (format === '1+1') {
+                  // At-send-time block check — VibeCheck filtering on 15s poll
+                  // isn't fast enough for a tap-and-invite flow. Pull blocks
+                  // fresh now and bail if any partner is involved in a block.
+                  // Two queries (forward + reverse) — cleaner than nested or/and
+                  // syntax which mis-parses with UUID partner ids.
+                  const partnerIds = realPartners.map((p: any) => p.id)
+                  const [{ data: iBlocked }, { data: blockedMe }] = await Promise.all([
+                    supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userData?.dbId).in('blocked_id', partnerIds),
+                    supabase.from('blocked_users').select('blocker_id').eq('blocked_id', userData?.dbId).in('blocker_id', partnerIds),
+                  ])
+                  if ((iBlocked && iBlocked.length > 0) || (blockedMe && blockedMe.length > 0)) {
+                    showToast('That user is not available', 'Can\'t send invite', '🚫')
+                    return
+                  }
                   for (const partner of realPartners) {
                     const key = `${ev.id}_${partner.id}`
                     if (sentCrewInvites[key]) continue
@@ -4600,13 +4652,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       const { data: chatData } = await supabase.from('chats')
                         .insert({ type: 'duo', last_msg: `🎉 ${ev.title}` }).select().single()
                       if (!chatData) continue
+                      // Update both crew_invites rows BEFORE inserting chat_members
+                      // so the partner's chat_members INSERT realtime listener can
+                      // resolve event_ref_id when it queries crew_invites by chat_id.
+                      await supabase.from('crew_invites').update({ status: 'accepted', chat_id: chatData.id }).in('id', [mutualInvite.id])
                       await supabase.from('chat_members').insert([
                         { chat_id: chatData.id, profile_id: userData?.dbId },
                         { chat_id: chatData.id, profile_id: partner.id },
                       ])
-                      await supabase.from('crew_invites').update({ status: 'accepted', chat_id: chatData.id }).in('id', [mutualInvite.id])
                       setChatList(prev => prev.some(c => c.id === chatData.id) ? prev : [{
-                        id: chatData.id, type: 'duo', name: partner.name || 'Your crew',
+                        id: chatData.id, type: 'duo', eventRefId: ev.id, name: partner.name || 'Your crew',
                         age: partner.age || '', color: partner.color || '#818CF8', photo: partner.photo || '',
                         lastMsg: '🎉 Mutual match! Say hi 👋', time: new Date().toISOString(), isNew: true, chatExpiresAt: (ev.expiresAt > 0 ? ev.expiresAt : Date.now()) + 24 * 60 * 60 * 1000,
                         event: ev.title, eventEmoji: '🎉', partnerProfile: partner,
@@ -4852,16 +4907,20 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 .select()
                 .single()
               if (!chatData) { acceptingInviteRef.current.delete(invite.id); showToast('Please try again', 'Something went wrong', '⚠️'); return }
+              // Update crew_invites FIRST so the inviter's chat_members INSERT
+              // realtime listener can find event_ref_id when it queries by chat_id.
+              // Race window was: chat_members fired → inviter queried crew_invites →
+              // row still had chat_id=null → effectiveEventId undefined → "Waiting" stuck.
+              await supabase.from('crew_invites')
+                .update({ status: 'accepted', chat_id: chatData.id })
+                .eq('id', invite.id)
               await supabase.from('chat_members').insert([
                 { chat_id: chatData.id, profile_id: userData?.dbId },
                 { chat_id: chatData.id, profile_id: invite.inviter_id },
               ])
-              await supabase.from('crew_invites')
-                .update({ status: 'accepted', chat_id: chatData.id })
-                .eq('id', invite.id)
               const inviter = invite.inviter || {}
               const newChat = {
-                id: chatData.id, type: 'duo',
+                id: chatData.id, type: 'duo', eventRefId: invite.event_ref_id,
                 name: inviter.name || 'Your crew',
                 age: inviter.age || '',
                 color: inviter.color || '#818CF8',

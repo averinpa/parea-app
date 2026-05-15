@@ -389,7 +389,9 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                             {(() => {
                               const myCrewChat = chatList?.find((c: any) => c.eventRefId === ev.id || (c.event === ev.title && c.type === 'group'))
                               if (!myCrewChat) return 'Looking for crew…'
-                              return `${myCrewChat.members}/${cap} in crew`
+                              // Duo chats don't carry a `members` count (always 2 — me + partner).
+                              const count = myCrewChat.type === 'duo' ? 2 : (myCrewChat.members ?? 1)
+                              return `${count}/${cap} in crew`
                             })()}
                           </Text>
                         </View>
@@ -550,12 +552,46 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                     <Text style={{ fontSize: 11, color: CHATS_COLOR, fontWeight: '600' }} numberOfLines={1}>
                       {chat.type === 'duo' ? chat.event : `${chat.members} members`}
                     </Text>
-                    {chat.chatExpiresAt && Math.ceil((chat.chatExpiresAt - Date.now()) / 3600000) <= 6 && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
-                        <Clock size={9} color="#EF4444" />
-                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>Expiring</Text>
-                      </View>
-                    )}
+                    {(() => {
+                      // Derive expiry from the linked event when available — chat.chatExpiresAt
+                      // gets stuck at creation-time value (which falls back to "now + 24h" when
+                      // ev.expiresAt wasn't parsed yet), so a chat for a May 20 event created
+                      // yesterday looks "expiring" today even though the event is 5 days out.
+                      // For official events (no `expiresAt` field) parse from `date_label`/`time`.
+                      // Show "Expiring" only when ≤6h remain AND it hasn't already expired.
+                      const evId = chat.eventRefId || chat.communityEventId || chat.hostEventId
+                      const pool = [...allEvents, ...hostedEvents]
+                      // Duo chats are persisted without event_id (DB schema didn't carry it),
+                      // so we can't match by ID — fall back to title match. Title isn't unique
+                      // forever but is unique enough for the active window where the chat lives.
+                      const linkedEv = evId
+                        ? pool.find((e: any) => e.id === evId)
+                        : (chat.event ? pool.find((e: any) => e.title === chat.event) : null)
+                      let evStartMs = 0
+                      if (linkedEv?.expiresAt > 0) evStartMs = linkedEv.expiresAt
+                      else if (linkedEv) {
+                        const parsed = parseEventDateTime(linkedEv.date_label || linkedEv.time || '')
+                        if (parsed) evStartMs = parsed.getTime()
+                      }
+                      const evExpiresAt = evStartMs > 0 ? evStartMs + 24 * 3600 * 1000 : 0
+                      const effectiveExpiry = evExpiresAt || chat.chatExpiresAt
+                      if (!effectiveExpiry) return null
+                      const hoursLeft = (effectiveExpiry - Date.now()) / 3600000
+                      // Threshold 24h covers the entire "post-event" window — once the event
+                      // is done, the chat enters its 24h grace period and should flag as
+                      // expiring. Anything past the chat's actual deadline is hidden.
+                      if (hoursLeft <= 0 || hoursLeft > 24) return null
+                      // After-event chats (event already happened, ≤24h remain) should also
+                      // signal urgency — same red "Expiring" badge.
+                      const evAlreadyHappened = evStartMs > 0 && evStartMs < Date.now()
+                      if (!evAlreadyHappened && hoursLeft > 6) return null
+                      return (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
+                          <Clock size={9} color="#EF4444" />
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>Expiring</Text>
+                        </View>
+                      )
+                    })()}
                   </View>
                   <Text style={{ fontSize: 13, color: chat.isNew ? '#334155' : '#94A3B8', fontWeight: chat.isNew ? '600' : '400' }} numberOfLines={1}>{chat.lastMsg}</Text>
                 </View>

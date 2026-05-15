@@ -77,9 +77,22 @@ export function ChatScreen(props: any) {
                   <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.2 }} numberOfLines={1}>
                     {`${openChat.name}, ${openChat.age}`}
                   </Text>
-                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }} numberOfLines={1}>
-                    {openChat.eventEmoji} {openChat.event}
-                  </Text>
+                  {(() => {
+                    // Match the group-chat subtitle: event + date. Duo chats often miss
+                    // eventRefId (older rows have no event_id), so fall back to title match.
+                    const chatEvId = openChat.eventRefId || openChat.communityEventId || openChat.hostEventId
+                    const pool = [...userCreatedEvents, ...dbCommunityEvents, ...feedOfficialDbEvents]
+                    const ev = chatEvId
+                      ? pool.find((e: any) => e.id === chatEvId || e._dbId === chatEvId)
+                      : (openChat.event ? pool.find((e: any) => e.title === openChat.event) : null)
+                    const dateStr = prettyEventTime(ev?.date_label || ev?.time_label || ev?.time) || ''
+                    const subtitle = [openChat.event, dateStr].filter(Boolean).join(' · ')
+                    return (
+                      <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }} numberOfLines={1}>
+                        {openChat.eventEmoji} {subtitle}
+                      </Text>
+                    )
+                  })()}
                 </View>
               </TouchableOpacity>
             ) : (

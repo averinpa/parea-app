@@ -25,12 +25,37 @@ export function parseEventDate(timeStr: string): Date | null {
     d.setHours(0, 0, 0, 0)
     return d
   }
-  const monthMap: Record<string, number> = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 }
+  const monthMap: Record<string, number> = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11, jan:0,feb:1,mar:2,apr:3,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 }
   const longMatch = timeStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/)
   if (longMatch) {
     const month = monthMap[longMatch[2].toLowerCase()]
     if (month !== undefined) {
       const d = new Date(parseInt(longMatch[3]), month, parseInt(longMatch[1]))
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+  }
+  // Year-less "20 May" / "20 may," / "Sat, 20 May" — assume current year. If the
+  // parsed date is more than a few months in the past, roll over to next year.
+  const yearlessDM = timeStr.match(/(\d{1,2})\s+([A-Za-z]+)/)
+  if (yearlessDM) {
+    const month = monthMap[yearlessDM[2].toLowerCase()]
+    if (month !== undefined) {
+      const now = new Date()
+      const d = new Date(now.getFullYear(), month, parseInt(yearlessDM[1]))
+      if (d.getTime() < now.getTime() - 90 * 86400 * 1000) d.setFullYear(d.getFullYear() + 1)
+      d.setHours(0, 0, 0, 0)
+      return d
+    }
+  }
+  // Year-less "May 20" / "May 20," — same logic.
+  const yearlessMD = timeStr.match(/([A-Za-z]+)\s+(\d{1,2})/)
+  if (yearlessMD) {
+    const month = monthMap[yearlessMD[1].toLowerCase()]
+    if (month !== undefined) {
+      const now = new Date()
+      const d = new Date(now.getFullYear(), month, parseInt(yearlessMD[2]))
+      if (d.getTime() < now.getTime() - 90 * 86400 * 1000) d.setFullYear(d.getFullYear() + 1)
       d.setHours(0, 0, 0, 0)
       return d
     }
