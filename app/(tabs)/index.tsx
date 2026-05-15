@@ -1731,12 +1731,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       }
       return n
     })
-    // Same for the "already processed accepted invites" memo — without this,
-    // re-matching the same pair after unblock would skip processing because
-    // the key is already in the set.
-    for (const k of Array.from(acceptedInviteKeysRef.current)) {
-      if (k.endsWith(`_${profile.id}`)) acceptedInviteKeysRef.current.delete(k)
-    }
+    // Clear the "already processed accepted invites" memo. Stored keys are
+    // `inv:<invite_row_id>`. We don't know the invite ids here (DB cancel just
+    // happened), but clearing all entries is safe — the next poll will rebuild
+    // it from the current crew_invites rows, processing only ones not yet
+    // reflected in local state.
+    acceptedInviteKeysRef.current.clear()
     Alert.alert('Blocked', `${profile.name} has been blocked.`)
   }
   const scrollRef = useRef<ScrollView>(null)
@@ -2210,6 +2210,41 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     setOpenChat((cur: any) => cur ? refresh(cur) : cur)
   }, [crewsByEvent, userData?.dbId])
 
+  // Backfill joinedEvents from event_attendees on login + scrub
+  // cancelledEventIds for events the user is still attending. Old handleBlock
+  // versions polluted both stores on block, and we kept that state in
+  // AsyncStorage even after simplifying the flow — so a "cancelled" event id
+  // could lock the user out of accepting future invites for the same event.
+  useEffect(() => {
+    if (!userData?.dbId || !persistLoadedState) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.from('event_attendees')
+        .select('event_ref_id, status')
+        .eq('profile_id', userData.dbId)
+      if (cancelled || !data) return
+      const attendedIds = new Set<number>((data as any[]).map(r => r.event_ref_id))
+      setJoinedEvents(prev => {
+        const next = { ...prev }
+        let changed = false
+        for (const row of data as any[]) {
+          if (next[row.event_ref_id]) continue
+          next[row.event_ref_id] = row.status === 'confirmed' ? 'confirmed' : 'joined'
+          changed = true
+        }
+        return changed ? next : prev
+      })
+      // If the user is attending an event but it's in cancelledEventIds (legacy
+      // state), remove it — it's not really cancelled, just a stale flag.
+      const stale = [...cancelledEventIdsRef.current].filter(id => attendedIds.has(id))
+      if (stale.length > 0) {
+        stale.forEach(id => cancelledEventIdsRef.current.delete(id))
+        setCancelledEventIds(prev => prev.filter(id => !attendedIds.has(id)))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [userData?.dbId, persistLoadedState])
+
   // Backfill userEventFormat from event_attendees on login. AsyncStorage on a
   // fresh device install has no userEventFormat, which made VibeCheck fall back
   // to '1+1' (Duo) for official events the user already joined — showing
@@ -2509,10 +2544,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         if (saved.sentCrewInvites) {
           setSentCrewInvites(saved.sentCrewInvites)
-          // Pre-populate ref so poll doesn't re-add already-processed invites after restart
-          Object.entries(saved.sentCrewInvites).forEach(([key, val]) => {
-            if (val === 'accepted') acceptedInviteKeysRef.current.add(key)
-          })
+          // `acceptedInviteKeysRef` rebuilds from the next poll — its keys are
+          // now `inv:<row_id>` which we don't have here. Re-processing accepted
+          // invites is idempotent because chatList/officialEventChatMap setters
+          // dedup by chat id.
         }
         if (saved.officialEventChatMap) {
           setOfficialEventChatMap(saved.officialEventChatMap)
@@ -3072,15 +3107,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       const acceptedData = (data || []).filter((inv: any) => inv.status === 'accepted')
       if (!data) return
       for (const inv of acceptedData) {
-        const key = `${inv.event_ref_id}_${inv.invitee_id}`
-        if (acceptedInviteKeysRef.current.has(key) || !inv.chat_id) continue
-        // Skip if user explicitly cancelled this event. We used to also require
-        // `event_attendees` row, but that broke flows where the row got cleaned
-        // (e.g., earlier block cycle) — the accepted invite is itself evidence
-        // the inviter still wants this match, so trust it.
+        const sentKey = `${inv.event_ref_id}_${inv.invitee_id}`
+        // Use the invite row id for the "already processed" memo — pair-based
+        // keys collided when the same two users matched again on the same event
+        // after an earlier invite was cancelled/blocked, causing the second
+        // accept to be skipped and "Waiting for X" to stay stuck.
+        const processedKey = `inv:${inv.id}`
+        if (acceptedInviteKeysRef.current.has(processedKey) || !inv.chat_id) continue
         if (cancelledEventIdsRef.current.has(inv.event_ref_id)) continue
-        acceptedInviteKeysRef.current.add(key)
-        setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+        acceptedInviteKeysRef.current.add(processedKey)
+        setSentCrewInvites(prev => ({ ...prev, [sentKey]: 'accepted' }))
         setOfficialEventChatMap(prev => ({ ...prev, [inv.event_ref_id]: inv.chat_id }))
         setChatList(prev => {
           if (prev.some(c => c.id === inv.chat_id)) return prev
@@ -3831,13 +3867,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const isFull = ev.participantsCount >= ev.maxParticipants
     if (isFull) return
     const currentState = joinedEvents[ev.id]
-    // Pure state update — no side effects inside
+    // Distinguish "add" call (from confirmJoin, always passes transport) vs
+    // "leave" call (from event-card Leave button, no transport). Without this
+    // split, the toggle removes events the user just joined when backfill
+    // had pre-populated their state to 'confirmed' from DB.
+    const isAddAction = transport !== undefined
     setJoinedEvents(prev => {
-      if (!prev[ev.id]) return { ...prev, [ev.id]: 'pending' }
-      if (prev[ev.id] === 'pending') {
-        if (ev.type === 'community' && !ev.isHosted) return prev // wait for host
-        return { ...prev, [ev.id]: 'joined' }
+      if (isAddAction) {
+        if (!prev[ev.id]) return { ...prev, [ev.id]: 'pending' }
+        if (prev[ev.id] === 'pending') {
+          if (ev.type === 'community' && !ev.isHosted) return prev // wait for host
+          return { ...prev, [ev.id]: 'joined' }
+        }
+        return prev // already 'joined'/'confirmed' — keep as is
       }
+      // Leave action — remove if present.
+      if (!prev[ev.id]) return prev
       const next = { ...prev }
       delete next[ev.id]
       return next
