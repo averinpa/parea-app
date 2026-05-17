@@ -395,9 +395,11 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                             {(() => {
                               const myCrewChat = chatList?.find((c: any) => c.eventRefId === ev.id || (c.event === ev.title && c.type === 'group'))
                               if (!myCrewChat) return 'Looking for crew…'
-                              // Duo chats don't carry a `members` count (always 2 — me + partner).
-                              const count = myCrewChat.type === 'duo' ? 2 : (myCrewChat.members ?? 1)
-                              return `${count}/${cap} in crew`
+                              // Trust joinedCrew (DB-driven chat_members count). If it doesn't
+                              // exist for this event we're no longer in a crew (partner left
+                              // or we left) — surface that explicitly instead of a stale "2/2".
+                              if (!joinedCrew?.members) return 'Looking for crew…'
+                              return `${joinedCrew.members.length}/${cap} in crew`
                             })()}
                           </Text>
                         </View>
