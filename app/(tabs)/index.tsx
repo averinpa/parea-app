@@ -3716,29 +3716,55 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // an event the host deleted) — local chatList still has it but there's
       // nothing left to anchor it to.
       const cancelledByCleanup: number[] = []
+      // Local chatList isn't enough — chats persist in DB too. Delete-on-DB
+      // happens further below for chats we drop locally that match an expired
+      // official event (no `expiresAt` field — we parse the date string).
+      const toDeleteInDb: number[] = []
       setChatList(cl => cl.filter(c => {
         const eventId = c.communityEventId || c.hostEventId || c.eventRefId
         if (eventId) {
-          // Look in community events first, then official events.
           const ev = dbCommunityEventsRef.current.find((e: any) => e.id === eventId)
             || feedOfficialDbEventsRef.current?.find?.((e: any) => e.id === eventId)
           if (ev) {
-            if (ev.expiresAt > 0 && ev.expiresAt + EXPIRE_AFTER < now) {
+            // Community events carry `expiresAt` directly. Official events only
+            // expose `date_label` / `time` — parse those to a Date, otherwise
+            // post-event chats live forever in DB.
+            let evStartMs: number = ev.expiresAt && ev.expiresAt > 0 ? ev.expiresAt : 0
+            if (!evStartMs) {
+              const parsed = parseEventDateTime(ev.date_label || ev.time || '')
+              if (parsed) evStartMs = parsed.getTime()
+            }
+            if (evStartMs > 0 && evStartMs + EXPIRE_AFTER < now) {
               cancelledByCleanup.push(eventId)
+              if (typeof c.id === 'number' && c.id < 1e12) toDeleteInDb.push(c.id)
               return false
             }
           } else if (eventId < 100000) {
             // Community event not in DB → it was deleted → drop orphan chat.
             cancelledByCleanup.push(eventId)
+            if (typeof c.id === 'number' && c.id < 1e12) toDeleteInDb.push(c.id)
             return false
           }
         }
         if (c.chatExpiresAt && c.chatExpiresAt < now) {
           if (eventId) cancelledByCleanup.push(eventId)
+          if (typeof c.id === 'number' && c.id < 1e12) toDeleteInDb.push(c.id)
           return false
         }
         return true
       }))
+      // Delete expired chats from DB so they don't get replayed via realtime
+      // chat_members INSERT on next reconnect. Sequence: messages → chat_members
+      // → chats (FK ordering). Fire-and-forget — local state already reflects deletion.
+      if (toDeleteInDb.length > 0 && userData?.dbId) {
+        ;(async () => {
+          for (const chatId of toDeleteInDb) {
+            await supabase.from('messages').delete().eq('chat_id', chatId)
+            await supabase.from('chat_members').delete().eq('chat_id', chatId)
+            await supabase.from('chats').delete().eq('id', chatId)
+          }
+        })()
+      }
       if (cancelledByCleanup.length > 0) {
         // Persist the cancellation so realtime chat_members INSERT replays
         // (e.g., reconnecting on app load) can't resurrect these chats. The

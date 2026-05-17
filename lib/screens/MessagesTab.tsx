@@ -549,7 +549,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                     <Text style={{ fontSize: 13 }}>{chat.eventEmoji || '📍'}</Text>
-                    <Text style={{ fontSize: 11, color: CHATS_COLOR, fontWeight: '600' }} numberOfLines={1}>
+                    <Text style={{ fontSize: 11, color: CHATS_COLOR, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>
                       {chat.type === 'duo' ? chat.event : `${chat.members} members`}
                     </Text>
                     {(() => {
@@ -586,7 +586,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                       const evAlreadyHappened = evStartMs > 0 && evStartMs < Date.now()
                       if (!evAlreadyHappened && hoursLeft > 6) return null
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(239,68,68,0.08)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, flexShrink: 0 }}>
                           <Clock size={9} color="#EF4444" />
                           <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF4444' }}>Expiring</Text>
                         </View>
