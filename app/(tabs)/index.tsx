@@ -1644,6 +1644,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [eventParticipants, setEventParticipants] = useState<{ ev: any; members: any[] } | null>(null)
   const [matchedWith, setMatchedWith] = useState<any>(null)
   const [vibeResults, setVibeResults] = useState<Record<number, string>>({})
+  // Per-chat "last read at" timestamps. When the user opens a chat we record
+  // Date.now() here and persist; an incoming inbox message only marks the chat
+  // unread if its created_at is *after* the saved lastReadAt.
+  const [lastReadAtMap, setLastReadAtMap] = useState<Record<number, number>>({})
+  const lastReadAtMapRef = useRef<Record<number, number>>({})
+  lastReadAtMapRef.current = lastReadAtMap
   const {
     chatList, setChatList,
     chatMessages, setChatMessages,
@@ -1663,6 +1669,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   } = useChats({
     userDbId: userData?.dbId,
     userName: userData?.name,
+    lastReadAtMap,
     // Called when realtime DELETE on chats removes one of our chats (e.g., the
     // other side blocked us and tore down the chat). Mirror the cleanup the
     // blocker did locally so VibeCheck/Plans don't show stale "Open Chat".
@@ -1992,13 +1999,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const officialEventChatMapRef = useRef<Record<number, number>>({})
   officialEventChatMapRef.current = officialEventChatMap
   const acceptedInviteKeysRef = useRef<Set<string>>(new Set())
-  // Per-chat "last read at" timestamps. When the user opens a chat we record
-  // Date.now() here and persist; an incoming inbox message only marks the chat
-  // unread if its created_at is *after* the saved lastReadAt. Without this,
-  // realtime replay on reconnect re-marked already-read chats as unread.
-  const [lastReadAtMap, setLastReadAtMap] = useState<Record<number, number>>({})
-  const lastReadAtMapRef = useRef<Record<number, number>>({})
-  lastReadAtMapRef.current = lastReadAtMap
   const acceptingInviteRef = useRef<Set<number>>(new Set())
   const partyChatMemberChannels = useRef<Record<number, any>>({})
   const partyChatBroadcastChannels = useRef<Record<number, any>>({})
@@ -2545,9 +2545,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           const patched = deduped.map((c: any) => {
             const msgs = cleanedMessages[c.id] || []
             const last = msgs[msgs.length - 1]
-            if (!last) return c
+            // Clear stale isNew on launch — realtime will re-flag only chats
+            // that actually have unread messages arriving after this reload.
+            // If the last cached message is the user's own send, they've
+            // obviously seen it.
+            const cleared = { ...c, isNew: false }
+            if (!last) return cleared
             const previewText = last.from === 'me' ? `You: ${last.text}` : (last.senderName ? `${last.senderName}: ${last.text}` : last.text)
-            return { ...c, lastMsg: previewText || c.lastMsg, time: last.time || c.time }
+            return { ...cleared, lastMsg: previewText || cleared.lastMsg, time: last.time || cleared.time }
           })
           setChatList(patched)
         }
@@ -2603,7 +2608,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // entries created a race where polling fired before seen-keys loaded.
       seenNotifKeys: [...seenNotifKeysRef.current],
     }))
-  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, notifications])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   useEffect(() => {
@@ -4051,7 +4056,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const _now = new Date()
     const newMsg = { from: 'me', text, time: _now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), date: _now.toISOString().slice(0, 10), replyTo: currentReply || undefined }
     setChatMessages(prev => ({ ...prev, [openChat.id]: [...(prev[openChat.id] || []), newMsg] }))
-    setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: new Date().toISOString() } : c))
+    // Sending = obviously seen — clear the unread dot and bump lastReadAt.
+    const nowMs = Date.now()
+    setChatList(prev => prev.map(c => c.id === openChat.id ? { ...c, lastMsg: `You: ${text}`, time: new Date().toISOString(), isNew: false } : c))
+    setLastReadAtMap(prev => ({ ...prev, [openChat.id]: nowMs }))
+    lastReadAtMapRef.current = { ...lastReadAtMapRef.current, [openChat.id]: nowMs }
+    if (typeof openChat.id === 'number' && openChat.id < 1e12 && userData?.dbId) {
+      supabase.from('chat_members')
+        .update({ last_read_at: new Date(nowMs).toISOString() })
+        .eq('chat_id', openChat.id).eq('profile_id', userData.dbId)
+        .then(() => {})
+    }
     setChatInput('')
     setReplyTo(null)
     replyToRef.current = null
@@ -4276,7 +4291,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             if (isDup) return prev
             return { ...prev, [chatId]: [...existing, newMsg] }
           })
-          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: true } : c))
+          // Don't flag unread if the chat is currently open — user is reading.
+          // Same gate as in the party-broadcast handler above.
+          const chatOpen = openChatRef.current?.id === chatId
+          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: chatOpen ? c.isNew : true } : c))
+          if (chatOpen) {
+            const msgMs = new Date(payload.created_at).getTime()
+            setLastReadAtMap(prev => ({ ...prev, [chatId]: Math.max(prev[chatId] || 0, msgMs) }))
+            lastReadAtMapRef.current = { ...lastReadAtMapRef.current, [chatId]: Math.max(lastReadAtMapRef.current[chatId] || 0, msgMs) }
+          }
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
         })
       .subscribe((status) => {
@@ -4495,12 +4518,27 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           || (m.chat_id && c.id === m.chat_id)
         )
         if (!chat) return
+        // If the chat is currently open, treat the incoming message as read
+        // right away — user is sitting in the chat. Without this, opening a
+        // chat, receiving a message while reading, then reloading would
+        // resurface the (already read) message with the unread dot.
+        const isChatOpenNow = openChatRef.current?.id === chat.id
+        const msgTime = new Date(m.created_at).getTime()
+        if (isChatOpenNow) {
+          setLastReadAtMap(prev => ({ ...prev, [chat.id]: Math.max(prev[chat.id] || 0, msgTime) }))
+          lastReadAtMapRef.current = { ...lastReadAtMapRef.current, [chat.id]: Math.max(lastReadAtMapRef.current[chat.id] || 0, msgTime) }
+          if (typeof chat.id === 'number' && chat.id < 1e12 && userData?.dbId) {
+            supabase.from('chat_members')
+              .update({ last_read_at: new Date(msgTime).toISOString() })
+              .eq('chat_id', chat.id).eq('profile_id', userData.dbId)
+              .then(() => {})
+          }
+        }
         // If we've already read this chat past the message's timestamp, treat
         // it as already-read (don't mark isNew=true again). Covers realtime
         // replay on reconnect after reload.
         const lastRead = lastReadAtMapRef.current[chat.id] || 0
-        const msgTime = new Date(m.created_at).getTime()
-        const alreadyRead = msgTime <= lastRead
+        const alreadyRead = isChatOpenNow || msgTime <= lastRead
         // Don't early-return when chat is open: race between inbox and chat-specific
         // subscriptions means either path may miss the first message. Dedup by _dbId
         // (further down) prevents duplicates.

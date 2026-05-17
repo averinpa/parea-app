@@ -7,10 +7,11 @@ import { MOCK_CHATS, MOCK_MESSAGES } from '../feed-constants'
 // Realtime subscriptions, fallback poll, broadcasts, invite-related effects stay in
 // FeedScreen for now — they'll migrate in B2/B3. Hook surfaces setters so those
 // effects can still update local state from outside.
-export function useChats({ userDbId, userName, onChatRemoved }: {
+export function useChats({ userDbId, userName, onChatRemoved, lastReadAtMap }: {
   userDbId: string | undefined;
   userName?: string;
   onChatRemoved?: (chat: any) => void;
+  lastReadAtMap?: Record<number, number>;
 }) {
   const [chatList, setChatList] = useState<any[]>(MOCK_CHATS)
   const [chatMessages, setChatMessages] = useState<Record<number, any[]>>({ ...MOCK_MESSAGES })
@@ -212,12 +213,17 @@ export function useChats({ userDbId, userName, onChatRemoved }: {
         if (!last) return c
         const isMe = last.sender_id === userDbId
         const isSystem = (last.text || '').includes('left the group')
-        if (isSystem) return { ...c, lastMsg: last.text, time: last.created_at }
+        // Telegram-style unread: chat is unread only if latest message is from
+        // someone else AND was sent after we last read this chat.
+        const lastReadMs = (lastReadAtMap || {})[c.id] || 0
+        const lastMsgMs = new Date(last.created_at).getTime()
+        const hasUnread = !isMe && !isSystem && lastMsgMs > lastReadMs
+        if (isSystem) return { ...c, lastMsg: last.text, time: last.created_at, isNew: false }
         const sender = (c.memberProfiles || []).find((p: any) => p.id === last.sender_id)
         const previewText = isMe
           ? `You: ${last.text}`
           : (sender?.name ? `${sender.name}: ${last.text}` : last.text)
-        return { ...c, lastMsg: previewText, time: last.created_at }
+        return { ...c, lastMsg: previewText, time: last.created_at, isNew: hasUnread }
       }))
     })()
     return () => { cancelled = true }
