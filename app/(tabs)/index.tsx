@@ -5548,14 +5548,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const isExpired = (ev: any) => ev.expiresAt
                   ? ev.expiresAt <= now
                   : isEventPast(ev.date_label || ev.time || '')
-                // Only official events trigger Vibe Check (joiners use it to find crew). Community events handled in chats.
+                // Trigger Vibe dot for any active joined event the user is in,
+                // including community events the moment the joiner submits a
+                // request (status='pending') — they want immediate visual
+                // feedback, not "wait until host approves".
                 const hasActiveJoined = Object.entries(joinedEvents).some(([id, v]) => {
                   if (!v) return false
                   const ev = allKnownEvs.find(e => e.id === Number(id))
                   if (!ev) return false
-                  if (ev.type !== 'official') return false
                   if (isExpired(ev)) return false
-                  return true
+                  if (ev.type === 'official') return true
+                  if (ev.type === 'community' && !ev.isHosted) return true
+                  return false
                 })
                 const hasPending = Object.entries(pendingJoinRequests).some(([evId, reqs]) => {
                   if (!reqs.length) return false

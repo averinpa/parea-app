@@ -182,7 +182,11 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
                         <Users size={12} color="#64748B" />
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{(approvedJoiners[ev.id] || []).length + (hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
+                        {/* Count confirmed members only (people who accepted their slot).
+                            Approved-but-not-confirmed joiners shouldn't fill the badge
+                            until they confirm — otherwise host's Plans says "2/2" the moment
+                            they tap Approve, before the joiner has accepted. */}
+                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{(hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
                       </View>
                       <View style={{ flex: 1 }} />
                       <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12 }}>

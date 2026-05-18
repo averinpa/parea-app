@@ -372,8 +372,8 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                           </View>
                           <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>← tap</Text>
                               <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
-                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>tap →</Text>
                             </View>
                             <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
                             <View style={{ flexDirection: 'row', gap: 4, marginTop: 5, alignItems: 'center' }}>
