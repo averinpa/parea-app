@@ -3836,13 +3836,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         return true
       }))
       // Delete expired chats from DB so they don't get replayed via realtime
-      // chat_members INSERT on next reconnect. Sequence: messages → chat_members
-      // → chats (FK ordering). Fire-and-forget — local state already reflects deletion.
+      // chat_members INSERT on next reconnect. DELETE chats triggers CASCADE on
+      // messages.chat_id and chat_members.chat_id — single statement is enough,
+      // and avoids the RLS trap where chat_members policies block deleting other
+      // users' rows while we're still a member.
       if (toDeleteInDb.length > 0 && userData?.dbId) {
         ;(async () => {
           for (const chatId of toDeleteInDb) {
-            await supabase.from('messages').delete().eq('chat_id', chatId)
-            await supabase.from('chat_members').delete().eq('chat_id', chatId)
             await supabase.from('chats').delete().eq('id', chatId)
           }
         })()
@@ -5122,7 +5122,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 .insert({ type: 'duo', last_msg: '🎉 Crew confirmed!' })
                 .select()
                 .single()
-              if (!chatData) { acceptingInviteRef.current.delete(invite.id); showToast('Please try again', 'Something went wrong', '⚠️'); return }
+              // Must also check `.id` — if RLS blocks RETURNING, `chatData` may
+              // come back as a non-null empty object and we'd write NULL chat_id
+              // into crew_invites, leaving the inviter stuck on "Waiting".
+              if (!chatData?.id) { acceptingInviteRef.current.delete(invite.id); showToast('Please try again', 'Something went wrong', '⚠️'); return }
               // Update crew_invites FIRST so the inviter's chat_members INSERT
               // realtime listener can find event_ref_id when it queries by chat_id.
               // Race window was: chat_members fired → inviter queried crew_invites →
@@ -5483,35 +5486,39 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   const leavingChatLocal = chatListRef.current.find((c: any) => c.id === officialChatId)
                   const isDuoLeave = leavingChatLocal?.type === 'duo'
                   if (isDuoLeave) {
-                    supabase.from('messages').delete().eq('chat_id', officialChatId)
-                      .then(() => supabase.from('chat_members').delete().eq('chat_id', officialChatId))
-                      .then(() => supabase.from('chats').delete().eq('id', officialChatId))
+                    // DELETE chats while we're still a member — CASCADE FK
+                    // tears down chat_members and messages. RLS blocks cross-user
+                    // chat_members deletes, so the old "delete each table in
+                    // order" path orphaned the partner's row + the chat itself.
+                    supabase.from('chats').delete().eq('id', officialChatId)
+                      .then(({ error }) => { if (error) console.warn('duo leave chat delete error:', error.message) })
                   } else {
-                    supabase.from('chat_members').delete().eq('chat_id', officialChatId).eq('profile_id', userData.dbId)
-                      .then(async () => {
-                        // Check if anyone else with active event_attendees is still in the chat
-                        const { data: remaining } = await supabase.from('chat_members')
-                          .select('profile_id').eq('chat_id', officialChatId)
-                        const remainingIds = (remaining || []).map((r: any) => r.profile_id)
-                        if (remainingIds.length === 0) {
-                          // Chat is empty — delete it so RPC creates a fresh one next time
-                          supabase.from('chats').delete().eq('id', officialChatId)
-                        } else {
-                          // Check if remaining members still have active event_attendees
-                          const { data: activeLeft } = await supabase.from('event_attendees')
-                            .select('profile_id').eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed']).in('profile_id', remainingIds)
-                          if (!activeLeft || activeLeft.length === 0) {
-                            supabase.from('chat_members').delete().eq('chat_id', officialChatId)
-                              .then(() => supabase.from('chats').delete().eq('id', officialChatId))
-                          } else {
-                            supabase.from('messages').insert({
-                              chat_id: officialChatId,
-                              sender_id: userData.dbId,
-                              text: `${userData.name || 'Someone'} left the group`,
-                            }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
-                          }
-                        }
-                      })
+                    // Group leave: must inspect remaining BEFORE deleting our row
+                    // so we can still `DELETE chats` (RLS requires we're a member).
+                    ;(async () => {
+                      const { data: remaining } = await supabase.from('chat_members')
+                        .select('profile_id').eq('chat_id', officialChatId).neq('profile_id', userData.dbId)
+                      const remainingIds = (remaining || []).map((r: any) => r.profile_id)
+                      if (remainingIds.length === 0) {
+                        // I'm the only member — DELETE chats (CASCADE cleans up).
+                        await supabase.from('chats').delete().eq('id', officialChatId)
+                        return
+                      }
+                      const { data: activeLeft } = await supabase.from('event_attendees')
+                        .select('profile_id').eq('event_ref_id', ev.id).in('status', ['ready', 'confirmed']).in('profile_id', remainingIds)
+                      if (!activeLeft || activeLeft.length === 0) {
+                        // No one active left — tear down the whole chat (CASCADE).
+                        await supabase.from('chats').delete().eq('id', officialChatId)
+                        return
+                      }
+                      // Active members remain — remove just me + leave a trace.
+                      await supabase.from('chat_members').delete().eq('chat_id', officialChatId).eq('profile_id', userData.dbId)
+                      supabase.from('messages').insert({
+                        chat_id: officialChatId,
+                        sender_id: userData.dbId,
+                        text: `${userData.name || 'Someone'} left the group`,
+                      }).then(({ error }) => { if (error) console.warn('leave system msg error:', error.message) })
+                    })()
                   }
                 }
                 supabase.from('crew_invites').update({ status: 'cancelled' }).eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).in('status', ['pending', 'accepted'])
@@ -5577,13 +5584,23 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 // Trigger Vibe dot for events that still need user action.
                 // Community: dot until joiner is 'confirmed' (then chat exists,
                 // they shouldn't go back to VibeCheck — they go to Chats).
-                // Official: dot for any active joined event (still finding crew).
+                // Official: dot while still finding partner/crew. Once duo is
+                // confirmed (chat exists) or crew is full, the user has nothing
+                // to do in VibeCheck for that event — drop the dot.
                 const hasActiveJoined = Object.entries(joinedEvents).some(([id, v]) => {
                   if (!v) return false
                   const ev = allKnownEvs.find(e => e.id === Number(id))
                   if (!ev) return false
                   if (isExpired(ev)) return false
-                  if (ev.type === 'official') return true
+                  if (ev.type === 'official') {
+                    if (v !== 'confirmed') return true
+                    const format = userEventFormat[Number(id)]
+                    if (format === '1+1') return false
+                    const maxSize = VIBE_FORMAT_MAX[format] || 5
+                    const crewChat = chatList.find((c: any) => c.eventRefId === Number(id) || c.hostEventId === Number(id))
+                    const memberCount = crewChat?.members || 1
+                    return memberCount < maxSize
+                  }
                   if (ev.type === 'community' && !ev.isHosted) return v !== 'confirmed'
                   return false
                 })
