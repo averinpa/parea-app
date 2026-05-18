@@ -3174,6 +3174,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         addNotif({ type: 'crew_accepted', emoji: '🎉', color: '#43E97B', title: `${inv.invitee?.name} accepted your invite!`, body: `For "${inv.event_title}" — say hi 💬` })
       }
     }
+    // First check may run before Supabase auth session is fully attached —
+    // RLS would return empty, the user sees "Waiting for X" stuck until the
+    // next interval. Retry once after 2s to cover that race.
+    let didEarlyRetry = false
+    const earlyRetry = setTimeout(() => { if (!didEarlyRetry) { didEarlyRetry = true; check() } }, 2000)
     check()
     const interval = setInterval(check, 15000)
     // Realtime: when our sent invite changes status (accepted/declined/cancelled),
@@ -3184,7 +3189,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         check()
       })
       .subscribe()
-    return () => { clearInterval(interval); supabase.removeChannel(channel) }
+    // When app returns from background, realtime/poll may have stalled — re-sync.
+    // Without this, user backgrounds the app while waiting on a partner accept,
+    // returns hours later, and "Waiting for X" stays stuck until manual reopen.
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') check()
+    })
+    return () => { clearTimeout(earlyRetry); clearInterval(interval); supabase.removeChannel(channel); appStateSub.remove() }
   }, [userData?.dbId])
 
   const openNotifPanel = () => {
@@ -5630,7 +5641,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }}>
           <LinearGradient colors={['#F5F3FF', '#EEF2FF', '#F0F9FF']} style={s.fill}>
             <View style={[s.fill, { paddingBottom: insets.bottom }]}>
-              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'height' : 'padding'} keyboardVerticalOffset={0}>
+              {/* On Android the system already adjustResize-shrinks the window
+                  for the keyboard, so adding KeyboardAvoidingView padding
+                  doubled the offset — Next button hovered far above the
+                  keyboard. iOS still needs the manual avoidance. */}
+              <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'height' : undefined} keyboardVerticalOffset={0}>
 
                 {/* Header row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: insets.top + 4, paddingBottom: 12 }}>
