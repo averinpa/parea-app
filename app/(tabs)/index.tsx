@@ -5852,7 +5852,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       'Choose the format that fits your vibe',
                       'Pick the activity for your event',
                       'Set the date, time and place',
-                      'Almost there — set the mood',
+                      'Set who can join and how people find your plan',
                     ][createStep - 1]}
                   </Text>
                 </View>
@@ -6447,9 +6447,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCreateDay(''); setCreateHour(''); setCreateLocation(''); setCreateDescription(''); setCreateDriving(false);
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
-                        showToast('Others can find it in the feed now', 'Your social is live! 🎉', '🎉')
+                        showToast('Others can find it in the feed now', 'Plan published', '✓')
                       }}>
-                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create Social 🚀</Text>
+                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create plan</Text>
                     </TouchableOpacity>
                   )}
                 </View>
