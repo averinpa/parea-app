@@ -148,55 +148,54 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                 <Crown size={12} color={PLANS_COLOR} />
                 <Text style={{ fontSize: 11, fontWeight: '800', color: PLANS_COLOR, letterSpacing: 1, textTransform: 'uppercase' }}>Hosting</Text>
               </View>
-              {activeHostedEvents.map((ev: any) => (
+              {activeHostedEvents.map((ev: any) => {
+                const memberCount = (hostConfirmedMembers[ev.id] || []).length + 1
+                const formatLabel = ev.maxParticipants === 2 ? 'Duo' : (ev.maxParticipants <= 5 ? 'Squad' : 'Party')
+                // prettyEventTime returns e.g. "22 May, 09:30" — swap the comma
+                // for a middle-dot to match the rest of the new card style.
+                const whenLabel = (prettyEventTime(ev.time) || '').replace(/,\s*/, ' · ')
+                return (
                 <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.2)', shadowColor: PLANS_COLOR, shadowOpacity: 0.12, shadowRadius: 16, elevation: 4 }}>
                   <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
-                  <View style={{ padding: 16, gap: 8 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(245,158,11,0.1)' }}>
-                          <Crown size={10} color={PLANS_COLOR} />
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: PLANS_COLOR }}>Host</Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation?.()
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                            Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event and its chat.', [
-                              { text: 'Cancel Event', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
-                              { text: 'Keep', style: 'cancel' },
-                            ])
-                          }}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <Trash2 size={15} color="#ef4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
-                        <CalendarDays size={12} color="#64748B" />
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{prettyEventTime(ev.time)}</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
-                        <Users size={12} color="#64748B" />
-                        {/* Count confirmed members only (people who accepted their slot).
-                            Approved-but-not-confirmed joiners shouldn't fill the badge
-                            until they confirm — otherwise host's Plans says "2/2" the moment
-                            they tap Approve, before the joiner has accepted. */}
-                        <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>{(hostConfirmedMembers[ev.id] || []).length + 1}/{ev.maxParticipants}</Text>
-                      </View>
-                      <View style={{ flex: 1 }} />
-                      <TouchableOpacity activeOpacity={0.8} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event</Text>
-                        <ChevronRight size={14} color="#fff" />
+                  <View style={{ padding: 16 }}>
+                    {/* Title row with trash on the right */}
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                      <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', flex: 1, letterSpacing: -0.2 }} numberOfLines={2}>{ev.title}</Text>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation?.()
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                          Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event and its chat.', [
+                            { text: 'Cancel Event', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
+                            { text: 'Keep', style: 'cancel' },
+                          ])
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Trash2 size={15} color="#ef4444" />
                       </TouchableOpacity>
                     </View>
+                    {/* "You're hosting" sub-label */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                      <Crown size={11} color={PLANS_COLOR} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: PLANS_COLOR }}>You're hosting</Text>
+                    </View>
+                    {/* When + crew row */}
+                    <Text style={{ fontSize: 14, color: '#475569', fontFamily: 'Outfit-SemiBold', marginTop: 12 }}>{whenLabel}</Text>
+                    <Text style={{ fontSize: 13, color: '#64748B', fontFamily: 'Outfit-Medium', marginTop: 2 }}>
+                      {formatLabel} · {memberCount}/{ev.maxParticipants} joined
+                    </Text>
+                    {/* CTA */}
+                    <TouchableOpacity activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEventDetail?.(ev) }}
+                      style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingVertical: 12, borderRadius: 12 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>View event</Text>
+                      <ChevronRight size={15} color="#fff" />
+                    </TouchableOpacity>
                   </View>
                 </View>
-              ))}
+                )
+              })}
               {myEvents.length > 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, marginTop: 4 }}>
                   <CheckCircle size={12} color={PLANS_COLOR} />
