@@ -6235,12 +6235,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <View style={{ backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.18)', overflow: 'hidden' }}>
                         <TouchableOpacity activeOpacity={0.7}
                           onPress={() => setCreateSummaryOpen(v => !v)}
-                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 }}>
+                          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: createSummaryOpen ? 12 : 14 }}>
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 11, fontFamily: 'Outfit-Medium', color: '#94A3B8', letterSpacing: 0.4, textTransform: 'uppercase' }}>Your plan</Text>
-                            <Text style={{ fontSize: 15, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.2, marginTop: 2 }} numberOfLines={1}>
-                              {createSummaryOpen ? 'Hide details' : 'Review your plan'}
-                            </Text>
+                            {!createSummaryOpen && (
+                              <Text style={{ fontSize: 15, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.2, marginTop: 2 }} numberOfLines={1}>
+                                Review your plan
+                              </Text>
+                            )}
                           </View>
                           <Feather name={createSummaryOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#6366F1" />
                         </TouchableOpacity>
