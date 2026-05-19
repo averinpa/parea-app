@@ -62,8 +62,14 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
   // like "-", so check both before falling back to "show it".
   const eventDateStr = (ev: any) => ev.date_label || ev.time || ''
   const isExpiredEv = (ev: any) => ev.expiresAt ? ev.expiresAt <= now : isEventPast(eventDateStr(ev))
+  // Exclude events the user is *hosting* — they belong in the Hosting section,
+  // not Attending. Without this filter, a host's own event appears twice (once
+  // from hostedEvents, once from joinedEvents since the host is in their own
+  // chat_members row and the backfill marks them 'confirmed').
+  const hostedIds = new Set(hostedEvents.map((e: any) => e.id))
   const joinedAll = [...MOCK_EVENTS, ...allEvents.filter((e: any) => e._fromDb || e.type === 'community')]
     .filter(ev => ['joined', 'pending', 'confirmed'].includes(joinedEvents[ev.id]))
+    .filter(ev => !hostedIds.has(ev.id))
   const myEvents = joinedAll.filter(ev => !isExpiredEv(ev))
   const expiredJoinedEvents = joinedAll.filter(ev => isExpiredEv(ev))
   const activeHostedEvents = hostedEvents.filter(ev => !isExpiredEv(ev))
