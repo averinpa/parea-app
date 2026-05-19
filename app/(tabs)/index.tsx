@@ -6219,7 +6219,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <View style={{ gap: 16 }}>
                       {/* Vibe */}
                       <View>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Vibe</Text>
+                        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3 }}>Vibe</Text>
+                        <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium', marginTop: 2, marginBottom: 10 }}>Optional</Text>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                           {[{ id:'chill', emoji:'😌', label:'Chill' },{ id:'active', emoji:'⚡', label:'Active' },{ id:'professional', emoji:'🤝', label:'Professional' }].map(v => (
                             <TouchableOpacity key={v.id} onPress={() => setCreateVibe(v.id)} activeOpacity={0.8}
@@ -6234,7 +6235,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       </View>
                       {/* Languages */}
                       <View>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Languages</Text>
+                        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3 }}>Languages</Text>
+                        <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium', marginTop: 2, marginBottom: 10 }}>Optional</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                           {LANGUAGES_LIST.map((l: any) => (
                             <TouchableOpacity key={l.code} onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])} activeOpacity={0.8}
@@ -6255,7 +6257,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                           <Text style={{ fontSize: 22 }}>🚗</Text>
                           <View>
-                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B' }}>I can give a lift</Text>
+                            <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }}>I can give a lift</Text>
                             <Text style={{ fontSize: 12, color: '#64748B', marginTop: 1 }}>Others can ride with you</Text>
                           </View>
                         </View>
@@ -6264,11 +6266,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                       {/* Plan visibility */}
                       <View>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Plan visibility</Text>
+                        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3, marginBottom: 10 }}>Who can see it</Text>
                         <View style={{ gap: 8 }}>
                           {[
-                            { id: 'public',  label: 'Public',       sub: 'Visible in Community' },
-                            { id: 'private', label: 'Private 🔒',  sub: 'Only people with invite can join' },
+                            { id: 'public',  label: 'Public',   sub: 'Anyone in the community can find this plan' },
+                            { id: 'private', label: 'Private',  sub: 'Only people with the invite link can join' },
                           ].map(opt => {
                             const sel = createVisibility === opt.id
                             return (
@@ -6290,7 +6292,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
 
                       {/* Who can join */}
                       <View>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Who can join</Text>
+                        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3, marginBottom: 10 }}>Who can join</Text>
                         <View style={{ gap: 8 }}>
                           {[
                             { id: 'any',    label: 'Anyone',       sub: 'Open to everyone' },
