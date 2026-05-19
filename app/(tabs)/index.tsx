@@ -6260,15 +6260,23 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <View>
                         <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3, marginBottom: 10 }}>Vibe</Text>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
-                          {[{ id:'chill', emoji:'😌', label:'Chill' },{ id:'active', emoji:'⚡', label:'Active' },{ id:'professional', emoji:'🤝', label:'Professional' }].map(v => (
-                            <TouchableOpacity key={v.id} onPress={() => setCreateVibe(v.id)} activeOpacity={0.8}
-                              style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 16,
-                                backgroundColor: createVibe === v.id ? '#EEF2FF' : '#F8FAFC',
-                                borderWidth: 2, borderColor: createVibe === v.id ? '#6366F1' : 'transparent' }}>
-                              <Text style={{ fontSize: 22 }}>{v.emoji}</Text>
-                              <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 4, color: createVibe === v.id ? '#6366F1' : '#64748B' }}>{v.label}</Text>
-                            </TouchableOpacity>
-                          ))}
+                          {[
+                            { id:'chill',        Icon: Leaf,      label:'Chill' },
+                            { id:'active',       Icon: Zap,       label:'Active' },
+                            { id:'professional', Icon: Briefcase, label:'Professional' },
+                          ].map(v => {
+                            const sel = createVibe === v.id
+                            const VibeIcon = v.Icon
+                            return (
+                              <TouchableOpacity key={v.id} onPress={() => setCreateVibe(v.id)} activeOpacity={0.8}
+                                style={{ flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 16,
+                                  backgroundColor: sel ? '#EEF2FF' : '#F8FAFC',
+                                  borderWidth: 2, borderColor: sel ? '#6366F1' : 'transparent' }}>
+                                <VibeIcon size={22} color={sel ? '#6366F1' : '#94A3B8'} strokeWidth={2} />
+                                <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 6, color: sel ? '#6366F1' : '#64748B' }}>{v.label}</Text>
+                              </TouchableOpacity>
+                            )
+                          })}
                         </View>
                       </View>
                       {/* Languages */}
