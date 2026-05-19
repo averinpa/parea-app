@@ -5996,7 +5996,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             onChangeText={(t) => { setCreateCustom(t); if (createNameError) setCreateNameError(false) }}
                             placeholder="e.g. Wine & chat at Marina" placeholderTextColor="#94A3B8"
                             returnKeyType="done"
-                            onFocus={() => setTimeout(() => createScrollRef.current?.scrollToEnd({ animated: true }), 300)}
                             style={{ flex: 1, fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B' }} />
                           {createCustom.length > 0 && (
                             <TouchableOpacity onPress={() => setCreateCustom('')}>
