@@ -147,6 +147,29 @@ async def scrape_event(page, url):
             elif direct.startswith('Tickets:') and not price and len(direct) < 200:
                 price = direct.replace('Tickets:', '').strip()
 
+        # Fallback: newer soldoutticketbox layout drops the "When: / Where:" labels
+        # entirely and only renders the Event Dates table — rows like:
+        #   <td><strong>21/05/2026</strong></td><td><strong>19:30</strong></td><td><strong><a>Venue</a></strong></td>
+        # Pull the first row as the canonical start; the rest are extra showings.
+        if not date:
+            date_re = re.compile(r'^\d{1,2}/\d{1,2}/\d{4}$')
+            time_re = re.compile(r'^\d{1,2}:\d{2}$')
+            for tr in soup.find_all('tr'):
+                strongs = [s.get_text(strip=True) for s in tr.find_all('strong')]
+                cand_date = next((s for s in strongs if date_re.match(s)), None)
+                if not cand_date:
+                    continue
+                cand_time = next((s for s in strongs if time_re.match(s)), None)
+                date = cand_date
+                if cand_time:
+                    time_str = cand_time
+                if not venue:
+                    # Venue link sits in another <strong> in the same row.
+                    a = tr.find('a')
+                    if a:
+                        venue = a.get_text(strip=True)
+                break
+
         # Description — only text after "About the event:" marker
         desc = ''
         full_text = soup.get_text(separator=' ', strip=True)
