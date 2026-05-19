@@ -6219,8 +6219,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     <View style={{ gap: 16 }}>
                       {/* Vibe */}
                       <View>
-                        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3 }}>Vibe</Text>
-                        <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium', marginTop: 2, marginBottom: 10 }}>Optional</Text>
+                        <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3, marginBottom: 10 }}>Vibe</Text>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                           {[{ id:'chill', emoji:'😌', label:'Chill' },{ id:'active', emoji:'⚡', label:'Active' },{ id:'professional', emoji:'🤝', label:'Professional' }].map(v => (
                             <TouchableOpacity key={v.id} onPress={() => setCreateVibe(v.id)} activeOpacity={0.8}
@@ -6349,9 +6348,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         colors={STEP_COLORS[createStep - 1]}
                       />
                     )
-                  })() : createLangs.length === 0 ? (
+                  })() : (!createVibe || createLangs.length === 0) ? (
                     <View style={[s.btnPrimary, { opacity: 0.38, backgroundColor: '#CBD5E1' }]}>
-                      <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'Outfit-SemiBold' }]}>Pick at least one language</Text>
+                      <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'Outfit-SemiBold' }]}>
+                        {!createVibe ? 'Pick a vibe' : 'Pick at least one language'}
+                      </Text>
                     </View>
                   ) : (
                     <TouchableOpacity
