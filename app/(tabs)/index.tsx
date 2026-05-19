@@ -2549,7 +2549,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             // that actually have unread messages arriving after this reload.
             // If the last cached message is the user's own send, they've
             // obviously seen it.
-            const cleared = { ...c, isNew: false }
+            const cleared: any = { ...c, isNew: false }
+            // Backfill chatExpiresAt for chats persisted before this field was
+            // standardized. Without it the auto-cleanup pass can't expire the
+            // chat once its backing event drops out of the feed (e.g. scraper
+            // stops returning a past official event), and it lingers forever.
+            if (!cleared.chatExpiresAt) {
+              cleared.chatExpiresAt = Date.now() + 24 * 60 * 60 * 1000
+            }
             if (!last) return cleared
             const previewText = last.from === 'me' ? `You: ${last.text}` : (last.senderName ? `${last.senderName}: ${last.text}` : last.text)
             return { ...cleared, lastMsg: previewText || cleared.lastMsg, time: last.time || cleared.time }
