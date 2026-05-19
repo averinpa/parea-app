@@ -2,6 +2,13 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+
+# Greek venue names (Πέμπτη, ΜΑΡΚΙΔΕΙΟ ΘΕΑΤΡΟ) crash print() on Windows
+# PowerShell's default cp1251 stdout. Force UTF-8 so logs never blow up
+# mid-event and leave Supabase unwritten.
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 import re
@@ -84,6 +91,10 @@ async def get_event_links(page):
 
 async def scrape_event(page, url):
     try:
+        # Normalize before everything else — same event scraped with a trailing
+        # slash and without (or with /lang/en) would create separate DB rows
+        # because the existing-lookup uses the raw URL.
+        url = _normalize_event_url(url)
         # Use the URL as-is. The /lang/en suffix used to coerce English on the
         # old template, but on the modern slug pages it lands on a blank page
         # — every field comes back empty. Modern URLs are English by default.
