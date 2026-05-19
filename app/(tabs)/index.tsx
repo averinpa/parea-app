@@ -2237,13 +2237,49 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .eq('profile_id', userData.dbId)
       if (cancelled || !data) return
       const attendedIds = new Set<number>((data as any[]).map(r => r.event_ref_id))
+      // Fetch chat memberships too — if user is in a chat for the event, they
+      // should be 'confirmed' regardless of what event_attendees.status says.
+      // This catches the case where a partner accepted (chat created, both in
+      // chat_members) but the event_attendees row never got upgraded to
+      // 'confirmed' (e.g. the realtime listener that triggers that UPDATE
+      // missed firing on one side).
+      // Two sources to cover both crew/community (chats.event_id) and duo
+      // official (crew_invites.event_ref_id — chats.event_id is NULL there).
+      const [{ data: myChats }, { data: invitesAsInviter }, { data: invitesAsInvitee }] = await Promise.all([
+        supabase.from('chat_members')
+          .select('chats:chat_id(event_id)')
+          .eq('profile_id', userData.dbId),
+        supabase.from('crew_invites')
+          .select('event_ref_id')
+          .eq('inviter_id', userData.dbId)
+          .eq('status', 'accepted')
+          .not('chat_id', 'is', null),
+        supabase.from('crew_invites')
+          .select('event_ref_id')
+          .eq('invitee_id', userData.dbId)
+          .eq('status', 'accepted')
+          .not('chat_id', 'is', null),
+      ])
+      const confirmedViaChatEventIds = new Set<number>([
+        ...(myChats || []).map((r: any) => (r.chats as any)?.event_id).filter((id: any) => id != null),
+        ...(invitesAsInviter || []).map((r: any) => r.event_ref_id),
+        ...(invitesAsInvitee || []).map((r: any) => r.event_ref_id),
+      ])
       setJoinedEvents(prev => {
         const next = { ...prev }
         let changed = false
         for (const row of data as any[]) {
-          if (next[row.event_ref_id]) continue
-          next[row.event_ref_id] = row.status === 'confirmed' ? 'confirmed' : 'joined'
-          changed = true
+          const dbStatus: 'joined' | 'confirmed' =
+            row.status === 'confirmed' || confirmedViaChatEventIds.has(row.event_ref_id)
+              ? 'confirmed'
+              : 'joined'
+          // Always sync to DB — earlier this skipped if any local value was set,
+          // which left users on "Looking for crew" after a partner accepted
+          // while their local state was still 'joined'.
+          if (next[row.event_ref_id] !== dbStatus) {
+            next[row.event_ref_id] = dbStatus
+            changed = true
+          }
         }
         return changed ? next : prev
       })
