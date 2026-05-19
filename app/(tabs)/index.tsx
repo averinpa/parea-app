@@ -5860,7 +5860,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 {/* Step content in ScrollView */}
                 <ScrollView
                   ref={createScrollRef}
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   style={{ flex: 1 }}>
