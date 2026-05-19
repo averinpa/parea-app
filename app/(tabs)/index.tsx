@@ -6236,7 +6236,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       {/* Languages */}
                       <View>
                         <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3 }}>Languages</Text>
-                        <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium', marginTop: 2, marginBottom: 10 }}>Optional</Text>
+                        <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium', marginTop: 2, marginBottom: 10 }}>Pick at least one — we use it to match the right people</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                           {LANGUAGES_LIST.map((l: any) => (
                             <TouchableOpacity key={l.code} onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])} activeOpacity={0.8}
@@ -6349,7 +6349,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         colors={STEP_COLORS[createStep - 1]}
                       />
                     )
-                  })() : (
+                  })() : createLangs.length === 0 ? (
+                    <View style={[s.btnPrimary, { opacity: 0.38, backgroundColor: '#CBD5E1' }]}>
+                      <Text style={[s.btnPrimaryText, { color: '#fff', fontFamily: 'Outfit-SemiBold' }]}>Pick at least one language</Text>
+                    </View>
+                  ) : (
                     <TouchableOpacity
                       style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
                       onPress={async () => {
