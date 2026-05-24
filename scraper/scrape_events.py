@@ -110,10 +110,14 @@ async def scrape_event(page, url):
         # slash and without (or with /lang/en) would create separate DB rows
         # because the existing-lookup uses the raw URL.
         url = _normalize_event_url(url)
-        # Use the URL as-is. The /lang/en suffix used to coerce English on the
-        # old template, but on the modern slug pages it lands on a blank page
-        # — every field comes back empty. Modern URLs are English by default.
-        en_url = url
+        # Fetch the English locale via the /en/ path prefix. The bare
+        # /event/<slug> URL serves Greek by default (title, venue and the
+        # "Πότε:" label all come back Greek), while /en/event/<slug> returns
+        # English copy AND the same Event Dates table with the start time.
+        # NB: this differs from the old ?lang=en / /lang/en suffix which blanked
+        # modern slug pages — that's why we strip those in _normalize_event_url.
+        # We keep `url` (no /en/) as the canonical ticket_link DB key.
+        en_url = url.replace('soldoutticketbox.com/event/', 'soldoutticketbox.com/en/event/')
         await page.goto(en_url, wait_until='domcontentloaded', timeout=60000)
         await page.wait_for_timeout(1500)
         content = await page.content()
@@ -180,10 +184,18 @@ async def scrape_event(page, url):
         # collect every city the event tours through — without this the city
         # filter in-app misses tours that play multiple cities (Barcelona
         # Flamenco's Paphos/Nicosia/Limassol leg, etc).
+        # Run whenever date OR time is missing — the "Πότε:/When:" paragraph
+        # often gives a date (or a date range) with no time, so date can be
+        # set while time_str is still empty. The Event Dates table carries the
+        # real start time per row, so we still need to mine it for the hour.
+        # A real start time is HH:MM. The "When:" label often yields a date
+        # range like "09/10/2026 - 10/10/2026" whose split leaves time_str="-",
+        # so test for a proper clock value rather than mere non-emptiness.
+        time_re = re.compile(r'^\d{1,2}:\d{2}$')
         all_cities = []
-        if not date:
+        if not date or not time_re.match(time_str or ''):
             date_re = re.compile(r'^\d{1,2}/\d{1,2}/\d{4}$')
-            time_re = re.compile(r'^\d{1,2}:\d{2}$')
+            captured = False
             for tr in soup.find_all('tr'):
                 strongs = [s.get_text(strip=True) for s in tr.find_all('strong')]
                 cand_date = next((s for s in strongs if date_re.match(s)), None)
@@ -192,7 +204,9 @@ async def scrape_event(page, url):
                 cand_time = next((s for s in strongs if time_re.match(s)), None)
                 a = tr.find('a')
                 row_venue = a.get_text(strip=True) if a else ''
-                if not date:
+                if not captured:
+                    captured = True
+                    # Prefer the table's single date over a label-loop range.
                     date = cand_date
                     if cand_time:
                         time_str = cand_time
