@@ -2363,20 +2363,41 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .filter((c: any) => c && missingIds.includes(c.id) && c.type === 'group' && c.event_id && c.event_id < 100000)
         .map((c: any) => c.event_id)
       const communityTitleById: Record<number, string> = {}
+      const communityTimeById: Record<number, string> = {}
       if (groupEventIds.length > 0) {
         const { data: communityRows } = await supabase
           .from('community_events')
-          .select('id, title')
+          .select('id, title, time')
           .in('id', groupEventIds)
-        ;(communityRows || []).forEach((r: any) => { communityTitleById[r.id] = r.title })
+        ;(communityRows || []).forEach((r: any) => {
+          communityTitleById[r.id] = r.title
+          communityTimeById[r.id] = r.time
+        })
       }
+      // Don't resurrect chats whose event ended >24h ago — otherwise the
+      // auto-cleanup deletes them locally but this backfill re-adds them from
+      // DB on the next login, so they appear permanent. Parse the community
+      // event time and drop+delete anything past its 24h grace window.
+      const EXPIRE_AFTER = 24 * 60 * 60 * 1000
+      const nowMs = Date.now()
+      const isChatExpired = (c: any): boolean => {
+        const timeStr = c.event_id ? communityTimeById[c.event_id] : null
+        if (!timeStr) return false
+        const parsed = parseEventDateTime(timeStr)
+        if (!parsed) return false
+        return parsed.getTime() + EXPIRE_AFTER < nowMs
+      }
+      const expiredToDelete: number[] = []
       const newChats = (memberships as any[])
         .map(m => m.chats as any)
         .filter((c: any) => c && missingIds.includes(c.id))
         .filter((c: any) => {
           // Skip if user cancelled this event explicitly
           const evId = c.event_id ?? inviteByChat[c.id]?.event_ref_id
-          return !evId || !cancelledEventIdsRef.current.has(evId)
+          if (evId && cancelledEventIdsRef.current.has(evId)) return false
+          // Skip + delete if the event is long over
+          if (isChatExpired(c)) { expiredToDelete.push(c.id); return false }
+          return true
         })
         .map((c: any) => {
           const others = (membersByChat[c.id] || []).filter((m: any) => m.id !== userData.dbId)
@@ -2401,9 +2422,25 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             lastMsg: c.last_msg || '🎉 Crew confirmed!',
             time: c.created_at || new Date().toISOString(),
             isNew: false,
-            chatExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+            // Derive expiry from the event time so the chat ages out on its
+            // own schedule. Falls back to 24h-from-now only when there's no
+            // parseable event time (e.g. duo with TBD) — never refreshes an
+            // event-anchored expiry on reload.
+            chatExpiresAt: (() => {
+              const timeStr = c.event_id ? communityTimeById[c.event_id] : null
+              const parsed = timeStr ? parseEventDateTime(timeStr) : null
+              return parsed ? parsed.getTime() + EXPIRE_AFTER : Date.now() + EXPIRE_AFTER
+            })(),
           }
         })
+      // Delete events that are long over from DB so they stop coming back.
+      if (expiredToDelete.length > 0) {
+        ;(async () => {
+          for (const chatId of expiredToDelete) {
+            await supabase.from('chats').delete().eq('id', chatId)
+          }
+        })()
+      }
       if (newChats.length === 0) return
       setChatList(prev => {
         const seen = new Set(prev.map((c: any) => c.id))
