@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Greek venue names (Πέμπτη, ΜΑΡΚΙΔΕΙΟ ΘΕΑΤΡΟ) crash print() on Windows
@@ -333,6 +334,31 @@ async def main():
                     print(f'  Failed: {result}')
 
         await browser.close()
-        print(f'\nDone! Inserted: {inserted}, Skipped: {skipped}, Cancelled removed: {cancelled_removed}')
+
+        # Purge events that already happened — keeps the table from filling up
+        # with last year's shows. 2-day grace so multi-day runs aren't cut early.
+        # Only runs on a full scrape (skip in single-URL test mode).
+        purged = 0
+        if len(sys.argv) <= 1:
+            all_rows = supabase.table('official_events').select('id, date_label').execute()
+            cutoff = datetime.now() - timedelta(days=2)
+            date_pat = re.compile(r'(\d{1,2})/(\d{1,2})/(\d{4})')
+            expired_ids = []
+            for r in (all_rows.data or []):
+                matches = date_pat.findall(r.get('date_label') or '')
+                if not matches:
+                    continue  # unparseable date — leave the row alone
+                d, m, y = matches[-1]  # last date = end of a multi-day range
+                try:
+                    ev_date = datetime(int(y), int(m), int(d))
+                except ValueError:
+                    continue
+                if ev_date < cutoff:
+                    expired_ids.append(r['id'])
+            if expired_ids:
+                supabase.table('official_events').delete().in_('id', expired_ids).execute()
+                purged = len(expired_ids)
+
+        print(f'\nDone! Inserted: {inserted}, Skipped: {skipped}, Cancelled removed: {cancelled_removed}, Past purged: {purged}')
 
 asyncio.run(main())
