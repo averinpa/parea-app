@@ -168,11 +168,12 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
         Animated.timing(welcomeOpacity, { toValue: 1, duration: 320, useNativeDriver: true }),
         Animated.spring(welcomeScale,   { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
       ]).start()
+      // Navigate while the welcome overlay still covers the screen. Fading it
+      // out first re-exposed the vibe step for a frame ("vibe → main" flash)
+      // before onFinish unmounted the screen — keep it covered and let the
+      // parent's navigation tear it down.
       setTimeout(() => {
-        Animated.timing(welcomeOpacity, { toValue: 0, duration: 320, useNativeDriver: true }).start(() => {
-          setShowWelcome(false)
-          onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy, dealbreakers })
-        })
+        onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy, dealbreakers })
       }, 1600)
     }
   }
