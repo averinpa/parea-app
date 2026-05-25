@@ -361,6 +361,7 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
                       source={require('../../assets/images/step1_bubble.png')}
                       style={{ width: 150, height: 150, marginLeft: 4, marginRight: -8 }}
                       resizeMode="contain"
+                      fadeDuration={0}
                     />
                   </View>
 
