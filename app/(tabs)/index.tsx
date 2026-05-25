@@ -2245,8 +2245,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     // Respect the user's push preference — don't re-register if they turned
     // notifications off in Settings.
     AsyncStorage.getItem('parea_push_enabled').then(v => {
-      if (v === '0') return
-      registerPushToken(userData.dbId).catch(() => {})
+      console.log('push: effect fired, dbId=', userData.dbId, 'pref=', v)
+      if (v === '0') { console.log('push: skip — disabled in settings'); return }
+      registerPushToken(userData.dbId).catch((e) => console.warn('push: register threw', e?.message))
     })
   }, [userData?.dbId])
 

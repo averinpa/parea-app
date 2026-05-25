@@ -21,9 +21,10 @@ if (Platform.OS !== 'web') {
 // user's profile so the send-side edge function can target this device.
 // Returns the token (or null when unavailable — web, simulator, denied, Expo Go).
 export async function registerPushToken(profileId: string): Promise<string | null> {
+  console.log('push: registerPushToken called, profileId=', profileId, 'platform=', Platform.OS, 'isDevice=', Device.isDevice)
   // No push on web, and only on physical devices.
-  if (Platform.OS === 'web') return null
-  if (!Device.isDevice) return null
+  if (Platform.OS === 'web') { console.log('push: skip — web'); return null }
+  if (!Device.isDevice) { console.log('push: skip — not a physical device'); return null }
 
   // Android needs a channel before tokens fire any UI.
   if (Platform.OS === 'android') {
@@ -37,6 +38,7 @@ export async function registerPushToken(profileId: string): Promise<string | nul
 
   const { status: existing } = await Notifications.getPermissionsAsync()
   let status = existing
+  console.log('push: existing permission =', existing)
   if (existing !== 'granted') {
     // iOS needs explicit alert/badge/sound options or the prompt grants
     // nothing usable. Android ignores the ios block.
@@ -44,24 +46,28 @@ export async function registerPushToken(profileId: string): Promise<string | nul
       ios: { allowAlert: true, allowBadge: true, allowSound: true },
     })
     status = req.status
+    console.log('push: requested permission, status =', status)
   }
-  if (status !== 'granted') return null
+  if (status !== 'granted') { console.log('push: skip — permission not granted'); return null }
 
   // projectId comes from app.json → extra.eas.projectId
   const projectId =
     Constants?.expoConfig?.extra?.eas?.projectId ??
     (Constants as any)?.easConfig?.projectId
+  console.log('push: projectId =', projectId)
   if (!projectId) { console.warn('push: missing EAS projectId'); return null }
 
   try {
     const tokenResp = await Notifications.getExpoPushTokenAsync({ projectId })
     const token = tokenResp.data
+    console.log('push: got token =', token)
     if (token && profileId) {
       const { error } = await supabase
         .from('profiles')
         .update({ expo_push_token: token })
         .eq('id', profileId)
       if (error) console.warn('push: token save error:', error.message)
+      else console.log('push: token saved to profile OK')
     }
     return token
   } catch (e: any) {
