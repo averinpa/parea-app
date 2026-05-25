@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, Keyboard, Platform } from 'react-native'
 import { supabase } from '../supabase'
 import { MOCK_CHATS, MOCK_MESSAGES } from '../feed-constants'
+import { setActivePushChatId } from '../push'
 
 // B1: state, refs, blocked-user logic, chat keyboard listener, hydrate-previews effect.
 // Realtime subscriptions, fallback poll, broadcasts, invite-related effects stay in
@@ -36,6 +37,9 @@ export function useChats({ userDbId, userName, onChatRemoved, lastReadAtMap }: {
   chatListRef.current = chatList
   openChatRef.current = openChat
   useEffect(() => { replyToRef.current = replyTo }, [replyTo])
+  // Tell the push handler which chat is open so it can suppress a duplicate
+  // banner for a message in that chat (cleared when the chat closes).
+  useEffect(() => { setActivePushChatId(openChat?.id ?? null) }, [openChat])
 
   // Fetch block relationships involving me — both directions — once on login.
   // Realtime keeps both sides in sync: INSERT/DELETE on blocked_users updates

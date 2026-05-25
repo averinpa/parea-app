@@ -4,16 +4,32 @@ import * as Device from 'expo-device'
 import Constants from 'expo-constants'
 import { supabase } from './supabase'
 
+// The chat the user is currently viewing. Kept in sync from useChats so the
+// foreground handler can suppress a banner for a message in the open chat
+// (the realtime path already rendered it — a banner would be a duplicate).
+let activeChatId: string | number | null = null
+export function setActivePushChatId(id: string | number | null) {
+  activeChatId = id
+}
+
 // Show notifications even when the app is foregrounded (banner + sound).
 // Guarded off web — expo-notifications has no web handler and throws.
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async (notification) => {
+      const d: any = notification.request.content.data || {}
+      // Already viewing this chat → no banner/sound (realtime already showed it).
+      const inOpenChat =
+        d.type === 'new_message' &&
+        activeChatId != null &&
+        String(d.chatId) === String(activeChatId)
+      return {
+        shouldShowBanner: !inOpenChat,
+        shouldShowList: !inOpenChat,
+        shouldPlaySound: !inOpenChat,
+        shouldSetBadge: false,
+      }
+    },
   })
 }
 
