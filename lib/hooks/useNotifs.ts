@@ -35,12 +35,16 @@ export function useNotifs({ persistLoadedRef }: {
   // only inspects the currently-visible `notifications` array.
   const seenNotifKeysRef = useRef<Set<string>>(new Set())
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const unreadCount = notifications.filter(n => !n.read && n.type !== 'new_message').length
 
   const notifKey = (n: { type: string; title: string; body?: string; chatId?: number }) =>
     `${n.type}|${n.title}|${n.body || ''}|${n.chatId || 0}`
 
   const addNotif = (n: Omit<Notif, 'id' | 'time' | 'read'>) => {
+    // Chat messages never belong in the bell — they live in the Chats tab
+    // (unread is tracked via chat list `isNew`). Keeps the bell for events
+    // (invites, approvals, joins, reminders) only.
+    if (n.type === 'new_message') return
     // Skip until persist load completes — otherwise polling fires before
     // seen-keys is restored from storage, bypassing dedupe → dupe notifs.
     if (!persistLoadedRef.current) return

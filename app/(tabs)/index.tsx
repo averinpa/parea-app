@@ -570,7 +570,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const JoinButton = ({ ev }: { ev: any }) => {
     if (ev.isHosted) return (
       <View style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,215,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.3)' }}>
-        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309' }}>Your plan 👑</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B45309' }}>Your plan</Text>
       </View>
     )
     const state = getJoinState(ev)
@@ -1225,7 +1225,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,8,30,0.75)' }} activeOpacity={1} onPress={closeJoinSheet} />
-        <View style={[s.joinSheetWrap, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={[s.joinSheetWrap, { paddingBottom: insets.bottom + 16 }]}>
           <View style={s.joinSheetHandle} />
 
           {joinSheet.ev?.type === 'official' && joinSheet.step !== 4 && (
@@ -1346,7 +1346,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   { id: 'any',    label: 'Any',          sub: 'Open to everyone' },
                   { id: 'women',  label: 'Women only',   sub: 'Crew of women only' },
                   { id: 'men',    label: 'Men only',     sub: 'Crew of men only' },
-                  { id: 'mixed',  label: 'Mixed group',  sub: 'Mix of women and men' },
                 ].map(opt => {
                   const active = joinSheet.crewPref === opt.id
                   return (
@@ -1626,6 +1625,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createLangs, setCreateLangs] = useState<string[]>([])
   const [createCrewPref, setCreateCrewPref] = useState<string>('any')
   const [createVisibility, setCreateVisibility] = useState<'public' | 'private'>('public')
+  // True while the final "Create plan" submit is uploading the cover + inserting
+  // the event — drives the button spinner and blocks double-taps.
+  const [creatingEvent, setCreatingEvent] = useState(false)
   const [calViewYear, setCalViewYear] = useState(new Date().getFullYear())
   const [calViewMonth, setCalViewMonth] = useState(new Date().getMonth())
   const [createCategory, setCreateCategory] = useState<string>('Sport')
@@ -1639,6 +1641,25 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createSummaryOpen, setCreateSummaryOpen] = useState(false)
   const [createImage, setCreateImage] = useState<{ uri: string; base64: string } | null>(null)
   const createScrollRef = useRef<ScrollView>(null)
+  // Keyboard height while the create modal is open. On Android edge-to-edge the
+  // window does NOT shrink for the keyboard, so we add this as bottom padding to
+  // the step ScrollView — that gives scrollToEnd room to lift the name field
+  // above the keyboard instead of leaving it covered.
+  const [createKbHeight, setCreateKbHeight] = useState(0)
+  useEffect(() => {
+    if (!createOpen) { setCreateKbHeight(0); return }
+    const show = Keyboard.addListener('keyboardDidShow', e => setCreateKbHeight(e.endCoordinates?.height || 0))
+    const hide = Keyboard.addListener('keyboardDidHide', () => setCreateKbHeight(0))
+    return () => { show.remove(); hide.remove() }
+  }, [createOpen])
+  // Once the keyboard padding is applied on the name step, scroll the field
+  // into view above the keyboard (runs after the padding re-render, so the
+  // ScrollView actually has room to lift it).
+  useEffect(() => {
+    if (createKbHeight > 0 && createStep === 2) {
+      createScrollRef.current?.scrollToEnd({ animated: true })
+    }
+  }, [createKbHeight, createStep])
   // Scroll create form to top on step change
   useEffect(() => { createScrollRef.current?.scrollTo({ y: 0, animated: false }) }, [createStep])
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
@@ -3346,6 +3367,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // ── Poll for accepted invites (inviter side) — sync chat to local state ───
   useEffect(() => {
     if (!userData?.dbId) return
+    // Baseline gate: the first data-bearing check after login only RESTORES state
+    // (chat list, maps) for already-accepted invites without firing notifications —
+    // otherwise every historical accept replays as a fresh "X accepted!" bell on
+    // each login. Only accepts seen after the baseline (genuinely new) notify.
+    let baselineDone = false
     const check = async () => {
       const { data } = await supabase
         .from('crew_invites')
@@ -3401,8 +3427,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }, ...prev]
         })
         setJoinedEvents(prev => ({ ...prev, [inv.event_ref_id]: 'confirmed' }))
-        addNotif({ type: 'crew_accepted', emoji: '🎉', color: '#43E97B', title: `${inv.invitee?.name} accepted your invite!`, body: `For "${inv.event_title}" — say hi 💬` })
+        // Only notify for accepts discovered after the login baseline — skip the
+        // historical backlog so re-login doesn't replay old "accepted" bells.
+        if (baselineDone) {
+          addNotif({ type: 'crew_accepted', emoji: '🎉', color: '#43E97B', title: `${inv.invitee?.name} accepted your invite!`, body: `For "${inv.event_title}" — say hi 💬` })
+        }
       }
+      // First successful data load establishes the baseline; subsequent checks
+      // (interval / realtime UPDATE / app-resume) fire notifs for new accepts.
+      baselineDone = true
     }
     // First check may run before Supabase auth session is fully attached —
     // RLS would return empty, the user sees "Waiting for X" stuck until the
@@ -5152,7 +5185,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   // If a chat already exists — join immediately (atomic get-or-create)
                   const { data: existingChatId } = await supabase.rpc('get_or_create_party_chat', { p_event_id: ev.id, p_title: ev.title }).single()
                   if (existingChatId) {
-                    await supabase.from('chat_members').upsert({ chat_id: existingChatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                    const { error: joinErr } = await supabase.rpc('join_party_chat', { p_chat_id: existingChatId, p_host_id: ev.hostId ?? null })
+                    if (joinErr) console.warn('join_party_chat error:', joinErr.message)
                     await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                     const { data: members } = await supabase.from('chat_members')
                       .select('profile_id, profiles:profile_id(id, name, photos, color, age)').eq('chat_id', existingChatId)
@@ -5269,18 +5303,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   if (newDbChat) dbChatId = newDbChat.id
                 }
                 // Add joiner + host to chat_members so both phones can restore the chat.
-                // Insert self first (always RLS-safe via profile_id=me), then the host as
-                // a separate call so a failure on the host row doesn't roll back joiner's
-                // own membership and silently leave the chat without any members.
+                // Done via the join_party_chat SECURITY DEFINER RPC: it resolves the
+                // caller from auth.uid() server-side and inserts both rows bypassing
+                // RLS, which the direct client upserts kept tripping on (silently
+                // leaving the chat memberless → vanished for everyone but the host).
                 if (dbChatId) {
-                  const { error: selfErr } = await supabase.from('chat_members')
-                    .upsert({ chat_id: dbChatId, profile_id: userData.dbId }, { onConflict: 'chat_id,profile_id' })
-                  if (selfErr) console.warn('chat_members self insert error:', selfErr.message)
-                  if (ev.hostId) {
-                    const { error: hostErr } = await supabase.from('chat_members')
-                      .upsert({ chat_id: dbChatId, profile_id: ev.hostId }, { onConflict: 'chat_id,profile_id' })
-                    if (hostErr) console.warn('chat_members host insert error:', hostErr.message)
-                  }
+                  const { error: joinErr } = await supabase.rpc('join_party_chat', {
+                    p_chat_id: dbChatId,
+                    p_host_id: ev.hostId ?? null,
+                  })
+                  if (joinErr) console.warn('join_party_chat error:', joinErr.message)
                 }
               }
               // For community events: prepend host profile to members list
@@ -5322,8 +5354,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onJoinCrew={async (ev: any) => {
               const preview = crewPreviewMap[ev.id]
               if (preview && preview.chatId) {
-                // Join existing chat
-                await supabase.from('chat_members').insert({ chat_id: preview.chatId, profile_id: userData?.dbId })
+                // Join existing chat (via RPC so RLS doesn't drop the membership)
+                const { error: joinErr } = await supabase.rpc('join_party_chat', { p_chat_id: preview.chatId, p_host_id: ev.hostId ?? null })
+                if (joinErr) console.warn('join_party_chat error:', joinErr.message)
                 // Mark self as confirmed so we don't appear in others' VibeCheck
                 await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                 const memberProfiles = preview.members
@@ -5344,7 +5377,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 const { data: chatId, error: rpcErr } = await supabase.rpc('get_or_create_party_chat', { p_event_id: ev.id, p_title: ev.title }).single()
                 if (!chatId) { console.error('get_or_create_party_chat error:', rpcErr); showToast('Please try again', 'Something went wrong', '⚠️'); return }
                 // Add only self — others join when they tap confirm from vibe check
-                await supabase.from('chat_members').upsert({ chat_id: chatId, profile_id: userData?.dbId }, { onConflict: 'chat_id,profile_id' })
+                const { error: joinErr } = await supabase.rpc('join_party_chat', { p_chat_id: chatId, p_host_id: ev.hostId ?? null })
+                if (joinErr) console.warn('join_party_chat error:', joinErr.message)
                 await supabase.from('event_attendees').update({ status: 'confirmed' }).eq('event_ref_id', ev.id).eq('profile_id', userData?.dbId)
                 const { data: members } = await supabase
                   .from('chat_members').select('profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, goal)')
@@ -5993,7 +6027,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 {/* Step content in ScrollView */}
                 <ScrollView
                   ref={createScrollRef}
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 + createKbHeight }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   style={{ flex: 1 }}>
@@ -6481,7 +6515,6 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             { id: 'any',    label: 'Anyone',       sub: 'Open to everyone' },
                             { id: 'women',  label: 'Women only',   sub: 'Only women can join' },
                             { id: 'men',    label: 'Men only',     sub: 'Only men can join' },
-                            { id: 'mixed',  label: 'Mixed group',  sub: 'Mix of women and men' },
                           ].map(opt => {
                             const sel = createCrewPref === opt.id
                             return (
@@ -6543,8 +6576,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     </View>
                   ) : (
                     <TouchableOpacity
-                      style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }]}
+                      disabled={creatingEvent}
+                      style={[s.btnPrimary, { shadowColor: '#6366F1', shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10 }, creatingEvent && { opacity: 0.7 }]}
                       onPress={async () => {
+                        if (creatingEvent) return
+                        setCreatingEvent(true)
+                        try {
                         // Build a proper event object
                         const TYPE_TO_CAT: Record<string, string> = {
                           padel:'sports',tennis:'sports',yoga:'sports',gym:'sports',water:'sports',
@@ -6642,8 +6679,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                         showToast('Others can find it in the feed now', 'Plan published', '✓')
+                        } catch (e) {
+                          console.warn('create event failed:', e)
+                          showToast('Please try again', 'Could not publish', '⚠️')
+                        } finally {
+                          setCreatingEvent(false)
+                        }
                       }}>
-                      <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create plan</Text>
+                      {creatingEvent
+                        ? <ActivityIndicator color="#fff" />
+                        : <Text style={[s.btnPrimaryText, { color: '#fff' }]}>Create plan</Text>}
                     </TouchableOpacity>
                   )}
                 </View>
@@ -7092,14 +7137,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 10 }}>
-                {notifications.length === 0 ? (
+                {(() => { const bellNotifs = notifications.filter(n => n.type !== 'new_message'); return (
+                bellNotifs.length === 0 ? (
                   <View style={{ alignItems: 'center', paddingVertical: 48 }}>
                     <Text style={{ fontSize: 42, marginBottom: 12 }}>🔔</Text>
                     <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E1B4B', marginBottom: 6 }}>All caught up!</Text>
                     <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>Notifications will appear here{'\n'}when something happens</Text>
                   </View>
                 ) : (
-                  notifications.map(n => {
+                  bellNotifs.map(n => {
                     const handleNotifTap = () => {
                       dismissNotif(n.id)
                       closeNotifPanel()
@@ -7160,7 +7206,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       </TouchableOpacity>
                     )
                   })
-                )}
+                ))})()}
               </ScrollView>
             </Animated.View>
           </View>
@@ -7197,11 +7243,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#1E1B4B' }}>You</Text>
                       {openChat.hostEventId && (
                         <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#6366F1' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>HOST</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={{ fontSize: 12, color: '#64748B' }}>That's you 👋</Text>
+                    <Text style={{ fontSize: 12, color: '#64748B' }}>That's you</Text>
                   </View>
                 </View>
                 {/* Approved members — compact: photo + name + chevron, no bio/transport/flags */}
@@ -7230,7 +7276,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: '#1E1B4B' }}>{p.name}{p.age ? `, ${p.age}` : ''}</Text>
                         {p._isHost && (
                           <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#6366F1' }}>
-                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>HOST 👑</Text>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>HOST</Text>
                           </View>
                         )}
                       </View>

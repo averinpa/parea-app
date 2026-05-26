@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   Zap, PartyPopper, MessageCircle, Clock, Check, Minus, Trash2, Crown,
-  CheckCircle, User,
+  CheckCircle, User, Trophy,
 } from 'lucide-react-native'
 import {
   Sparkle, MagnifyingGlass, CaretRight, MapPin as PhMapPin, Car as PhCar,
@@ -243,7 +243,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
   }
 
   const subtitle = (() => {
-    if (hasHostActivity) return '👑 You have join requests'
+    if (hasHostActivity) return 'You have join requests'
     const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
     if (myEvents.length > 0 && totalReal > 0) return `${totalReal} ${totalReal === 1 ? 'person' : 'people'} joined · tap to review`
     const lookingCount = myEvents.length + visibleHosted.length
@@ -348,7 +348,8 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                       activeOpacity={0.8}
                       style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(99,102,241,0.25)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.5)' }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#A5B4FC' }}>⚡ Auto-fill {autoFillCount} best match{autoFillCount !== 1 ? 'es' : ''}</Text>
+                      <Zap size={14} color="#A5B4FC" strokeWidth={2.5} fill="#A5B4FC" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#A5B4FC' }}>Auto-fill {autoFillCount} best match{autoFillCount !== 1 ? 'es' : ''}</Text>
                     </TouchableOpacity>
                   )}
                   {/* Ranked request cards */}
@@ -357,8 +358,12 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     const scoreColor = score >= 75 ? '#43E97B' : score >= 50 ? '#FBBF24' : '#F87171'
                     return (
                       <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
-                        {/* Rank indicator */}
-                        {idx === 0 && <Text style={{ position: 'absolute', top: 8, left: 10, fontSize: 11 }}>🏆</Text>}
+                        {/* Rank indicator — top vibe match */}
+                        {idx === 0 && (
+                          <View style={{ position: 'absolute', top: 6, left: 8, zIndex: 2 }}>
+                            <Trophy size={13} color="#FBBF24" strokeWidth={2} fill="#FBBF24" />
+                          </View>
+                        )}
                         <TouchableOpacity onPress={() => {
                           setPreviewProfile({
                             ...req,
