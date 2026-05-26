@@ -4794,7 +4794,21 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           return { ...prev, [chatId]: [...existing, newMsg] }
         })
         const lastMsgText = isSystemMsg ? m.text : `${sender?.name || 'Someone'}: ${m.text}`
-        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: lastMsgText, time: new Date().toISOString(), isNew: !isSystemMsg } : c))
+        // If the chat is open right now the user is reading it — don't mark it
+        // unread, and advance lastReadAt so it stays read after leaving/reloading.
+        const chatOpen = openChatRef.current?.id === chatId
+        const msgMs = new Date(m.created_at).getTime()
+        setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: lastMsgText, time: new Date().toISOString(), isNew: chatOpen ? c.isNew : !isSystemMsg } : c))
+        if (chatOpen && !isSystemMsg) {
+          setLastReadAtMap(prev => ({ ...prev, [chatId]: Math.max(prev[chatId] || 0, msgMs) }))
+          lastReadAtMapRef.current = { ...lastReadAtMapRef.current, [chatId]: Math.max(lastReadAtMapRef.current[chatId] || 0, msgMs) }
+          if (typeof chatId === 'number' && chatId < 1e12 && userData?.dbId) {
+            supabase.from('chat_members')
+              .update({ last_read_at: new Date(msgMs).toISOString() })
+              .eq('chat_id', chatId).eq('profile_id', userData.dbId)
+              .then(() => {})
+          }
+        }
         if (!isSystemMsg) {
           setOpenChat((cur: any) => {
             if (!cur || cur.id !== chatId) {
