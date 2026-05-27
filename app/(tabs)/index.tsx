@@ -2463,18 +2463,50 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           communityTimeById[r.id] = r.time
         })
       }
+      // Duo/official chats anchor expiry to the official event's date. The app's
+      // event_ref_id is offset by +100000 over official_events.id, so resolve it
+      // back and pull date_label (DD/MM/YYYY). Without this duo official-event
+      // chats never get an event date → never expire (the recurring "old chat
+      // won't disappear" bug). End-of-day + 24h grace keeps same-day events live.
+      const officialEndById: Record<number, number> = {} // keyed by app event_ref_id
+      const officialRefIds = (duoInvites || [])
+        .map((i: any) => i.event_ref_id)
+        .filter((r: any) => typeof r === 'number' && r >= 100000)
+      if (officialRefIds.length > 0) {
+        const { data: offRows } = await supabase
+          .from('official_events')
+          .select('id, date_label')
+          .in('id', officialRefIds.map((r: number) => r - 100000))
+        ;(offRows || []).forEach((r: any) => {
+          const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((r.date_label || '').trim())
+          if (m) {
+            const end = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 23, 59, 0, 0).getTime()
+            officialEndById[r.id + 100000] = end
+          }
+        })
+      }
       // Don't resurrect chats whose event ended >24h ago — otherwise the
       // auto-cleanup deletes them locally but this backfill re-adds them from
       // DB on the next login, so they appear permanent. Parse the community
       // event time and drop+delete anything past its 24h grace window.
       const EXPIRE_AFTER = 24 * 60 * 60 * 1000
       const nowMs = Date.now()
-      const isChatExpired = (c: any): boolean => {
+      // Resolve a chat's event end-time (ms): community group chats from
+      // community_events.time, duo/official chats from official_events.date_label.
+      const chatEventEndMs = (c: any): number | null => {
         const timeStr = c.event_id ? communityTimeById[c.event_id] : null
-        if (!timeStr) return false
-        const parsed = parseEventDateTime(timeStr)
-        if (!parsed) return false
-        return parsed.getTime() + EXPIRE_AFTER < nowMs
+        if (timeStr) {
+          const parsed = parseEventDateTime(timeStr)
+          if (parsed) return parsed.getTime()
+        }
+        const refId = inviteByChat[c.id]?.event_ref_id
+        if (refId != null && officialEndById[refId] != null) return officialEndById[refId]
+        return null
+      }
+      const isChatExpired = (c: any): boolean => {
+        const endMs = chatEventEndMs(c)
+        if (endMs == null) return false
+        return endMs + EXPIRE_AFTER < nowMs
       }
       const expiredToDelete: number[] = []
       const newChats = (memberships as any[])
@@ -2516,9 +2548,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             // parseable event time (e.g. duo with TBD) — never refreshes an
             // event-anchored expiry on reload.
             chatExpiresAt: (() => {
-              const timeStr = c.event_id ? communityTimeById[c.event_id] : null
-              const parsed = timeStr ? parseEventDateTime(timeStr) : null
-              return parsed ? parsed.getTime() + EXPIRE_AFTER : Date.now() + EXPIRE_AFTER
+              const endMs = chatEventEndMs(c)
+              return endMs != null ? endMs + EXPIRE_AFTER : Date.now() + EXPIRE_AFTER
             })(),
           }
         })

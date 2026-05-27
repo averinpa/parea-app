@@ -255,6 +255,9 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
   }
 
   const onPhotoPress = (idx: number) => {
+    // On web Alert.alert with action buttons doesn't fire callbacks, so the
+    // selfie/gallery sheet is a dead end — go straight to the file picker.
+    if (Platform.OS === 'web') { pickPhoto(idx, 'gallery'); return }
     if (photos[idx]) {
       Alert.alert('Photo options', '', [
         { text: 'Take a selfie', onPress: () => pickPhoto(idx, 'camera') },

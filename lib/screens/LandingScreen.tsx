@@ -78,10 +78,13 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
   useEffect(() => {
     // Warm all slide images so swiping between them doesn't decode on-demand
     // (the on-demand decode is what reads as "slow loading" between slides).
-    LANDING_SLIDES.forEach(s => {
-      const src = Image.resolveAssetSource(s.img)
-      if (src?.uri) Image.prefetch(src.uri).catch(() => {})
-    })
+    // resolveAssetSource is native-only — it throws on web, so guard it off.
+    if (Platform.OS !== 'web') {
+      LANDING_SLIDES.forEach(s => {
+        const src = Image.resolveAssetSource(s.img)
+        if (src?.uri) Image.prefetch(src.uri).catch(() => {})
+      })
+    }
     Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start()
     // Paint the window background dark so on Android edge-to-edge devices
     // the 3-button nav bar area doesn't show as a white system strip
