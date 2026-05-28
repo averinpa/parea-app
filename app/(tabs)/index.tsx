@@ -2408,6 +2408,29 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         .map(m => (m.chats as any)?.id)
         .filter((id: any) => typeof id === 'number')
       if (dbChatIds.length === 0) return
+      // Reconcile: drop local chats that are gone from the DB (left/deleted/
+      // expired elsewhere, e.g. a duplicate chat we cleaned up). The persisted
+      // AsyncStorage list only ever grew, so a server-side delete kept
+      // reappearing on every reload. Only prune confirmed DB-backed chats
+      // (duo/group) the user is no longer a member of — never an optimistic
+      // chat (isNew) or one created in the last minute, whose membership row
+      // may not have landed yet. Guarded by dbChatIds.length > 0 above so a
+      // transient empty fetch can't wipe the whole list.
+      {
+        const dbIdSet = new Set<number>(dbChatIds as number[])
+        setChatList(prev => {
+          const next = prev.filter((c: any) => {
+            if (c.type !== 'duo' && c.type !== 'group') return true
+            if (typeof c.id !== 'number') return true
+            if (dbIdSet.has(c.id)) return true
+            if (c.isNew) return true
+            const createdMs = Date.parse(c.time)
+            if (!isNaN(createdMs) && Date.now() - createdMs < 60_000) return true
+            return false
+          })
+          return next.length === prev.length ? prev : next
+        })
+      }
       // Skip chats already in local list (realtime / AsyncStorage already
       // captured them) and chats whose event was explicitly cancelled. Dedup
       // by event_id too — older local chats may carry a "stable local id"
