@@ -16,7 +16,7 @@ import { DobBottomSheet } from '../components/DobBottomSheet'
 import {
   INTERESTS_BY_CATEGORY, INTEREST_CATEGORY_PALETTE, LANGUAGES_LIST,
   BENTO_SONGS, BENTO_FLAGS, BENTO_MOODS, MAGIC_BIOS,
-  MUSIC_GENRES, PRIMARY_GENRE_COUNT, DEALBREAKERS,
+  MUSIC_GENRES, PRIMARY_GENRE_COUNT, DEALBREAKERS, CITIES,
 } from '../feed-constants'
 import { s } from '../feed-styles'
 import { uploadPhotoToStorage, isImageSafe } from '../photo-helpers'
@@ -41,6 +41,7 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
   }
   const [showAllGenres, setShowAllGenres] = useState(false)
   const [gender, setGender] = useState<string | null>(null)
+  const [homeCity, setHomeCity] = useState<string | null>(null)
   const [photos, setPhotos] = useState<(string | null)[]>([null, null, null])
   const [photoLoading, setPhotoLoading] = useState([false, false, false])
   const [photoStatus, setPhotoStatus] = useState<('idle' | 'verified' | 'error')[]>(['idle', 'idle', 'idle'])
@@ -127,7 +128,7 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
   }
 
   const canNext = () => {
-    if (step === 1) return name.trim().length >= 2 && dobValid && !!gender
+    if (step === 1) return name.trim().length >= 2 && dobValid && !!gender && !!homeCity
     if (step === 2) return photoStatus[0] === 'verified'
     if (step === 3) return interests.length > 0
     if (step === 4) return langs.length > 0
@@ -173,7 +174,7 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
       // before onFinish unmounted the screen — keep it covered and let the
       // parent's navigation tear it down.
       setTimeout(() => {
-        onFinish({ name, age: String(dobAgeNum || ageNum), gender, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy, dealbreakers })
+        onFinish({ name, age: String(dobAgeNum || ageNum), gender, city: homeCity, photos, bio, interests, langs, musicGenres, drinksPref, smokingPref, petsPref, socialEnergy, dealbreakers })
       }, 1600)
     }
   }
@@ -437,6 +438,31 @@ export function OnboardingScreen({ onBack, onFinish, userId }: { onBack: () => v
                               borderColor: active ? '#818CF8' : '#E2E8F0',
                             }}>
                             <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: active ? '#fff' : '#475569' }}>{label}</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </View>
+                  </View>
+
+                  <View>
+                    <Text style={s.label}>Where do you live?</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      {CITIES.map(c => {
+                        const active = homeCity === c
+                        return (
+                          <TouchableOpacity
+                            key={c}
+                            onPress={() => { setHomeCity(c); Haptics.selectionAsync() }}
+                            activeOpacity={0.8}
+                            style={{
+                              paddingVertical: 9,
+                              paddingHorizontal: 18,
+                              borderRadius: 99,
+                              backgroundColor: active ? '#818CF8' : 'rgba(255,255,255,0.7)',
+                              borderWidth: 1.5,
+                              borderColor: active ? '#818CF8' : '#E2E8F0',
+                            }}>
+                            <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: active ? '#fff' : '#475569' }}>{c}</Text>
                           </TouchableOpacity>
                         )
                       })}

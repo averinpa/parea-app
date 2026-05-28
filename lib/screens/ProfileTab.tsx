@@ -14,7 +14,7 @@ import { AnimatedInterestChip } from '../components/AnimatedInterestChip'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
 import {
   INTERESTS_BY_CATEGORY, INTEREST_CATEGORY_PALETTE, LANGUAGES_LIST,
-  MUSIC_GENRES, DEALBREAKERS,
+  MUSIC_GENRES, DEALBREAKERS, CITIES,
 } from '../feed-constants'
 import { INTEREST_ICON_MAP } from '../interest-icons'
 import { SOCIAL_ENERGY } from '../social-energy'
@@ -35,6 +35,7 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
   const [vibeEditOpen, setVibeEditOpen] = useState(false)
   const [langEditOpen, setLangEditOpen] = useState(false)
   const [interestsEditOpen, setInterestsEditOpen] = useState(false)
+  const [homeCityOpen, setHomeCityOpen] = useState(false)
   const [draftLangs, setDraftLangs] = useState<string[]>([])
   const [draftInterests, setDraftInterests] = useState<string[]>([])
   const [draft, setDraft] = useState<any>({})
@@ -365,6 +366,33 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
         </View>
       </Modal>
 
+      <Modal visible={homeCityOpen} transparent animationType="slide" onRequestClose={() => setHomeCityOpen(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setHomeCityOpen(false)} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: insets.bottom + 24 }}>
+          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1E1B4B' }}>Where you live</Text>
+            <TouchableOpacity onPress={() => setHomeCityOpen(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="x" size={16} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 13, color: '#94A3B8', paddingHorizontal: 20, marginBottom: 12 }}>Shown on your profile so your crew knows where you're based.</Text>
+          <View style={{ paddingHorizontal: 20, gap: 8 }}>
+            {CITIES.map(c => {
+              const on = userData?.city === c
+              return (
+                <TouchableOpacity key={c} onPress={() => { onUpdateUserData?.({ city: c }); Haptics.selectionAsync(); setHomeCityOpen(false) }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, backgroundColor: on ? '#F3EEFF' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#8B5CF6' : '#E2E8F0' }}>
+                  <Feather name="map-pin" size={16} color={on ? '#8B5CF6' : '#94A3B8'} />
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: on ? '#4338CA' : '#475569' }}>{c}</Text>
+                  {on && <Feather name="check" size={18} color="#8B5CF6" />}
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={editProfileOpen} transparent animationType="slide" onRequestClose={() => setEditProfileOpen(false)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }} activeOpacity={1} onPress={() => setEditProfileOpen(false)} />
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '80%' }}>
@@ -377,20 +405,20 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>City</Text>
-              <TouchableOpacity onPress={() => { setEditProfileOpen(false); setTimeout(() => setCityOpen?.(true), 300) }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.8, textTransform: 'uppercase' }}>Where you live</Text>
+              <TouchableOpacity onPress={() => setHomeCityOpen(true)}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>Edit →</Text>
               </TouchableOpacity>
             </View>
-            {city ? (
+            {userData?.city ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#EEF2FF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7 }}>
                   <Feather name="map-pin" size={13} color="#6366F1" />
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#4338CA' }}>{city}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#4338CA' }}>{userData.city}</Text>
                 </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => { setEditProfileOpen(false); setTimeout(() => setCityOpen?.(true), 300) }}
+              <TouchableOpacity onPress={() => setHomeCityOpen(true)}
                 style={{ alignItems: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', marginBottom: 20 }}>
                 <Text style={{ fontSize: 13, color: '#94A3B8' }}>Add your city</Text>
               </TouchableOpacity>

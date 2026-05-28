@@ -150,8 +150,8 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
       if (userDb.includes('sober_only') && p.drinksPref === 'Social drinker') return { id: p.id, score: 0, reason: 'Drinking dealbreaker' }
       if (userDb.includes('pets_allergy') && p.hasPets) return { id: p.id, score: 0, reason: 'Pet allergy' }
       const score = scoreRequesterForHost(
-        { langs: p.langs, age: p.age, drinksPref: p.drinksPref, smokingPref: p.smokingPref, interests: p.interests, hasPets: p.hasPets },
-        { langs: userData.langs, age: userData.age, drinksPref: userData.drinksPref, smokingPref: userData.smokingPref, interests: userData.interests, dealbreakers: userData.dealbreakers }
+        { langs: p.langs, age: p.age, drinksPref: p.drinksPref, smokingPref: p.smokingPref, interests: p.interests, hasPets: p.hasPets, city: p.city },
+        { langs: userData.langs, age: userData.age, drinksPref: userData.drinksPref, smokingPref: userData.smokingPref, interests: userData.interests, dealbreakers: userData.dealbreakers, city: userData.city }
       )
       return { id: p.id, score, reason: 'Compatibility' }
     })
@@ -306,7 +306,6 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
               .map((req: any) => ({ ...req, _score: scoreRequesterForHost(req, userData || {}, ev.category) }))
               .sort((a: any, b: any) => b._score - a._score)
               .slice(0, 12)
-            const autoFillCount = Math.min(slotsLeft, scored.length)
             return (
               <View key={`host-${ev.id}`} style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.22)' }}>
                 <LinearGradient colors={ev.gradient as any} style={{ height: 7 }} />
@@ -339,20 +338,6 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                         : `${allRequests.length} request${allRequests.length > 1 ? 's' : ''} · ${slotsLeft} spot${slotsLeft !== 1 ? 's' : ''} left · AI-ranked ✨`}
                     </Text>
                   </View>
-                  {/* Auto-fill button */}
-                  {slotsLeft > 0 && scored.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        scored.slice(0, autoFillCount).forEach((req: any) => onApproveJoiner?.(ev.id, req))
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-                      }}
-                      activeOpacity={0.8}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(99,102,241,0.25)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.5)' }}
-                    >
-                      <Zap size={14} color="#A5B4FC" strokeWidth={2.5} fill="#A5B4FC" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#A5B4FC' }}>Auto-fill {autoFillCount} best match{autoFillCount !== 1 ? 'es' : ''}</Text>
-                    </TouchableOpacity>
-                  )}
                   {/* Ranked request cards */}
                   {scored.map((req: any, idx: number) => {
                     const score = req._score as number

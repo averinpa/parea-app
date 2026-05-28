@@ -42,6 +42,7 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
           name: full.name || profileProp.name,
           age: full.age || profileProp.age,
           gender: full.gender ?? profileProp.gender,
+          city: full.city ?? profileProp.city,
           bio: full.bio || profileProp.bio,
           photos: full.photos || profileProp.photos,
           photo: full.photos?.[0] || profileProp.photo,
@@ -201,6 +202,7 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
             const genderRaw = (profile.gender || '').toLowerCase()
             const genderText = genderRaw === 'female' ? 'Female' : genderRaw === 'male' ? 'Male' : genderRaw ? genderRaw.charAt(0).toUpperCase() + genderRaw.slice(1) : ''
             const rows = [
+              profile.city && { label: 'Lives in', value: profile.city },
               genderText && { label: 'Gender', value: genderText },
               langText && { label: 'Languages', value: langText },
               { label: 'Getting there', value: transportText },

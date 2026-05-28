@@ -109,8 +109,8 @@ export const MAX_AGE_GAP = 15
 
 // Score a join requester's compatibility with the host (0–100)
 export function scoreRequesterForHost(
-  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[]; hasPets?: boolean },
-  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[]; dealbreakers?: string[] },
+  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[]; hasPets?: boolean; city?: string },
+  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[]; dealbreakers?: string[]; city?: string },
   eventCategory?: string
 ): number {
   // Hard host dealbreakers — return 0 so they're filtered out of the approval list.
@@ -138,6 +138,8 @@ export function scoreRequesterForHost(
   if (overlap >= 2) score += 20
   else if (overlap === 1) score += 12
   else if (eventCategory && reqI.includes(eventCategory)) score += 8
+  // Same home city — easier to actually meet up / carpool (+12 bonus)
+  if (req.city && host.city && req.city.toLowerCase() === host.city.toLowerCase()) score += 12
   return Math.min(100, score)
 }
 

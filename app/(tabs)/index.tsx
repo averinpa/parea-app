@@ -3662,6 +3662,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           drinksPref: p.drinks_pref || '',
           smokingPref: p.smoking_pref || '',
           hasPets: !!p.has_pets,
+          city: p.city || null,
           transport: req.transport || null,
           _real: true,
         })
@@ -6840,14 +6841,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setCityOpen(false)}>
           <View style={s.cityPickerSheet}>
             <Text style={s.cityPickerTitle}>Select City</Text>
+            {/* Feed filter only — does NOT change the user's home city (profiles.city).
+                Home city is set in registration / Edit Profile. */}
             <TouchableOpacity style={[s.cityPickerItem, city === null && { backgroundColor: 'rgba(99,102,241,0.08)' }]}
-              onPress={() => { setCity(null); setCityOpen(false); onUpdateUserData?.({ city: null }) }}>
+              onPress={() => { setCity(null); setCityOpen(false) }}>
               <Text style={[{ fontSize: 16, color: '#334155' }, city === null && { color: '#6366F1', fontWeight: '700' }]}>All Cities</Text>
               {city === null && <Ionicons name="checkmark" size={18} color="#6366F1" />}
             </TouchableOpacity>
             {CITIES.map(c => (
               <TouchableOpacity key={c} style={[s.cityPickerItem, city === c && { backgroundColor: 'rgba(99,102,241,0.08)' }]}
-                onPress={() => { setCity(c); setCityOpen(false); onUpdateUserData?.({ city: c }) }}>
+                onPress={() => { setCity(c); setCityOpen(false) }}>
                 <Text style={[{ fontSize: 16, color: '#334155' }, city === c && { color: '#6366F1', fontWeight: '700' }]}>{c}</Text>
                 {city === c && <Ionicons name="checkmark" size={18} color="#6366F1" />}
               </TouchableOpacity>
@@ -7620,6 +7623,7 @@ export default function App() {
         name: data.name,
         age: parseInt(data.age) || null,
         gender: data.gender || null,
+        city: data.city || null,
         bio: data.bio,
         photos: finalPhotos,
         langs: data.langs || [],
