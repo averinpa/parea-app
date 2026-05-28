@@ -2963,8 +2963,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
+  // Gated on plansHydrated: the joinedEvents backfill from DB (which sets
+  // plansHydrated=true on completion) must run FIRST. Otherwise this raced the
+  // backfill and ran with a half-empty joinedEvents, deleting valid attendance
+  // rows (a duo-seeker who'd joined vanished entirely — "as if never joined").
+  // After backfill, joinedOfficialIds covers every attended event except ones
+  // explicitly left (cancelledEventIds, which the backfill skips), so staleIds
+  // correctly resolves to just those left events.
   useEffect(() => {
-    if (!userData?.dbId || !persistLoadedState) return
+    if (!userData?.dbId || !persistLoadedState || !plansHydrated) return
     // Use joinedEvents state directly (not ref) to avoid race with ref update order
     const joinedOfficialIds = new Set(
       Object.keys(joinedEvents).map(Number).filter(id => joinedEvents[id] && id > 100000)
@@ -2972,13 +2979,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     supabase.from('event_attendees').select('event_ref_id').eq('profile_id', userData.dbId)
       .then(({ data }) => {
         if (!data || data.length === 0) return
-        const staleIds = data.map((r: any) => r.event_ref_id).filter((id: number) => !joinedOfficialIds.has(id))
+        const staleIds = data.map((r: any) => r.event_ref_id).filter((id: number) => id > 100000 && !joinedOfficialIds.has(id))
         if (staleIds.length > 0) {
           supabase.from('event_attendees').delete().eq('profile_id', userData.dbId).in('event_ref_id', staleIds)
             .then(({ error }) => { if (error) console.warn('stale event_attendees cleanup error:', error.message) })
         }
       })
-  }, [userData?.dbId, persistLoadedState])
+  }, [userData?.dbId, persistLoadedState, plansHydrated])
 
   // ── Tonight's Vibe ────────────────────────────────────────────────────────
   const [tonightVibe, setTonightVibe] = useState({
