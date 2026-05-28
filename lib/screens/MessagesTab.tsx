@@ -12,7 +12,7 @@ import {
 } from 'lucide-react-native'
 import { ChatTeardrop, Car as PhCar, MapPin as PhMapPin, Users as PhUsers, UsersThree as PhUsersThree, Confetti as PhConfetti, HandWaving as PhHand } from '../phosphor-icons'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
-import { MOCK_EVENTS, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, FLAG_MAP } from '../feed-constants'
+import { MOCK_EVENTS, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, FLAG_MAP, CATEGORY_COLOR, CATEGORY_BG } from '../feed-constants'
 import { isEventPast, prettyEventTime, parseEventDateTime } from '../feed-helpers'
 
 // Transport chip — Phosphor icon (duotone) matching VibeCheck's RockingTransportPill,
@@ -361,9 +361,19 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                       </View>
                     </View>
 
-                    {/* Format + transport chips */}
-                    {(fmt || trsp) && (
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                    {/* Theme + format + transport chips */}
+                    {(ev.category || fmt || trsp) && (
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                        {ev.category && (() => {
+                          const themeColor = CATEGORY_COLOR[ev.category] || '#6366F1'
+                          const themeBg = (CATEGORY_BG[ev.category] || ['#EEF2FF'])[0]
+                          const themeLabel = ev.category.charAt(0).toUpperCase() + ev.category.slice(1)
+                          return (
+                            <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: themeBg }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: themeColor }}>{themeLabel}</Text>
+                            </View>
+                          )
+                        })()}
                         {fmt && (() => {
                           const FmtIcon = format === 'party' ? PhConfetti : format === 'squad' ? PhUsersThree : PhUsers
                           return (
