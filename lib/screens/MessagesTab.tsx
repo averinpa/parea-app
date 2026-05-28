@@ -10,10 +10,37 @@ import {
   CalendarDays, MessageCircle, Crown, Trash2, Users, ChevronRight, CheckCircle,
   Clock, MoreHorizontal, X, Check, User,
 } from 'lucide-react-native'
-import { ChatTeardrop } from '../phosphor-icons'
+import { ChatTeardrop, Car as PhCar, MapPin as PhMapPin, Users as PhUsers, UsersThree as PhUsersThree, Confetti as PhConfetti, HandWaving as PhHand } from '../phosphor-icons'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
-import { MOCK_EVENTS, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, CATEGORY_EMOJI, FLAG_MAP } from '../feed-constants'
+import { MOCK_EVENTS, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, FLAG_MAP } from '../feed-constants'
 import { isEventPast, prettyEventTime, parseEventDateTime } from '../feed-helpers'
+
+// Transport chip — Phosphor icon (duotone) matching VibeCheck's RockingTransportPill,
+// with the same playful rock on "Need a ride" so the row feels alive. Light theme.
+function AnimatedTransportChip({ transportKey, label }: { transportKey: string; label: string }) {
+  const rock = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    if (transportKey !== 'lift') return
+    const anim = Animated.loop(Animated.sequence([
+      Animated.timing(rock, { toValue: 1, duration: 280, useNativeDriver: true }),
+      Animated.timing(rock, { toValue: -1, duration: 280, useNativeDriver: true }),
+      Animated.timing(rock, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.delay(3200),
+    ]))
+    anim.start()
+    return () => anim.stop()
+  }, [transportKey])
+  const rotate = rock.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] })
+  const Icon = transportKey === 'meet' ? PhMapPin : transportKey === 'lift' ? PhHand : PhCar
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+      <Animated.View style={transportKey === 'lift' ? { transform: [{ rotate }] } : undefined}>
+        <Icon size={13} color="#64748B" weight="duotone" />
+      </Animated.View>
+      <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{label}</Text>
+    </View>
+  )
+}
 
 export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, crewsByEvent = {}, officialEventChatMap = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {}, onBlockUser, onReportUser, plansLoading = false }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
@@ -262,10 +289,14 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
               // Smart status badge
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
               const statusLabel = isCommunity
-                ? (isConfirmed ? 'Confirmed ✅' : joinedEvents[ev.id] === 'pending' ? 'Pending ⏳' : 'Approved ✓')
-                : isConfirmed ? 'Confirmed ✅'
-                : hasReal ? `${nonPassedAttendees.length} found 🎯`
+                ? (isConfirmed ? 'Confirmed' : joinedEvents[ev.id] === 'pending' ? 'Pending' : 'Approved')
+                : isConfirmed ? 'Confirmed'
+                : hasReal ? `${nonPassedAttendees.length} found`
                 : 'Looking...'
+              // Matching Lucide icon for the status pill (unified style, no inline emoji).
+              const StatusIcon = isConfirmed ? CheckCircle
+                : isCommunity ? (joinedEvents[ev.id] === 'pending' ? Clock : Check)
+                : hasReal ? Users : Clock
               const statusColor = isCommunity
                 ? (isConfirmed ? '#16a34a' : joinedEvents[ev.id] === 'pending' ? '#d97706' : '#16a34a')
                 : isConfirmed ? '#16a34a' : hasReal ? '#16a34a' : '#d97706'
@@ -306,7 +337,8 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                         </View>
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: statusBg }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: statusBg }}>
+                          <StatusIcon size={11} color={statusColor} strokeWidth={2.5} />
                           <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor }}>{statusLabel}</Text>
                         </View>
                         <TouchableOpacity
@@ -332,17 +364,17 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                     {/* Format + transport chips */}
                     {(fmt || trsp) && (
                       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                        {fmt && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
-                            <Text style={{ fontSize: 13 }}>{fmt.emoji}</Text>
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: fmt.color }}>{fmt.label}</Text>
-                          </View>
-                        )}
+                        {fmt && (() => {
+                          const FmtIcon = format === 'party' ? PhConfetti : format === 'squad' ? PhUsersThree : PhUsers
+                          return (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: `${fmt.color}18`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
+                              <FmtIcon size={13} color={fmt.color} weight="duotone" />
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: fmt.color }}>{fmt.label}</Text>
+                            </View>
+                          )
+                        })()}
                         {trsp && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(100,116,139,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 }}>
-                            <Text style={{ fontSize: 13 }}>{trsp.emoji}</Text>
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>{trsp.label}</Text>
-                          </View>
+                          <AnimatedTransportChip transportKey={userEventTransport[ev.id]} label={trsp.label} />
                         )}
                       </View>
                     )}
@@ -384,13 +416,13 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                               // so 2/2 is implied. crewsByEvent (which joinedCrew comes from)
                               // is computed for group chats and is empty for duos, which is why
                               // we can't lean on joinedCrew here.
-                              if (myCrewChat.type === 'duo') return 'Crew confirmed 🎉'
+                              if (myCrewChat.type === 'duo') return 'Crew confirmed'
                               // Trust joinedCrew (DB-driven chat_members count). If it doesn't
                               // exist for this event we're no longer in a crew (partner left
                               // or we left) — surface that explicitly instead of a stale "2/2".
                               if (!joinedCrew?.members) return 'Looking for crew…'
                               const count = joinedCrew.members.length
-                              return count >= cap ? 'Crew confirmed 🎉' : `${count}/${cap} in crew`
+                              return count >= cap ? 'Crew confirmed' : `${count}/${cap} in crew`
                             })()}
                           </Text>
                         </View>
@@ -449,7 +481,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                 })()
                 return (
                   <View key={ev.id} style={{ borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.04)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10, opacity: 0.7 }}>
-                    <Text style={{ fontSize: 18 }}>{CATEGORY_EMOJI[ev.category] || '📅'}</Text>
+                    <CalendarDays size={18} color="#94A3B8" />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={{ fontSize: 13, fontWeight: '700', color: '#64748B' }} numberOfLines={1}>{ev.title}</Text>
                       <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }} numberOfLines={1}>

@@ -63,3 +63,4 @@ export { default as Laptop }           from 'phosphor-react-native/lib/commonjs/
 export { default as Sailboat }         from 'phosphor-react-native/lib/commonjs/icons/Sailboat'
 export { default as Check }            from 'phosphor-react-native/lib/commonjs/icons/Check'
 export { default as X }                from 'phosphor-react-native/lib/commonjs/icons/X'
+export { default as Users }            from 'phosphor-react-native/lib/commonjs/icons/Users'

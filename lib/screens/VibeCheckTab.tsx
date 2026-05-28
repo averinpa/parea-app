@@ -62,7 +62,7 @@ function RockingTransportPill({ transport }: { transport: string }) {
   }, [transport])
   const rotate = rock.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] })
   const label = transport === 'car' ? 'Can give a lift' : transport === 'lift' ? 'Need a ride' : 'Meeting there'
-  const Icon = transport === 'meet' ? PhMapPin : PhCar
+  const Icon = transport === 'meet' ? PhMapPin : transport === 'lift' ? PhHand : PhCar
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
       <Animated.View style={transport === 'lift' ? { transform: [{ rotate }] } : undefined}>

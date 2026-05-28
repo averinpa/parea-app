@@ -2878,7 +2878,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             }
             if (!last) return cleared
             const previewText = last.from === 'me' ? `You: ${last.text}` : (last.senderName ? `${last.senderName}: ${last.text}` : last.text)
-            return { ...cleared, lastMsg: previewText || cleared.lastMsg, time: last.time || cleared.time }
+            return { ...cleared, lastMsg: previewText || cleared.lastMsg, time: last._ts || cleared.time }
           })
           setChatList(patched)
         }
@@ -4593,6 +4593,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               replyTo: m.reply_to_text ? { text: m.reply_to_text, senderName: m.reply_to_sender || '' } : undefined,
               _dbId: m.id,
               _senderId: m.sender_id,
+              _ts: m.created_at,
             }
           })
           setChatMessages(prev => {
@@ -4614,7 +4615,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               ? `You: ${last.text}`
               : (last.senderName ? `${last.senderName}: ${last.text}` : last.text)
             setChatList(prev => prev.map(c =>
-              c.id === chatId ? { ...c, lastMsg: previewText, time: last.time || c.time } : c
+              c.id === chatId ? { ...c, lastMsg: previewText, time: last._ts || c.time } : c
             ))
           }
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 400)
