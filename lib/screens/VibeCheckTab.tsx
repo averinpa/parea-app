@@ -45,33 +45,6 @@ function PulsingStatusBadge({ label, color, bg, border }: { label: string; color
   )
 }
 
-function RockingTransportPill({ transport }: { transport: string }) {
-  const rock = useRef(new Animated.Value(0)).current
-  useEffect(() => {
-    if (transport !== 'lift') return
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(rock, { toValue: 1,  duration: 280, useNativeDriver: true }),
-        Animated.timing(rock, { toValue: -1, duration: 280, useNativeDriver: true }),
-        Animated.timing(rock, { toValue: 0,  duration: 200, useNativeDriver: true }),
-        Animated.delay(3200),
-      ])
-    )
-    anim.start()
-    return () => anim.stop()
-  }, [transport])
-  const rotate = rock.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] })
-  const label = transport === 'car' ? 'Can give a lift' : transport === 'lift' ? 'Need a ride' : 'Meeting there'
-  const Icon = transport === 'meet' ? PhMapPin : transport === 'lift' ? PhHand : PhCar
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
-      <Animated.View style={transport === 'lift' ? { transform: [{ rotate }] } : undefined}>
-        <Icon size={12} color="rgba(255,255,255,0.55)" weight="duotone" />
-      </Animated.View>
-      <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.55)' }}>{label}</Text>
-    </View>
-  )
-}
 
 export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, passedIdsByEvent = {}, onPassMember, onJoinCrew, crewsByEvent = {}, onJoinSpecificCrew, onCreateNewCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
   const insets = useSafeAreaInsets()
@@ -519,7 +492,6 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
             // sending it through crew-list would show a bulk Confirm button that
             // invites a phantom partner when there's stale event_attendees data.
             const isCrewMode = !isCommunity && format !== '1+1'
-            const transport  = userEventTransport?.[ev.id] || 'meet'
             // For community events: use real participant count as crew size
             const cap        = isCommunity ? Math.min(ev.participantsCount || 5, 5) : (VIBE_FORMAT_MAX[format] || 5)
             const threshold  = isCommunity ? cap : (VIBE_FORMAT_THRESHOLD[format] || cap)
@@ -535,8 +507,8 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
             const isActive   = hasRealAttendees || isCommunity
             // Status label (excludes skipped people from count)
             const statusLabel = isCommunity
-              ? (hasRealAttendees ? `${realAttendees.length + 1} in group 🎯` : 'HOST APPROVED ✓')
-              : realPartners.length > 0 ? `${realPartners.length} found 🎯` : (isParty ? 'GROUP ACTIVE 🔥' : 'Looking...')
+              ? (hasRealAttendees ? `${realAttendees.length + 1} in group` : 'HOST APPROVED')
+              : realPartners.length > 0 ? `${realPartners.length} found` : (isParty ? 'GROUP ACTIVE' : 'Looking...')
             const hasReal = realPartners.length > 0
             const statusColor = (isActive || hasReal) ? '#43E97B' : '#FBBF24'
             const statusBg    = (isActive || hasReal) ? 'rgba(67,233,123,0.15)' : 'rgba(251,191,36,0.13)'
@@ -566,15 +538,6 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     )}
                   </View>
 
-                  {/* My choices pills */}
-                  <View style={{ flexDirection: 'row', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
-                    <View style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)' }}>
-                      <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: 'rgba(255,255,255,0.55)' }}>
-                        {isCommunity ? ev.category : VIBE_FORMAT_LABEL[format]}
-                      </Text>
-                    </View>
-                    <RockingTransportPill transport={transport} />
-                  </View>
 
                   {/* Confirmation deadline banner — disabled. The yellow alarm-clock
                       reminder duplicated info shown by the green "approved, tap to
@@ -688,7 +651,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                             )}
                             <View style={{ flex: 1 }}>
                               <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{inviter.name || 'Someone'}</Text>
-                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>wants to go together 🎯</Text>
+                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>wants to go together</Text>
                               {inviterScore != null && (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                                   <Sparkle size={10} color={scoreColor} weight="fill" />
@@ -745,6 +708,30 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                               </View>
                             )}
                             {currentPerson!.bio ? <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3, lineHeight: 16 }} numberOfLines={1}>{currentPerson!.bio}</Text> : null}
+                            {/* Their format + transport — so you see they want e.g. a Squad
+                                and need a ride, not just your own preference. */}
+                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                              {(() => {
+                                const gm = currentPerson!.groupMax
+                                const fmtLabel = gm === 2 ? 'Duo' : (gm != null && gm >= 6) ? 'Party' : 'Squad'
+                                return (
+                                  <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: 'rgba(167,139,250,0.15)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.3)' }}>
+                                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#A78BFA', letterSpacing: 0.3 }}>{fmtLabel}</Text>
+                                  </View>
+                                )
+                              })()}
+                              {currentPerson!.transport && (() => {
+                                const tk = currentPerson!.transport
+                                const TIcon = tk === 'meet' ? PhMapPin : tk === 'lift' ? PhHand : PhCar
+                                const tLabel = tk === 'car' ? 'Can drive' : tk === 'lift' ? 'Needs a ride' : 'Meets there'
+                                return (
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                    <TIcon size={11} color="rgba(255,255,255,0.45)" weight="duotone" />
+                                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: '600' }}>{tLabel}</Text>
+                                  </View>
+                                )
+                              })()}
+                            </View>
                           </View>
                           <TouchableOpacity activeOpacity={0.85}
                             onPress={openPreview}
@@ -912,7 +899,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                   <View style={{ flex: 1 }}>
                                     <Text style={{ fontSize: 13, fontWeight: '800', color: '#43E97B' }}>You're in a crew of {memberCount}</Text>
                                     <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
-                                      {memberCount < maxSize ? `${maxSize - memberCount} spots left for others to join` : 'Crew is full'}
+                                      {memberCount < maxSize ? `Still looking — ${maxSize - memberCount} more can join your crew` : 'Crew is full'}
                                     </Text>
                                   </View>
                                 </View>
@@ -928,9 +915,12 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                           }
                           // Not in any crew yet — show existing crews + Create new.
                           // Visual priority is JOIN (existing crews), not CREATE.
-                          // Filter out crews that are full (size >= maxSize) AND orphan
-                          // empty crews (zero members — leftovers from earlier tests).
-                          const joinable = crews.filter((c: any) => c.members.length > 0 && c.members.length < maxSize)
+                          // Filter out crews that are full AND orphan empty crews (zero
+                          // members — leftovers). "Full" is judged by the CREW's own
+                          // maxSize, not the viewer's format — so a duo-seeker still sees
+                          // a squad crew of 5 (shown as "3 of 5 · Squad"), not just crews
+                          // matching their own size.
+                          const joinable = crews.filter((c: any) => c.members.length > 0 && c.members.length < (c.maxSize || maxSize))
                           return (
                             <View style={{ gap: 8 }}>
                               {joinable.length > 0 ? (

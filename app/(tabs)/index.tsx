@@ -5171,8 +5171,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 .insert({ event_id: ev.id, type: 'group', last_msg: '⏳ Waiting for crew to join...', format: creatorFormat })
                 .select('id').single()
               if (!newChat) { console.error('chat insert error:', error); showToast('Try again', 'Could not create crew', '⚠️'); return }
-              await supabase.from('chat_members')
-                .upsert({ chat_id: newChat.id, profile_id: userData.dbId }, { onConflict: 'chat_id,profile_id' })
+              // Add the creator via the SECURITY DEFINER RPC — a direct chat_members
+              // upsert is blocked by RLS and left the new crew chat memberless
+              // (invisible to the creator). No host on a self-started crew.
+              const { error: joinErr } = await supabase.rpc('join_party_chat', { p_chat_id: newChat.id, p_host_id: null })
+              if (joinErr) console.warn('join_party_chat error (create crew):', joinErr.message)
               // Same pattern as onJoinSpecificCrew: don't overwrite existing sizes.
               {
                 if (myRow && myRow.group_size_min != null && myRow.group_size_max != null) {
