@@ -2731,11 +2731,14 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         const { data: mine } = await supabase.from('event_attendees').select('crew_pref').eq('event_ref_id', evId).eq('profile_id', userData.dbId).maybeSingle()
         const myPref = mine?.crew_pref || 'any'
         const myGender = (userData as any)?.gender
+        // Format/size is a hint shown on the card, NOT a hard filter — otherwise a
+        // duo-seeker and a squad-seeker never see each other and both dead-end on
+        // "Start your own crew". Match the eventAttendeesMap path which already
+        // dropped this size overlap check. Everyone on the event is discoverable.
         const { data: rawReady } = await supabase
           .from('event_attendees').select('*, profiles(*)')
           .eq('event_ref_id', evId).in('status', ['ready', 'confirmed'])
           .neq('profile_id', userData.dbId)
-          .lte('group_size_min', userMax).gte('group_size_max', userMin)
         const readyData = (rawReady || []).filter((r: any) => fitsCrewPref(myPref, myGender, r.crew_pref || 'any', r.profiles?.gender))
         const othersCount = readyData?.length || 0
         const confirmedCount = (readyData || []).filter((r: any) => r.status === 'confirmed').length

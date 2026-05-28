@@ -701,12 +701,12 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                           )}
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{currentPerson!.name}</Text>
-                            {scoreVal != null && (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                                <Sparkle size={10} color={scoreColor} weight="fill" />
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: scoreColor }}>{scoreVal}% vibe match</Text>
-                              </View>
-                            )}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <Sparkle size={10} color={scoreVal != null ? scoreColor : 'rgba(255,255,255,0.4)'} weight="fill" />
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: scoreVal != null ? scoreColor : 'rgba(255,255,255,0.4)' }}>
+                                {scoreVal != null ? `${scoreVal}% vibe match` : 'Matching…'}
+                              </Text>
+                            </View>
                             {currentPerson!.bio ? <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3, lineHeight: 16 }} numberOfLines={1}>{currentPerson!.bio}</Text> : null}
                             {/* Their format + transport — so you see they want e.g. a Squad
                                 and need a ride, not just your own preference. */}
@@ -888,6 +888,39 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                           // refreshed crewsByEvent yet — joinedEvents+officialEventChatMap
                           // already says "they're in a crew", so show the badge immediately.
                           const isOptimisticallyInCrew = !myCrew && joinedEvents?.[ev.id] === 'confirmed' && !!officialEventChatMap[ev.id]
+                          // Surface an incoming invite in crew mode too — otherwise a
+                          // squad/party invitee only ever sees "Start your own crew" and
+                          // never the invite someone sent them.
+                          const crewIncoming = incomingCrewInvites.find((inv: any) => inv.event_ref_id === ev.id)
+                          if (crewIncoming && !myCrew && !isOptimisticallyInCrew) {
+                            const inviter = crewIncoming.inviter || {}
+                            return (
+                              <View style={{ gap: 12 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
+                                  {inviter.photos?.[0] ? (
+                                    <Image source={{ uri: inviter.photos[0] }} style={{ width: 44, height: 44, borderRadius: 22 }} />
+                                  ) : (
+                                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: inviter.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
+                                      <Text style={{ fontSize: 18, color: '#fff', fontWeight: '800' }}>{(inviter.name || '?').charAt(0)}</Text>
+                                    </View>
+                                  )}
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{inviter.name || 'Someone'} invited you</Text>
+                                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Accept to join their crew</Text>
+                                  </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+                                  <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(crewIncoming)} style={{ paddingHorizontal: 26, borderRadius: 99, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#43E97B', minWidth: 120, justifyContent: 'center' }}>
+                                    <Zap size={14} color="#052e16" fill="#052e16" />
+                                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#052e16' }}>Accept</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity activeOpacity={0.8} onPress={() => onDeclineInvite?.(crewIncoming)} style={{ paddingHorizontal: 20, borderRadius: 99, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', minWidth: 90, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.4)' }}>Decline</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            )
+                          }
                           if (myCrew || isOptimisticallyInCrew) {
                             const memberCount = myCrew?.members.length ?? 1
                             return (
@@ -968,14 +1001,12 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                       <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 3 }}>
                                         {crew.members.length} of {crewMax} · {crewMax - crew.members.length} {crewMax - crew.members.length === 1 ? 'spot' : 'spots'} left
                                       </Text>
-                                      {crew.avgMatch > 0 && (
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                                          <Sparkle size={10} color={scoreColor} weight="fill" />
-                                          <Text style={{ fontSize: 11, fontWeight: '700', color: scoreColor }}>
-                                            {crew.avgMatch}% vibe match
-                                          </Text>
-                                        </View>
-                                      )}
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                        <Sparkle size={10} color={crew.avgMatch > 0 ? scoreColor : 'rgba(255,255,255,0.4)'} weight="fill" />
+                                        <Text style={{ fontSize: 11, fontWeight: '700', color: crew.avgMatch > 0 ? scoreColor : 'rgba(255,255,255,0.4)' }}>
+                                          {crew.avgMatch > 0 ? `${crew.avgMatch}% vibe match` : 'Matching…'}
+                                        </Text>
+                                      </View>
                                     </View>
                                     {/* Two explicit pills, stacked with breathing room.
                                         View = preview, Join = commit. */}
