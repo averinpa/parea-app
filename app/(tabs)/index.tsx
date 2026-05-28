@@ -3301,7 +3301,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (isDup) return prev
               return { ...prev, [chatId]: [...existing, newMsg] }
             })
-            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time } : c))
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time: payload.created_at } : c))
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
           } else {
             // Chat is closed — mark unread
@@ -3924,7 +3924,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           Object.keys(updated).forEach(id => {
             const numId = +id
             const isMockOrOfficial = MOCK_EVENTS.some(e => e.id === numId) || numId > 100000
-            if (!isMockOrOfficial && !validEventIds.has(numId)) {
+            // Skip removal for events requested in the last 15s — the join_request
+            // upsert may not be visible to this poll yet (commit/RLS lag); without
+            // this grace the freshly-set 'pending' is wiped then restored (flicker).
+            const justRequested = recentlyRequestedRef.current[numId] && (Date.now() - recentlyRequestedRef.current[numId] < 15000)
+            if (!isMockOrOfficial && !validEventIds.has(numId) && !justRequested) {
               const wasJoinedOrConfirmed = updated[numId] === 'joined' || updated[numId] === 'confirmed'
               const cancelledByUser = cancelledEventIdsRef.current.has(numId)
               if (wasJoinedOrConfirmed && !cancelledByUser) {
@@ -4302,6 +4306,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // checkMatch: always match when user vibes (demo — every vibe is mutual)
   const checkMatch = (_seeker: any, _eventId?: number) => true
 
+  // Event ids the user just requested → guards the optimistic 'pending' from
+  // being wiped by the status poll before the DB upsert is visible (caused the
+  // "event disappears then reappears" flicker right after tapping Request).
+  const recentlyRequestedRef = useRef<Record<number, number>>({})
+
   const handleJoinEvent = (ev: any, transport?: string) => {
     const isFull = ev.participantsCount >= ev.maxParticipants
     if (isFull) return
@@ -4328,6 +4337,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     })
     // Side effects OUTSIDE the state updater
     if (!currentState && ev.type === 'community' && !ev.isHosted) {
+      recentlyRequestedRef.current[ev.id] = Date.now()
       // Insert real join request into DB
       if (userData?.dbId && ev.hostId) {
         ;(async () => {
@@ -4635,7 +4645,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               if (isDup) return prev
               return { ...prev, [chatId]: [...existing, newMsg] }
             })
-            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time } : c))
+            setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, time: payload.created_at } : c))
             setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60)
           } else {
             setChatList((prev: any) => prev.map((c: any) => c.id === chatId ? { ...c, lastMsg: payload.text, isNew: true, time: payload.created_at } : c))
@@ -4678,7 +4688,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           // Don't flag unread if the chat is currently open — user is reading.
           // Same gate as in the party-broadcast handler above.
           const chatOpen = openChatRef.current?.id === chatId
-          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time, isNew: chatOpen ? c.isNew : true } : c))
+          setChatList(prev => prev.map(c => c.id === chatId ? { ...c, lastMsg: payload.text, time: payload.created_at, isNew: chatOpen ? c.isNew : true } : c))
           if (chatOpen) {
             const msgMs = new Date(payload.created_at).getTime()
             setLastReadAtMap(prev => ({ ...prev, [chatId]: Math.max(prev[chatId] || 0, msgMs) }))
