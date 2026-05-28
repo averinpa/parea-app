@@ -66,6 +66,8 @@ export const MAGIC_BIOS = [
   "Living for unexpected Fridays and good conversations 💬",
 ]
 export const FLAG_MAP: Record<string, string> = { en: '🇬🇧', ru: '🇷🇺', el: '🇬🇷', uk: '🇺🇦', de: '🇩🇪', he: '🇮🇱', fr: '🇫🇷' }
+// Short, friendly 2-letter language codes for clean chips (premium UI, no flag emoji).
+export const LANG_CODE: Record<string, string> = { en: 'EN', ru: 'RU', el: 'GR', uk: 'UA', de: 'DE', he: 'HE', fr: 'FR', es: 'ES', ar: 'AR', zh: 'ZH' }
 export const TRANSPORT_LABEL: Record<string, string> = { car: '🚗 Can give a lift', lift: '🙋 Needs a lift', meet: '📍 Meeting there' }
 
 export const MOCK_SEEKERS = [

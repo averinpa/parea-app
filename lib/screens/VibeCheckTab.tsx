@@ -8,16 +8,17 @@ import { BlurView } from 'expo-blur'
 import * as Haptics from 'expo-haptics'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
-  Zap, PartyPopper, MessageCircle, Clock, Check, Minus, Trash2, Crown,
-  CheckCircle, User, Trophy,
+  Zap, PartyPopper, MessageCircle, Clock, Trash2, Crown,
+  CheckCircle, User,
 } from 'lucide-react-native'
 import {
   Sparkle, MagnifyingGlass, CaretRight, MapPin as PhMapPin, Car as PhCar,
+  HandWaving as PhHand, Check as PhCheck, X as PhX,
 } from '../phosphor-icons'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
 import { CrewPoolSheet } from '../components/CrewPoolSheet'
 import {
-  VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, VIBE_FORMAT_LABEL, FLAG_MAP, QUEUE_PROFILES,
+  VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, VIBE_FORMAT_LABEL, FLAG_MAP, LANG_CODE, QUEUE_PROFILES,
 } from '../feed-constants'
 import { prettyEventTime, isEventPast, scoreRequesterForHost, scoreEventForRequester } from '../feed-helpers'
 
@@ -358,10 +359,10 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     const scoreColor = score >= 75 ? '#43E97B' : score >= 50 ? '#FBBF24' : '#F87171'
                     return (
                       <View key={req.requestId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 12 }}>
-                        {/* Rank indicator — top vibe match */}
+                        {/* Rank indicator — top vibe match (clean badge, not a trophy icon) */}
                         {idx === 0 && (
-                          <View style={{ position: 'absolute', top: 6, left: 8, zIndex: 2 }}>
-                            <Trophy size={13} color="#FBBF24" strokeWidth={2} fill="#FBBF24" />
+                          <View style={{ position: 'absolute', top: -8, left: 12, zIndex: 2, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: '#FBBF24' }}>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#1E1B4B', letterSpacing: 0.5 }}>TOP MATCH</Text>
                           </View>
                         )}
                         <TouchableOpacity onPress={() => {
@@ -391,13 +392,30 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                               <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{req.name}, {req.age}</Text>
                             </View>
                             <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }} numberOfLines={1}>{req.bio}</Text>
-                            <View style={{ flexDirection: 'row', gap: 4, marginTop: 5, alignItems: 'center' }}>
+                            <View style={{ flexDirection: 'row', gap: 5, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                               {(req.langs || []).map((l: string) => (
-                                <Text key={l} style={{ fontSize: 13 }}>{FLAG_MAP[l] || '🌐'}</Text>
+                                <View key={l} style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.4 }}>{LANG_CODE[l] || l.toUpperCase()}</Text>
+                                </View>
                               ))}
-                              {req.transport === 'car' && <Text style={{ fontSize: 12 }}>🚗</Text>}
-                              {req.transport === 'lift' && <Text style={{ fontSize: 12 }}>🙋</Text>}
-                              {req.transport === 'meet' && <Text style={{ fontSize: 12 }}>📍</Text>}
+                              {req.transport === 'car' && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <PhCar size={14} color="#A5B4FC" weight="duotone" />
+                                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Can drive</Text>
+                                </View>
+                              )}
+                              {req.transport === 'lift' && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <PhHand size={14} color="#A5B4FC" weight="duotone" />
+                                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Needs ride</Text>
+                                </View>
+                              )}
+                              {req.transport === 'meet' && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <PhMapPin size={14} color="#A5B4FC" weight="duotone" />
+                                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: '600' }}>Meets there</Text>
+                                </View>
+                              )}
                             </View>
                           </View>
                         </TouchableOpacity>
@@ -405,11 +423,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                         <View style={{ gap: 6 }}>
                           <TouchableOpacity onPress={() => onApproveJoiner?.(ev.id, req)} activeOpacity={0.8}
                             style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1.5, borderColor: '#43E97B', alignItems: 'center', justifyContent: 'center' }}>
-                            <Check size={18} color="#43E97B" />
+                            <PhCheck size={18} color="#43E97B" weight="bold" />
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => onPassJoiner?.(ev.id, req)} activeOpacity={0.8}
-                            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(148,163,184,0.08)', borderWidth: 1.5, borderColor: 'rgba(148,163,184,0.22)', alignItems: 'center', justifyContent: 'center' }}>
-                            <Minus size={16} color="rgba(255,255,255,0.4)" />
+                            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(248,113,113,0.12)', borderWidth: 1.5, borderColor: 'rgba(248,113,113,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+                            <PhX size={17} color="#F87171" weight="bold" />
                           </TouchableOpacity>
                         </View>
                       </View>

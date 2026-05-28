@@ -151,10 +151,10 @@ export function ProfilePreviewSheet({ profile: profileProp, onClose, onBlock, on
 
           {/* AI Match badge — moved up: most interesting + personalized info */}
           {profile.aiScore != null && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18, padding: 14, borderRadius: 16, backgroundColor: profile.aiScore >= 75 ? 'rgba(67,233,123,0.10)' : 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: profile.aiScore >= 75 ? 'rgba(67,233,123,0.28)' : 'rgba(129,140,248,0.25)' }}>
-              <Sparkle size={22} color={profile.aiScore >= 75 ? '#43E97B' : '#818CF8'} weight="fill" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 18, paddingVertical: 10, paddingHorizontal: 13, borderRadius: 14, alignSelf: 'flex-start', maxWidth: '92%', backgroundColor: profile.aiScore >= 75 ? 'rgba(67,233,123,0.10)' : 'rgba(129,140,248,0.12)', borderWidth: 1, borderColor: profile.aiScore >= 75 ? 'rgba(67,233,123,0.28)' : 'rgba(129,140,248,0.25)' }}>
+              <Sparkle size={20} color={profile.aiScore >= 75 ? '#43E97B' : '#818CF8'} weight="fill" />
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: profile.aiScore >= 75 ? '#43E97B' : '#818CF8' }}>
                   {profile.aiScore}% vibe match
                 </Text>
                 {profile.aiReason && (
