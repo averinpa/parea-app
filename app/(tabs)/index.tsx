@@ -5342,6 +5342,55 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       .eq('event_ref_id', ev.id).eq('inviter_id', partner.id)
                       .eq('invitee_id', userData?.dbId).eq('status', 'pending').maybeSingle()
                     if (mutualInvite) {
+                      // If the partner already started a GROUP crew (they invited me
+                      // via onInviteToMyCrew, which stores the crew chat id), JOIN
+                      // that crew instead of creating a duo chat. Otherwise a squad
+                      // inviter + a duo invitee pressing "Invite" would spawn a stray
+                      // duo chat alongside the real squad crew (the bug we just hit).
+                      if (mutualInvite.chat_id) {
+                        const { data: grpChat } = await supabase.from('chats').select('id, type').eq('id', mutualInvite.chat_id).maybeSingle()
+                        if (grpChat && grpChat.type === 'group') {
+                          const { error: gJoinErr } = await supabase.rpc('join_party_chat', { p_chat_id: mutualInvite.chat_id, p_host_id: null })
+                          if (gJoinErr) console.warn('join_party_chat error (confirm mutual group):', gJoinErr.message)
+                          await supabase.from('crew_invites').update({ status: 'accepted' }).eq('id', mutualInvite.id)
+                          // Drop my just-created reverse invite so it can't later be
+                          // accepted into yet another (duo) chat.
+                          await supabase.from('crew_invites').delete()
+                            .eq('event_ref_id', ev.id).eq('inviter_id', userData?.dbId).eq('invitee_id', partner.id).eq('status', 'pending')
+                          await supabase.from('event_attendees').upsert({
+                            event_ref_id: ev.id, event_title: ev.title, profile_id: userData?.dbId, status: 'confirmed',
+                          }, { onConflict: 'event_ref_id,profile_id' })
+                          const { data: gm } = await supabase.from('chat_members')
+                            .select('profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, goal)')
+                            .eq('chat_id', mutualInvite.chat_id)
+                          const gmProfiles = (gm || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
+                            const p = (m as any).profiles || {}
+                            return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍' }
+                          })
+                          setChatList(prev => {
+                            const existing = prev.find(c => c.id === mutualInvite.chat_id)
+                            const entry = {
+                              id: mutualInvite.chat_id, type: 'group', event: ev.title,
+                              eventEmoji: CATEGORY_EMOJI[ev.category] || '🎉', eventRefId: ev.id, eventImage: ev.image_url || null,
+                              members: (gm || []).length,
+                              avatars: gmProfiles.map((p: any) => p.photo).filter(Boolean),
+                              colors: gmProfiles.map((p: any) => p.color), memberProfiles: gmProfiles,
+                              lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true,
+                              chatExpiresAt: (ev.expiresAt > 0 ? ev.expiresAt : Date.now()) + 24 * 60 * 60 * 1000,
+                            }
+                            if (existing) return prev.map(c => c.id === mutualInvite.chat_id ? { ...c, ...entry } : c)
+                            return [entry, ...prev]
+                          })
+                          setJoinedEvents(prev => ({ ...prev, [ev.id]: 'confirmed' }))
+                          setSentCrewInvites(prev => ({ ...prev, [key]: 'accepted' }))
+                          setOfficialEventChatMap(prev => ({ ...prev, [ev.id]: mutualInvite.chat_id }))
+                          setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== mutualInvite.id))
+                          showToast('Say hi to the crew!', 'Joined the crew! 🎉', '✅')
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                          setMessagesInitialSubTab('messages'); setActiveTab('messages')
+                          return
+                        }
+                      }
                       const { data: chatData } = await supabase.from('chats')
                         .insert({ type: 'duo', last_msg: `🎉 ${ev.title}` }).select().single()
                       if (!chatData) continue
@@ -5618,10 +5667,18 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               // already created the crew chat and stored its id on the invite. Join
               // that existing group chat via the SECURITY DEFINER RPC instead of
               // creating a new duo chat. Duo invites have no chat_id at this point.
-              if (invite.chat_id) {
-                const { data: chatRow } = await supabase.from('chats').select('id, type').eq('id', invite.chat_id).maybeSingle()
+              // Re-read chat_id from DB — the local incomingCrewInvites copy can be
+              // stale (loaded before the inviter set chat_id), which would wrongly
+              // route a group invite down the duo path and create a duplicate chat.
+              let inviteChatId = invite.chat_id
+              if (!inviteChatId) {
+                const { data: fresh } = await supabase.from('crew_invites').select('chat_id').eq('id', invite.id).maybeSingle()
+                inviteChatId = fresh?.chat_id || null
+              }
+              if (inviteChatId) {
+                const { data: chatRow } = await supabase.from('chats').select('id, type').eq('id', inviteChatId).maybeSingle()
                 if (chatRow && chatRow.type === 'group') {
-                  const { error: joinErr } = await supabase.rpc('join_party_chat', { p_chat_id: invite.chat_id, p_host_id: null })
+                  const { error: joinErr } = await supabase.rpc('join_party_chat', { p_chat_id: inviteChatId, p_host_id: null })
                   if (joinErr) { console.warn('join_party_chat error (accept group):', joinErr.message); acceptingInviteRef.current.delete(invite.id); showToast('Please try again', 'Something went wrong', '⚠️'); return }
                   await supabase.from('crew_invites').update({ status: 'accepted' }).eq('id', invite.id)
                   const evId = invite.event_ref_id
@@ -5631,7 +5688,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   }, { onConflict: 'event_ref_id,profile_id' })
                   const { data: members } = await supabase.from('chat_members')
                     .select('profile_id, profiles:profile_id(id, name, photos, color, age, bio, langs, interests, goal)')
-                    .eq('chat_id', invite.chat_id)
+                    .eq('chat_id', inviteChatId)
                   const memberProfiles = (members || []).filter((m: any) => m.profile_id !== userData?.dbId).map((m: any) => {
                     const p = (m as any).profiles || {}
                     return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍' }
@@ -5640,9 +5697,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   // effects (officialEndById / event image map) — safe to default here.
                   const grpExpiry = Date.now() + 24 * 60 * 60 * 1000
                   setChatList(prev => {
-                    const existing = prev.find(c => c.id === invite.chat_id)
+                    const existing = prev.find(c => c.id === inviteChatId)
                     const entry = {
-                      id: invite.chat_id, type: 'group', event: invite.event_title,
+                      id: inviteChatId, type: 'group', event: invite.event_title,
                       eventEmoji: '🎉',
                       eventRefId: evId, eventImage: null,
                       members: (members || []).length,
@@ -5650,11 +5707,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       colors: memberProfiles.map((p: any) => p.color), memberProfiles,
                       lastMsg: '🎉 You joined the crew!', time: new Date().toISOString(), isNew: true, chatExpiresAt: grpExpiry,
                     }
-                    if (existing) return prev.map(c => c.id === invite.chat_id ? { ...c, ...entry } : c)
+                    if (existing) return prev.map(c => c.id === inviteChatId ? { ...c, ...entry } : c)
                     return [entry, ...prev]
                   })
                   setJoinedEvents(prev => ({ ...prev, [evId]: 'confirmed' }))
-                  setOfficialEventChatMap(prev => ({ ...prev, [evId]: invite.chat_id }))
+                  setOfficialEventChatMap(prev => ({ ...prev, [evId]: inviteChatId }))
                   setIncomingCrewInvites(prev => prev.filter((i: any) => i.id !== invite.id))
                   acceptingInviteRef.current.delete(invite.id)
                   showToast('Say hi to the crew!', 'Joined the crew! 🎉', '✅')
