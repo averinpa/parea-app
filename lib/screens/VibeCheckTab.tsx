@@ -465,6 +465,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>{inviter.name || 'Someone'} wants to crew up!</Text>
                       <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{invite.event_title}</Text>
+                      {invite._format && (
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(167,139,250,0.95)', marginTop: 4 }}>
+                          {invite._format === '1+1' ? "You'll match as a Duo (1+1)" : `You'll join their ${invite._format === 'party' ? 'Party' : 'Squad'} · up to ${invite._maxSize}`}
+                        </Text>
+                      )}
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -651,7 +656,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                             )}
                             <View style={{ flex: 1 }}>
                               <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{inviter.name || 'Someone'}</Text>
-                              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>wants to go together</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: anyIncoming._format ? 'rgba(167,139,250,0.95)' : 'rgba(255,255,255,0.4)', marginTop: 3 }}>
+                                {anyIncoming._format
+                                  ? (anyIncoming._format === '1+1' ? "You'll match as a Duo (1+1)" : `You'll join their ${anyIncoming._format === 'party' ? 'Party' : 'Squad'} · up to ${anyIncoming._maxSize}`)
+                                  : 'wants to go together'}
+                              </Text>
                               {inviterScore != null && (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                                   <Sparkle size={10} color={scoreColor} weight="fill" />
@@ -906,7 +915,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                   )}
                                   <View style={{ flex: 1 }}>
                                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }} numberOfLines={1}>{inviter.name || 'Someone'} invited you</Text>
-                                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Accept to join their crew</Text>
+                                    <Text style={{ fontSize: 11, color: 'rgba(167,139,250,0.95)', fontWeight: '700', marginTop: 2 }}>
+                                      {crewIncoming._format
+                                        ? (crewIncoming._format === '1+1' ? "You'll match as a Duo (1+1)" : `You'll join their ${crewIncoming._format === 'party' ? 'Party' : 'Squad'} · up to ${crewIncoming._maxSize}`)
+                                        : 'Accept to join their crew'}
+                                    </Text>
                                   </View>
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>

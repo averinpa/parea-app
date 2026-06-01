@@ -3034,7 +3034,39 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         ...(iBlocked || []).map((b: any) => b.blocked_id),
         ...(blockedMe || []).map((b: any) => b.blocker_id),
       ])
-      if (data) setIncomingCrewInvites(data.filter((inv: any) => !blocked.has(inv.inviter_id)))
+      const filtered = (data || []).filter((inv: any) => !blocked.has(inv.inviter_id))
+      if (filtered.length === 0) { setIncomingCrewInvites([]); return }
+      // Enrich each invite with the inviter's chosen format + max size, so the
+      // accept-consent card can say "You're joining their Squad of up to 5"
+      // before Accept (so a duo-seeker isn't surprised by a 5-person crew).
+      // Duo invites carry chat_id=null (1+1 mutual flow); group invites store
+      // the inviter's crew chat id and inherit its format. We read from
+      // event_attendees to avoid a chats.format select that RLS would hide.
+      const inviterIds = Array.from(new Set(filtered.map((inv: any) => inv.inviter_id)))
+      const eventIds = Array.from(new Set(filtered.map((inv: any) => inv.event_ref_id)))
+      const { data: sizeRows } = await supabase
+        .from('event_attendees')
+        .select('profile_id, event_ref_id, group_size_max')
+        .in('profile_id', inviterIds).in('event_ref_id', eventIds)
+      const sizeByPair: Record<string, number> = {}
+      ;(sizeRows || []).forEach((r: any) => {
+        if (r.group_size_max != null) sizeByPair[`${r.profile_id}_${r.event_ref_id}`] = r.group_size_max
+      })
+      const enriched = filtered.map((inv: any) => {
+        let format: string | null = null
+        let maxSize: number | null = null
+        if (!inv.chat_id) {
+          format = '1+1'; maxSize = 2
+        } else {
+          const gm = sizeByPair[`${inv.inviter_id}_${inv.event_ref_id}`]
+          if (gm != null) {
+            maxSize = gm
+            format = gm === 2 ? '1+1' : gm >= 6 ? 'party' : 'squad'
+          }
+        }
+        return { ...inv, _format: format, _maxSize: maxSize }
+      })
+      setIncomingCrewInvites(enriched)
     }
     fetchIncoming()
     const interval = setInterval(fetchIncoming, 15000)
