@@ -450,8 +450,13 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
           {/* ── Incoming crew invites for events not in user's list (edge case) ── */}
           {incomingCrewInvites.filter((invite: any) => !myEvents.some((ev: any) => ev.id === invite.event_ref_id)).map((invite: any) => {
             const inviter = invite.inviter || {}
+            const openInviter = () => {
+              setPreviewProfile({ ...inviter, flag: FLAG_MAP[inviter.langs?.[0]] || '🌍', langs: (inviter.langs || []).map((l: string) => FLAG_MAP[l] || l) })
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            }
             return (
-              <View key={invite.id} style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.35)' }}>
+              <TouchableOpacity key={invite.id} activeOpacity={0.85} onPress={openInviter}
+                style={{ borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.35)' }}>
                 <LinearGradient colors={['#6366F1', '#818CF8']} style={{ height: 6 }} />
                 <View style={{ padding: 18 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
@@ -482,7 +487,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )
           })}
 
@@ -644,9 +649,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                       }
                       return (
                         <View style={{ gap: 14 }}>
-                          {/* Profile card — non-interactive body + View pill on the right
-                              (matches group-crew card layout). */}
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                          {/* Tap anywhere on the card to preview the inviter's profile.
+                              View pill is retained as an explicit affordance. Action
+                              buttons (Accept/Decline) below capture their own presses. */}
+                          <TouchableOpacity activeOpacity={0.85} onPress={openInviterPreview}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
                             {inviter.photos?.[0] ? (
                               <Image source={{ uri: inviter.photos[0] }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: scoreColor + '60' }} />
                             ) : (
@@ -674,7 +681,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                               style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 70 }}>
                               <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
                             </TouchableOpacity>
-                          </View>
+                          </TouchableOpacity>
                           <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
                             <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(anyIncoming)} style={{ paddingHorizontal: 26, borderRadius: 99, paddingVertical: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7, backgroundColor: '#43E97B', shadowColor: '#43E97B', shadowOpacity: 0.3, shadowRadius: 8, elevation: 3, minWidth: 110 }}>
                               <Zap size={14} color="#052e16" fill="#052e16" />
@@ -698,9 +705,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     }
                     return (
                       <View style={{ gap: 14 }}>
-                        {/* Profile card — matches group-crew card layout: non-interactive
-                            body + stacked View pill on the right (View opens preview). */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                        {/* Tap anywhere on the card to preview profile; View pill is
+                            still there as an explicit affordance. Invite/Skip pills
+                            below capture their own presses and won't fire openPreview. */}
+                        <TouchableOpacity activeOpacity={0.85} onPress={openPreview}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
                           {currentPerson!.photo ? (
                             <Image source={{ uri: currentPerson!.photo }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: scoreColor + '60' }} />
                           ) : (
@@ -748,7 +757,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                             style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', minWidth: 70 }}>
                             <Text style={{ fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.75)' }}>View</Text>
                           </TouchableOpacity>
-                        </View>
+                        </TouchableOpacity>
 
                         {/* Action buttons */}
                         {incomingFromCurrent ? (
@@ -905,7 +914,12 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                             const inviter = crewIncoming.inviter || {}
                             return (
                               <View style={{ gap: 12 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
+                                <TouchableOpacity activeOpacity={0.85}
+                                  onPress={() => {
+                                    setPreviewProfile({ ...inviter, flag: FLAG_MAP[inviter.langs?.[0]] || '🌍', langs: (inviter.langs || []).map((l: string) => FLAG_MAP[l] || l) })
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                                  }}
+                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
                                   {inviter.photos?.[0] ? (
                                     <Image source={{ uri: inviter.photos[0] }} style={{ width: 44, height: 44, borderRadius: 22 }} />
                                   ) : (
@@ -921,7 +935,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                         : 'Accept to join their crew'}
                                     </Text>
                                   </View>
-                                </View>
+                                </TouchableOpacity>
                                 <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
                                   <TouchableOpacity activeOpacity={0.85} onPress={() => onAcceptInvite?.(crewIncoming)} style={{ paddingHorizontal: 26, borderRadius: 99, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#43E97B', minWidth: 120, justifyContent: 'center' }}>
                                     <Zap size={14} color="#052e16" fill="#052e16" />
@@ -998,12 +1012,20 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                   <View key={crew.chatId}
                                     style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                     <View style={{ flexDirection: 'row' }}>
-                                      {crew.members.slice(0, 3).map((m: any, i: number) => (
-                                        m.photo ? <Image key={m.id || i} source={{ uri: m.photo }} style={{ width: 42, height: 42, borderRadius: 21, borderWidth: 2.5, borderColor: '#0A0812', marginLeft: i > 0 ? -14 : 0 }} /> :
-                                        <View key={m.id || i} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#0A0812', marginLeft: i > 0 ? -14 : 0 }}>
-                                          <Text style={{ fontSize: 15 }}>👤</Text>
-                                        </View>
-                                      ))}
+                                      {crew.members.slice(0, 3).map((m: any, i: number) => {
+                                        const openMember = () => {
+                                          setPreviewProfile({ ...m, flag: FLAG_MAP[m.langs?.[0]] || '🌍', langs: (m.langs || []).map((l: string) => FLAG_MAP[l] || l) })
+                                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                                        }
+                                        return (
+                                          <TouchableOpacity key={m.id || i} activeOpacity={0.85} onPress={openMember}
+                                            style={{ width: 42, height: 42, borderRadius: 21, borderWidth: 2.5, borderColor: '#0A0812', marginLeft: i > 0 ? -14 : 0, overflow: 'hidden', backgroundColor: m.color || '#818CF8', alignItems: 'center', justifyContent: 'center' }}>
+                                            {m.photo
+                                              ? <Image source={{ uri: m.photo }} style={{ width: '100%', height: '100%' }} />
+                                              : <Text style={{ fontSize: 15 }}>👤</Text>}
+                                          </TouchableOpacity>
+                                        )
+                                      })}
                                     </View>
                                     <View style={{ flex: 1 }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1064,7 +1086,8 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                                 }
                                 return (
-                                  <View key={p.id} style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                  <TouchableOpacity key={p.id} activeOpacity={0.85} onPress={openP}
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                     {p.photo ? (
                                       <Image source={{ uri: p.photo }} style={{ width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: sColor + '50' }} />
                                     ) : (
@@ -1097,7 +1120,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                         <Text style={{ fontSize: 13, fontWeight: '900', color: invited ? '#43E97B' : '#052e16' }}>{invited ? 'Invited' : 'Invite'}</Text>
                                       </TouchableOpacity>
                                     </View>
-                                  </View>
+                                  </TouchableOpacity>
                                 )
                               })}
                               {/* When no crews exist — designer primary CTA: dark glass body
