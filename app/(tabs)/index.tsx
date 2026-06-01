@@ -5717,6 +5717,48 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onAcceptInvite={async (invite: any) => {
               if (acceptingInviteRef.current.has(invite.id)) return
               acceptingInviteRef.current.add(invite.id)
+              // Stay / Switch crew — model decision C. If I'm already in another
+              // crew chat for this event, ask before silently joining a second
+              // one (which would leave me as a phantom member of the old crew).
+              // Default = stay; explicit Switch leaves the current crew first.
+              {
+                const existingChatId = officialEventChatMap[invite.event_ref_id]
+                if (existingChatId && existingChatId !== invite.chat_id) {
+                  const choice = await new Promise<'stay' | 'switch' | 'cancel'>(resolve => {
+                    Alert.alert(
+                      "You're already in a crew",
+                      "You're in another crew for this event. Switch to this one (you'll leave the current crew) or stay where you are?",
+                      [
+                        { text: 'Cancel', style: 'cancel', onPress: () => resolve('cancel') },
+                        { text: 'Stay', onPress: () => resolve('stay') },
+                        { text: 'Switch', style: 'destructive', onPress: () => resolve('switch') },
+                      ],
+                      { cancelable: true, onDismiss: () => resolve('cancel') }
+                    )
+                  })
+                  if (choice !== 'switch') {
+                    acceptingInviteRef.current.delete(invite.id)
+                    return
+                  }
+                  // Switch: leave the current crew first. Same cleanup pattern as
+                  // onLeave for official events — drop my chat_members row, then
+                  // either delete the chat if I was last member or write a "X
+                  // left the group" system message so remaining members see why
+                  // the count dropped.
+                  await supabase.from('chat_members').delete().eq('chat_id', existingChatId).eq('profile_id', userData?.dbId)
+                  const { data: remaining } = await supabase.from('chat_members').select('profile_id').eq('chat_id', existingChatId).limit(1).maybeSingle()
+                  if (!remaining) {
+                    await supabase.from('chats').delete().eq('id', existingChatId)
+                  } else {
+                    supabase.from('messages').insert({
+                      chat_id: existingChatId, sender_id: userData?.dbId,
+                      text: `${userData?.name || 'Someone'} left the group`,
+                    }).then(({ error }) => { if (error) console.warn('switch system msg error:', error.message) })
+                  }
+                  setChatList(prev => prev.filter((c: any) => c.id !== existingChatId))
+                  setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[invite.event_ref_id]; return n })
+                }
+              }
               // Group-crew invite (squad/party via onInviteToMyCrew): the inviter
               // already created the crew chat and stored its id on the invite. Join
               // that existing group chat via the SECURITY DEFINER RPC instead of
