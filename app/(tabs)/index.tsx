@@ -7274,7 +7274,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                             const { data: dbEv, error: dbErr } = await supabase.from('community_events').insert({
                               host_id: userData.dbId,
                               title: actLabel,
-                              category: TYPE_TO_CAT[createType || ''] || 'outdoors',
+                              // Save the user's specific event-type (Coffee, Bar, Hiking, Cinema...)
+                              // instead of collapsing into one of 8 broad categories. The category
+                              // popup in the home toolbar surfaces every distinct category that has
+                              // events, so this directly broadens what's filterable.
+                              category: createType || 'outdoors',
                               location: createLocation,
                               description: createDescription || null,
                               city,
