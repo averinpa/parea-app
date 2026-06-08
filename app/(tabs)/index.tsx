@@ -992,6 +992,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><PushPin size={9} color="#fff" weight="duotone" /><Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>FEATURED</Text></View>
                     </View>
                   )}
+                  {/* Popular sticker on the hero image — prominent, designer-y,
+                      separate from the inline "1 crew · X spots left" text below. */}
+                  {(crewStats[ev.id]?.members || 0) >= 3 && (
+                    <LinearGradient colors={['#FB923C', '#EF4444']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={{ position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 99, shadowColor: '#EF4444', shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 5 }}>
+                      <Fire size={13} color="#fff" weight="fill" />
+                      <Text style={{ fontSize: 11, fontWeight: '900', color: '#fff', letterSpacing: 0.4 }}>POPULAR</Text>
+                    </LinearGradient>
+                  )}
                   <View style={{ padding: 12 }}>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#1E1B4B', marginBottom: 6, minHeight: 36 }} numberOfLines={2}>{ev.title}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -1007,16 +1016,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       if (!st || st.crews === 0) return null
                       const spotsTxt = st.spotsLeft === 0 ? 'crew full' : `${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'} left`
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, flexWrap: 'wrap' }}>
-                          <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>
-                            {st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}
-                          </Text>
-                          {st.members >= 3 && (
-                            <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99, backgroundColor: '#FEF3C7' }}>
-                              <Text style={{ fontSize: 9, fontWeight: '800', color: '#92400E' }}>🔥 Popular</Text>
-                            </View>
-                          )}
-                        </View>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700', marginTop: 8 }}>
+                          {st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}
+                        </Text>
                       )
                     })()}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: crewStats[ev.id]?.crews ? 6 : 8 }}>
@@ -1089,8 +1091,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2, flexWrap: 'wrap' }}>
                                 <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>{st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}</Text>
                                 {st.members >= 3 && (
-                                  <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: 99, backgroundColor: '#FEF3C7' }}>
-                                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#92400E' }}>🔥 Popular</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#FFEDD5' }}>
+                                    <Fire size={9} color="#EA580C" weight="fill" />
+                                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#9A3412' }}>POPULAR</Text>
                                   </View>
                                 )}
                               </View>
@@ -1155,8 +1158,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           <Text style={{ fontSize: 10, fontWeight: '700', color: '#4338CA', textTransform: 'capitalize' }}>{ev.category}</Text>
                         </View>
                         {(crewStats[ev.id]?.members || 0) >= 3 && (
-                          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#FEF3C7' }}>
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>🔥 Popular</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 99, backgroundColor: '#FFEDD5' }}>
+                            <Fire size={11} color="#EA580C" weight="fill" />
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#9A3412' }}>POPULAR</Text>
                           </View>
                         )}
                       </View>
