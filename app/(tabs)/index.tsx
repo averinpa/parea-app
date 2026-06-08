@@ -514,7 +514,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
   const forYouEvents = (() => {
     const officialForYou = officialAll.filter((ev: any) => !city || !ev.city || ev.city.toLowerCase() === city.toLowerCase())
-    const all: any[] = [...officialForYou, ...communityAll]
+    // Respect the Type toggle inside For You too — picking Community should
+    // not surface official picks, same as on All Events.
+    const all: any[] = [
+      ...(typeFilter === 'community' ? [] : officialForYou),
+      ...(typeFilter === 'official' ? [] : communityAll),
+    ]
     const seen = new Set<number>()
     // Threshold 30 (was 60) — any single strong signal qualifies (interests
     // match, vibe match, or language + today). The old bar of 60 effectively
@@ -1009,7 +1014,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         )}
 
         {/* ── TONIGHT VIBE PICKS ── */}
-        {!forYouFilter && vibeEvents.length > 0 && (() => {
+        {/* Tonight Vibe surfaces top-3 official events for the mood, so it
+            shouldn't render when the Type toggle is restricted to Community. */}
+        {!forYouFilter && typeFilter !== 'community' && vibeEvents.length > 0 && (() => {
           const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe?.energy) || SOCIAL_ENERGY[2]
           return (
             <View style={{ marginTop: 28, marginBottom: 12 }}>
