@@ -147,12 +147,17 @@ export const MUSIC_GENRES = [
 
 export const PRIMARY_GENRE_COUNT = 10
 
+// Vibe → categories mapping. Mixes legacy broad categories (coffee/wine/food/
+// outdoors/sports/etc.) AND the granular community createTypes (boardgames/
+// cinema/bar/hiking/etc.) so the For You feed surfaces the right events for
+// each mood regardless of whether they came from the scraper or from a
+// community host. Balanced stays empty as a catch-all (no vibe filter).
 export const VIBE_CATS: Record<string, string[]> = {
-  homebody:  ['coffee', 'culture', 'gaming'],
-  chill:     ['coffee', 'wine', 'food'],
+  homebody:  ['coffee', 'culture', 'gaming', 'boardgames', 'cinema', 'walk'],
+  chill:     ['coffee', 'wine', 'food', 'walk', 'picnic', 'dinner'],
   balanced:  [],
-  social:    ['food', 'wine', 'outdoors', 'sports'],
-  party:     ['music', 'wine', 'dance', 'food'],
+  social:    ['food', 'wine', 'outdoors', 'sports', 'bar', 'beach', 'hiking', 'daytrip', 'boat', 'picnic', 'dinner'],
+  party:     ['music', 'wine', 'dance', 'food', 'bar', 'beach'],
 }
 
 // Dealbreakers we can actually enforce against existing profile data.
