@@ -277,6 +277,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [forYouFilter, setForYouFilter] = useState(false)
   const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
+  // Simplified toolbar filters: each toggle is a single segmented control,
+  // category lives in a popup instead of the inline horizontal scroll. Default
+  // 'all' for both → show everything, matching the prior unfiltered behavior.
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'custom'>('all')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'official' | 'community'>('all')
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const now = Date.now()
 
   useEffect(() => {
@@ -353,17 +359,32 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   })
 
   // Apply search + category filter to community
+  // Date-range helper used by both communityFiltered and officialEvents filters
+  // so the new toolbar Today/Week/Custom segmented control affects both lists
+  // consistently. 'custom' falls back to the existing selectedDate state.
+  const isInDateRange = (evDate: Date | null) => {
+    if (dateRange === 'all') return true
+    if (!evDate) return false
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    if (dateRange === 'today') return evDate.toDateString() === today.toDateString()
+    if (dateRange === 'week') {
+      const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7)
+      return evDate >= today && evDate < weekEnd
+    }
+    // custom — gated on the calendar picker. Until a date is picked, show
+    // nothing (the inline calendar opens automatically with this mode).
+    if (!selectedDate) return false
+    return evDate.toDateString() === selectedDate.toDateString()
+  }
   const communityFiltered = communityAll.filter(ev => {
+    if (typeFilter === 'official') return false
     if (categoryFilter && ev.category !== categoryFilter) return false
     if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       if (!ev.title.toLowerCase().includes(q) && !(ev.description || '').toLowerCase().includes(q)) return false
     }
-    if (selectedDate) {
-      const evDate = parseEventDate(ev.time)
-      if (!evDate || evDate.toDateString() !== selectedDate.toDateString()) return false
-    }
+    if (!isInDateRange(parseEventDate(ev.time))) return false
     return true
   })
 
@@ -405,6 +426,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   // Apply search + date + city filter to official; exclude Tonight's Vibe picks (B+C)
   const officialEvents = officialAll.filter(ev => {
     if (vibeEventIds.has(ev.id)) return false
+    if (typeFilter === 'community') return false
     if (city && ev.city && ev.city.toLowerCase() !== city.toLowerCase()) return false
     if (categoryFilter && ev.category !== categoryFilter) return false
     if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
@@ -412,10 +434,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
       const q = searchQuery.toLowerCase()
       if (!(ev.title || '').toLowerCase().includes(q) && !(ev.category || '').toLowerCase().includes(q)) return false
     }
-    if (selectedDate) {
-      const evDate = parseEventDate(ev.date_label || ev.time || '')
-      if (!evDate || evDate.toDateString() !== selectedDate.toDateString()) return false
-    }
+    if (!isInDateRange(parseEventDate(ev.date_label || ev.time || ''))) return false
     return true
   }).sort((a, b) => {
     // Promoted always at the top
@@ -671,15 +690,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 </>}
               </TouchableOpacity>
 
-              {/* Calendar — ghost */}
-              <TouchableOpacity onPress={() => { setCalendarOpen(v => !v); if (calendarOpen) setSelectedDate(null) }}
-                activeOpacity={0.7}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 7 }}>
-                <CalendarBlank size={14} color={calendarOpen || selectedDate ? '#6366F1' : '#94A3B8'} weight="regular" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: calendarOpen || selectedDate ? '#6366F1' : '#94A3B8' }}>
-                  {selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Calendar'}
-                </Text>
-              </TouchableOpacity>
+              {/* Calendar pill removed — its job is now the When toggle below. */}
 
             </View>
           </View>
@@ -697,6 +708,56 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
               <Sparkle size={13} color={forYouFilter ? '#EC4899' : '#94A3B8'} weight="duotone" />
               <Text style={{ fontSize: 13, fontWeight: '700', color: forYouFilter ? '#EC4899' : '#94A3B8' }}>For You</Text>
             </TouchableOpacity>
+          </View>
+
+          {/* When (date range) segmented control. 'Custom' both flags the
+              range and pops open the inline calendar below so user can pick
+              a specific day. Picking a day from Today / Week / Anytime
+              clears any previously-picked custom date. */}
+          <View style={{ flexDirection: 'row', marginHorizontal: 20, marginBottom: 10, backgroundColor: '#EEF2FF', borderRadius: 14, padding: 3 }}>
+            {([
+              { key: 'all', label: 'Anytime' },
+              { key: 'today', label: 'Today' },
+              { key: 'week', label: 'This week' },
+              { key: 'custom', label: selectedDate ? selectedDate.toLocaleDateString('en', { day: 'numeric', month: 'short' }) : 'Pick date' },
+            ] as const).map(opt => {
+              const active = dateRange === opt.key
+              return (
+                <TouchableOpacity key={opt.key}
+                  onPress={() => {
+                    if (opt.key === 'custom') {
+                      setDateRange('custom'); setCalendarOpen(true)
+                    } else {
+                      setDateRange(opt.key); setSelectedDate(null); setCalendarOpen(false)
+                    }
+                  }}
+                  style={{ flex: 1, paddingVertical: 7, borderRadius: 11, alignItems: 'center',
+                    backgroundColor: active ? '#fff' : 'transparent',
+                    shadowColor: active ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: active ? 2 : 0 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#4338CA' : '#94A3B8' }} numberOfLines={1}>{opt.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+
+          {/* Type (Official / Community) segmented control. */}
+          <View style={{ flexDirection: 'row', marginHorizontal: 20, marginBottom: 14, backgroundColor: '#EEF2FF', borderRadius: 14, padding: 3 }}>
+            {([
+              { key: 'all', label: 'All' },
+              { key: 'official', label: 'Official' },
+              { key: 'community', label: 'Community' },
+            ] as const).map(opt => {
+              const active = typeFilter === opt.key
+              return (
+                <TouchableOpacity key={opt.key}
+                  onPress={() => setTypeFilter(opt.key)}
+                  style={{ flex: 1, paddingVertical: 7, borderRadius: 11, alignItems: 'center',
+                    backgroundColor: active ? '#fff' : 'transparent',
+                    shadowColor: active ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: active ? 2 : 0 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#4338CA' : '#94A3B8' }}>{opt.label}</Text>
+                </TouchableOpacity>
+              )
+            })}
           </View>
 
           {/* Search bar */}
@@ -789,48 +850,80 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           })()}
         </View>
 
-        {/* ── Global category filter chips — generated from actual categories in data ── */}
-        {!forYouFilter && (officialAll.length > 0 || communityAll.length > 0) && (() => {
-          // Collect unique categories that actually exist in the loaded events.
-          // Pre-defined ones (Sports / Coffee / etc) are appended only if they
-          // also have at least one event, so we never show a chip that yields
-          // an empty result.
-          const allEvs = [...officialAll, ...communityAll]
-          const counts = new Map<string, number>()
-          allEvs.forEach(ev => {
-            const c = (ev.category || '').toLowerCase().trim()
-            if (!c) return
-            counts.set(c, (counts.get(c) || 0) + 1)
-          })
-          // Order: predefined first (in their CAT_FILTERS order), then any extras
-          // surfaced from the data (music / theatre / etc) sorted by frequency.
-          const knownIds = new Set(CAT_FILTERS.map(f => f.id))
-          const ordered: { id: string; label: string }[] = []
-          CAT_FILTERS.forEach(f => { if (counts.has(f.id)) ordered.push(f) })
-          const extras = [...counts.entries()]
-            .filter(([id]) => !knownIds.has(id))
-            .sort((a, b) => b[1] - a[1])
-            .map(([id]) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }))
-          const chips = [...ordered, ...extras]
-          if (chips.length === 0) return null
-          return (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 4, paddingTop: 8 }}>
-              <TouchableOpacity onPress={() => setCategoryFilter(null)}
-                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: !categoryFilter ? '#6366F1' : '#fff' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: !categoryFilter ? '#fff' : '#64748B' }}>All</Text>
-              </TouchableOpacity>
-              {chips.map(f => {
-                const isOn = categoryFilter === f.id
-                return (
-                  <TouchableOpacity key={f.id} onPress={() => setCategoryFilter(isOn ? null : f.id)}
-                    style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99, backgroundColor: isOn ? '#6366F1' : '#fff' }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : '#64748B' }}>{f.label}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </ScrollView>
-          )
-        })()}
+        {/* Compact Categories button (opens grid popup). The inline horizontal
+            scroll of chips was the biggest visual-density complaint in friend's
+            feedback — a popup keeps category power-users happy without
+            crowding the home toolbar for everyone. */}
+        {!forYouFilter && (officialAll.length > 0 || communityAll.length > 0) && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity onPress={() => setCategoryModalOpen(true)} activeOpacity={0.8}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
+                backgroundColor: categoryFilter ? '#6366F1' : '#fff',
+                borderWidth: 1, borderColor: categoryFilter ? '#6366F1' : '#E2E8F0' }}>
+              <MagnifyingGlass size={12} color={categoryFilter ? '#fff' : '#64748B'} weight="duotone" />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: categoryFilter ? '#fff' : '#64748B', textTransform: 'capitalize' }}>
+                {categoryFilter || 'Categories'}
+              </Text>
+              {categoryFilter && (
+                <TouchableOpacity onPress={() => setCategoryFilter(null)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                  <X size={11} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Categories popup */}
+        <Modal visible={categoryModalOpen} animationType="slide" transparent onRequestClose={() => setCategoryModalOpen(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setCategoryModalOpen(false)}
+            style={{ flex: 1, backgroundColor: 'rgba(15,12,31,0.55)', justifyContent: 'flex-end' }}>
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}
+              style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32, maxHeight: '70%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Filter by category</Text>
+                <TouchableOpacity onPress={() => setCategoryModalOpen(false)}
+                  style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={16} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+                {(() => {
+                  const allEvs = [...officialAll, ...communityAll]
+                  const counts = new Map<string, number>()
+                  allEvs.forEach(ev => {
+                    const c = (ev.category || '').toLowerCase().trim()
+                    if (!c) return
+                    counts.set(c, (counts.get(c) || 0) + 1)
+                  })
+                  const knownIds = new Set(CAT_FILTERS.map(f => f.id))
+                  const ordered: { id: string; label: string }[] = []
+                  CAT_FILTERS.forEach(f => { if (counts.has(f.id)) ordered.push(f) })
+                  const extras = [...counts.entries()]
+                    .filter(([id]) => !knownIds.has(id))
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([id]) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }))
+                  const chips = [{ id: '', label: 'All categories' }, ...ordered, ...extras]
+                  return (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {chips.map(f => {
+                        const isOn = f.id === (categoryFilter || '')
+                        return (
+                          <TouchableOpacity key={f.id || 'all'}
+                            onPress={() => { setCategoryFilter(f.id || null); setCategoryModalOpen(false) }}
+                            style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99,
+                              backgroundColor: isOn ? '#6366F1' : '#F1F5F9',
+                              borderWidth: 1, borderColor: isOn ? '#6366F1' : 'transparent' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: isOn ? '#fff' : '#475569' }}>{f.label}</Text>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </View>
+                  )
+                })()}
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
 
         {/* ── FOR YOU ── */}
         {forYouFilter && (
