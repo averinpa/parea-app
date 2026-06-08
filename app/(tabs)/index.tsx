@@ -5156,6 +5156,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               // 3rd user tried to join a crew they'd discovered via get_event_crews.
               const { error } = await supabase.rpc('join_party_chat', { p_chat_id: chatId, p_host_id: null })
               if (error) { console.warn('join_party_chat error (join specific crew):', error.message); showToast('Try again', 'Could not join crew', '⚠️'); return }
+              // Cancel my pending outgoing crew_invites for this event — otherwise
+              // a duo-seeker who sent a duo-invite then joined a party crew leaves a
+              // dangling pending invite; if the recipient later accepts it the duo
+              // path would spawn a stray duo chat (the bug we hit cross-format).
+              await supabase.from('crew_invites').update({ status: 'cancelled' })
+                .eq('event_ref_id', ev.id).eq('inviter_id', userData.dbId).eq('status', 'pending')
+              setSentCrewInvites(prev => {
+                const next = { ...prev }
+                Object.keys(next).filter(k => k.startsWith(`${ev.id}_`)).forEach(k => delete next[k])
+                return next
+              })
               // Local user choice (userEventFormat) is the source of truth for sizes.
               // If user picked party (20), make sure the DB row reflects that — otherwise
               // AI scoring filter (size compatibility) excludes others on size mismatch.
