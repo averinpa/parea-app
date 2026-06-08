@@ -7943,6 +7943,18 @@ export default function App() {
   }
 
   const handleLogOut = async () => {
+    // Clear the push token from the leaving user's profile so push notifications
+    // for them stop being delivered to this device after a different user logs
+    // in here. (Both profiles otherwise carry the same device token, and the
+    // send-push edge function would still pick up the stale one.) Best-effort —
+    // logout proceeds even if the DB call fails.
+    if (userData?.dbId) {
+      try {
+        await supabase.from('profiles').update({ expo_push_token: null }).eq('id', userData.dbId)
+      } catch (e: any) {
+        console.warn('logout: push token cleanup failed:', e?.message)
+      }
+    }
     if (userData?.authId) await AsyncStorage.removeItem(`parea_feed_${userData.authId}`)
     await supabase.auth.signOut()
     setUserData({})
