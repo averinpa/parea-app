@@ -92,6 +92,7 @@ export function CrewPoolSheet({
           smokingPref: m.smokingPref,
           interests: m.interests,
           hasPets: m.hasPets,
+          socialEnergy: (m as any).socialEnergy,
         },
         {
           langs: userForScore.langs,
@@ -100,6 +101,7 @@ export function CrewPoolSheet({
           smokingPref: userForScore.smokingPref,
           interests: userForScore.interests,
           dealbreakers: userProfile.dealbreakers,
+          socialEnergy: (userProfile as any).socialEnergy,
         },
         event?.category
       )

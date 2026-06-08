@@ -110,11 +110,13 @@ async function aiScoreRealAttendees(
     {
       langs: c.langs, age: typeof c.age === 'string' ? parseInt(c.age || '25') : (c.age || 25),
       drinksPref: c.drinksPref, smokingPref: c.smokingPref, interests: c.interests, hasPets: c.hasPets,
+      socialEnergy: c.socialEnergy,
     },
     {
       langs: user.langs, age: userAge,
       drinksPref: user.drinksPref, smokingPref: user.smokingPref, interests: user.interests,
       dealbreakers: user.dealbreakers,
+      socialEnergy: user.socialEnergy,
     }
   )
   const eligible: typeof candidates = []
@@ -1825,6 +1827,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             interests: p.interests || [],
             drinksPref: p.drinks_pref || '',
             smokingPref: p.smoking_pref || '',
+            socialEnergy: p.social_energy || '',
           })))
         }
       })
@@ -1979,7 +1982,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               emoji: '🎵', photo: p.photos?.[0] || null, photos: p.photos || [],
               bio: p.bio || '', langs: p.langs || [],
               interests: p.interests || [], drinksPref: p.drinks_pref || '', smokingPref: p.smoking_pref || '',
-              hasPets: !!p.has_pets,
+              hasPets: !!p.has_pets, socialEnergy: p.social_energy || '',
               transport: row.transport, groupMin: row.group_size_min, groupMax: row.group_size_max,
               _real: true, score: null as number | null, vibe: '',
             }
@@ -2564,6 +2567,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             age: p.age || '',
             bio: p.bio || '', langs: p.langs || [], interests: p.interests || [],
             drinksPref: p.drinks_pref, smokingPref: p.smoking_pref, hasPets: !!p.has_pets,
+            socialEnergy: p.social_energy || '',
           }))
           const otherIds = members.map((m: any) => m.id).filter((id: string) => id !== userData.dbId)
           const scores = otherIds.map((id: string) => scoreById[id]).filter((s: any) => typeof s === 'number')
@@ -2659,6 +2663,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             return { id: p.id, name: p.name || 'User', photo: p.photos?.[0] || null, photos: p.photos || [], color: p.color || '#818CF8', colors: [p.color || '#818CF8', '#1E1B4B'], age: p.age || '', bio: p.bio || '', langs: p.langs || [], interests: p.interests || [], goal: p.goal || 'chill', flag: FLAG_MAP[p.langs?.[0]] || '🌍', status: r.status, transport: r.transport,
               // Lifestyle fields needed by scoreRequesterForHost in CrewPoolSheet
               drinksPref: p.drinks_pref || '', smokingPref: p.smoking_pref || '', hasPets: !!p.has_pets,
+              socialEnergy: p.social_energy || '',
             }
           })
           setCrewPreviewMap(prev => ({ ...prev, [evId]: { members: memberProfiles, chatId: existingChatId, confirmedCount } }))
@@ -3623,6 +3628,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           drinksPref: p.drinks_pref || '',
           smokingPref: p.smoking_pref || '',
           hasPets: !!p.has_pets,
+          socialEnergy: p.social_energy || '',
           city: p.city || null,
           transport: req.transport || null,
           _real: true,

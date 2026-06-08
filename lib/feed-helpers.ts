@@ -107,10 +107,27 @@ export const prettyEventTime = (s: string | undefined | null) => {
 // joiner has the event (e.g. via deep link), the host decides for themselves.
 export const MAX_AGE_GAP = 15
 
+// Social-energy compatibility lookup: -3..+3. Closer-on-the-spectrum users
+// match better (two Homebodies > Homebody + Party Animal). Symmetric; missing
+// data is neutral (0). Used by scoreRequesterForHost so people are paired by
+// how they want to socialise, not just by interests/age.
+const ENERGY_ORDER: Record<string, number> = { homebody: 0, chill: 1, balanced: 2, social: 3, party: 4 }
+function energyAffinity(a?: string, b?: string): number {
+  if (!a || !b) return 0
+  const ia = ENERGY_ORDER[a]; const ib = ENERGY_ORDER[b]
+  if (ia == null || ib == null) return 0
+  const diff = Math.abs(ia - ib)
+  if (diff === 0) return 3   // exact match
+  if (diff === 1) return 2   // adjacent (homebody+chill, social+party)
+  if (diff === 2) return 1   // one step apart
+  if (diff === 3) return -1  // two steps apart — mild mismatch
+  return -3                  // homebody + party_animal — strong mismatch
+}
+
 // Score a join requester's compatibility with the host (0–100)
 export function scoreRequesterForHost(
-  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[]; hasPets?: boolean; city?: string },
-  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[]; dealbreakers?: string[]; city?: string },
+  req: { langs?: string[]; age?: number; drinksPref?: string; smokingPref?: string; interests?: string[]; hasPets?: boolean; city?: string; socialEnergy?: string },
+  host: { langs?: string[]; age?: string | number; drinksPref?: string; smokingPref?: string; interests?: string[]; dealbreakers?: string[]; city?: string; socialEnergy?: string },
   eventCategory?: string
 ): number {
   // Hard host dealbreakers — return 0 so they're filtered out of the approval list.
@@ -140,7 +157,12 @@ export function scoreRequesterForHost(
   else if (eventCategory && reqI.includes(eventCategory)) score += 8
   // Same home city — easier to actually meet up / carpool (+12 bonus)
   if (req.city && host.city && req.city.toLowerCase() === host.city.toLowerCase()) score += 12
-  return Math.min(100, score)
+  // Social-energy compatibility — pairs people who want to socialise the same
+  // way (Homebody + Homebody > Homebody + Party Animal). -3..+3 mapped to a
+  // proportional bonus/penalty (up to ±15) so it nudges ordering without
+  // dominating the existing signals.
+  score += energyAffinity(req.socialEnergy, host.socialEnergy) * 5
+  return Math.min(100, Math.max(0, score))
 }
 
 // Score how well an event fits a requester (0–100)

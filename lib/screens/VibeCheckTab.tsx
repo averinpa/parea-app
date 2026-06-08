@@ -123,8 +123,8 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
       if (userDb.includes('sober_only') && p.drinksPref === 'Social drinker') return { id: p.id, score: 0, reason: 'Drinking dealbreaker' }
       if (userDb.includes('pets_allergy') && p.hasPets) return { id: p.id, score: 0, reason: 'Pet allergy' }
       const score = scoreRequesterForHost(
-        { langs: p.langs, age: p.age, drinksPref: p.drinksPref, smokingPref: p.smokingPref, interests: p.interests, hasPets: p.hasPets, city: p.city },
-        { langs: userData.langs, age: userData.age, drinksPref: userData.drinksPref, smokingPref: userData.smokingPref, interests: userData.interests, dealbreakers: userData.dealbreakers, city: userData.city }
+        { langs: p.langs, age: p.age, drinksPref: p.drinksPref, smokingPref: p.smokingPref, interests: p.interests, hasPets: p.hasPets, city: p.city, socialEnergy: p.socialEnergy },
+        { langs: userData.langs, age: userData.age, drinksPref: userData.drinksPref, smokingPref: userData.smokingPref, interests: userData.interests, dealbreakers: userData.dealbreakers, city: userData.city, socialEnergy: userData.socialEnergy }
       )
       return { id: p.id, score, reason: 'Compatibility' }
     })
