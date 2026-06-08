@@ -521,9 +521,18 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     // required two signals to overlap, so 'balanced' vibe (VIBE_CATS=[]) +
     // narrow interests would leave the feed empty. Lower bar surfaces more,
     // ordering still puts the best matches first.
+    // Vibe gate: if the user picked a vibe with categories (Homebody, Chill,
+    // Social, Party), require the event to match THAT vibe OR their interests.
+    // Otherwise a concert squeaked into For You for a Homebody-mood user just
+    // because the language + day matched. Balanced vibe (no cats) skips the
+    // gate and falls back to the pure score threshold.
     const scored = all.flatMap(ev => {
       if (seen.has(ev.id)) return []
       seen.add(ev.id)
+      if (vibeCats.length > 0) {
+        const cat = (ev.category || '').toLowerCase()
+        if (!vibeCats.includes(cat) && !userCategories.includes(cat)) return []
+      }
       const { score, reasons } = scoreForYou(ev)
       if (score < 30) return []
       return [{ ev, score, reasons }]
