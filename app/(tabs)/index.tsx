@@ -252,30 +252,14 @@ Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' B
 
 function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData, onCancelHostedEvent, crewStats = {} }: any) {
   const insets = useSafeAreaInsets()
-  const [vibeEditOpen, setVibeEditOpen] = useState(false)
-  const [draftVibe, setDraftVibe] = useState(tonightVibe)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
-  const pulseAnim = useRef(new Animated.Value(1)).current
-
-  useEffect(() => {
-    if (draftVibe?.energy === 'party') {
-      Animated.loop(Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.12, duration: 600, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ])).start()
-    } else {
-      pulseAnim.stopAnimation()
-      pulseAnim.setValue(1)
-    }
-  }, [draftVibe?.energy])
   const [calMonth, setCalMonth] = useState(new Date().getMonth())
   const [searchQuery, setSearchQuery] = useState('')
   const [officialDbEvents, setOfficialDbEvents] = useState<any[]>([])
   const [officialDbLoading, setOfficialDbLoading] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
-  const [forYouFilter, setForYouFilter] = useState(false)
   const [showAllOfficialModal, setShowAllOfficialModal] = useState(false)
   // Simplified toolbar filters: each toggle is a single segmented control,
   // category lives in a popup instead of the inline horizontal scroll. Default
@@ -379,7 +363,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
   const communityFiltered = communityAll.filter(ev => {
     if (typeFilter === 'official') return false
     if (categoryFilter && ev.category !== categoryFilter) return false
-    if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       if (!ev.title.toLowerCase().includes(q) && !(ev.description || '').toLowerCase().includes(q)) return false
@@ -388,48 +371,15 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     return true
   })
 
-  // Sort community: vibe-matched first, then interest-matched
-  const vibeCats = tonightVibe?.energy ? (VIBE_CATS[tonightVibe.energy] || []) : []
-  const communityEvents = [...communityFiltered].sort((a, b) => {
-    const aVibe = vibeCats.includes(a.category) ? 2 : 0
-    const bVibe = vibeCats.includes(b.category) ? 2 : 0
-    const aInt = userCategories.includes(a.category) ? 1 : 0
-    const bInt = userCategories.includes(b.category) ? 1 : 0
-    return (bVibe + bInt) - (aVibe + aInt)
-  })
+  // Community: keep chronological (filter already sorted upstream). Interest-
+  // based bumping happens via the optional soft sort below if it pays off.
+  const communityEvents = communityFiltered
 
-  // Vibe-matched official events (shown in Tonight Vibe section) — curated top-3 for today/tomorrow
-  const vibeEvents = (() => {
-    if (vibeCats.length === 0) return []
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const dayAfterTomorrow = new Date(today); dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
-    return officialAll
-      .filter(ev => {
-        if (!vibeCats.includes(ev.category)) return false
-        if (city && ev.city && ev.city.toLowerCase() !== city.toLowerCase()) return false
-        const d = parseEventDate(ev.date_label || ev.time || '')
-        if (!d) return false
-        return d >= today && d < dayAfterTomorrow
-      })
-      .map(ev => {
-        const interestHit = userCategories.includes(ev.category) ? 2 : 0
-        const d = parseEventDate(ev.date_label || ev.time || '')
-        const todayHit = d && d.toDateString() === today.toDateString() ? 1 : 0
-        return { ev, score: interestHit + todayHit }
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
-      .map(x => x.ev)
-  })()
-  const vibeEventIds = new Set(vibeEvents.map((e: any) => e.id))
-
-  // Apply search + date + city filter to official; exclude Tonight's Vibe picks (B+C)
+  // Official events: just filter, sort applied below.
   const officialEvents = officialAll.filter(ev => {
-    if (vibeEventIds.has(ev.id)) return false
     if (typeFilter === 'community') return false
     if (city && ev.city && ev.city.toLowerCase() !== city.toLowerCase()) return false
     if (categoryFilter && ev.category !== categoryFilter) return false
-    if (forYouFilter && userCategories.length > 0 && !userCategories.includes(ev.category)) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       if (!(ev.title || '').toLowerCase().includes(q) && !(ev.category || '').toLowerCase().includes(q)) return false
@@ -448,103 +398,6 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     if (!db) return -1
     return da.getTime() - db.getTime()
   })
-
-  // ── For You scoring ───────────────────────────────────────────────────────
-  const userLangs: string[] = userData?.langs || []
-  const LANG_LABEL: Record<string, string> = { en: 'English', ru: 'Russian', el: 'Greek', de: 'German', fr: 'French', he: 'Hebrew', uk: 'Ukrainian', it: 'Italian', es: 'Spanish' }
-  const todayForYou = new Date(); todayForYou.setHours(0, 0, 0, 0)
-  const dayAfterForYou = new Date(todayForYou); dayAfterForYou.setDate(dayAfterForYou.getDate() + 2)
-
-  const scoreForYou = (ev: any): { score: number; reasons: string[] } => {
-    let score = 0
-    const reasons: string[] = []
-
-    if (vibeCats.length > 0 && vibeCats.includes(ev.category)) {
-      score += 35
-      reasons.push('Vibe')
-    }
-    if (userCategories.length > 0 && userCategories.includes(ev.category)) {
-      score += 30
-      reasons.push('Interests match')
-    }
-
-    let langHit: string | null = null
-    if (userLangs.length > 0) {
-      if (ev.type === 'community') {
-        const evLangs: string[] = ev.hostLangs || []
-        const overlap = evLangs.filter((l: string) => userLangs.includes(l))
-        if (overlap.length > 0) langHit = LANG_LABEL[overlap[0]] || overlap[0]
-      } else {
-        const langStr = (ev.language || '').toLowerCase()
-        if (langStr) {
-          const matched = userLangs.find(code => {
-            const label = (LANG_LABEL[code] || code).toLowerCase()
-            return langStr.includes(label) || langStr.includes(code)
-          })
-          if (matched) langHit = LANG_LABEL[matched] || matched
-        }
-      }
-    }
-    if (langHit) {
-      score += 15
-      reasons.push(langHit)
-    }
-
-    const d = parseEventDate(ev.date_label || ev.time || '')
-    if (d && d >= todayForYou && d < dayAfterForYou) {
-      score += 10
-      reasons.push(d.toDateString() === todayForYou.toDateString() ? 'Today' : 'Tomorrow')
-    }
-
-    let joinable = false
-    if (ev.type === 'community') {
-      const filled = ev.isHosted ? (approvedJoiners[ev.id] || []).length + 1 : ev.participantsCount || 0
-      const total = ev.maxParticipants || 10
-      joinable = filled < total
-    } else {
-      joinable = !ev.expiresAt || ev.expiresAt > Date.now()
-    }
-    if (joinable) {
-      score += 10
-      reasons.push('Spots open')
-    }
-
-    return { score: Math.min(100, score), reasons: reasons.slice(0, 3) }
-  }
-
-  const forYouEvents = (() => {
-    const officialForYou = officialAll.filter((ev: any) => !city || !ev.city || ev.city.toLowerCase() === city.toLowerCase())
-    // Respect the Type toggle inside For You too — picking Community should
-    // not surface official picks, same as on All Events.
-    const all: any[] = [
-      ...(typeFilter === 'community' ? [] : officialForYou),
-      ...(typeFilter === 'official' ? [] : communityAll),
-    ]
-    const seen = new Set<number>()
-    // Threshold 30 (was 60) — any single strong signal qualifies (interests
-    // match, vibe match, or language + today). The old bar of 60 effectively
-    // required two signals to overlap, so 'balanced' vibe (VIBE_CATS=[]) +
-    // narrow interests would leave the feed empty. Lower bar surfaces more,
-    // ordering still puts the best matches first.
-    // Vibe gate: if the user picked a vibe with categories (Homebody, Chill,
-    // Social, Party), require the event to match THAT vibe OR their interests.
-    // Otherwise a concert squeaked into For You for a Homebody-mood user just
-    // because the language + day matched. Balanced vibe (no cats) skips the
-    // gate and falls back to the pure score threshold.
-    const scored = all.flatMap(ev => {
-      if (seen.has(ev.id)) return []
-      seen.add(ev.id)
-      if (vibeCats.length > 0) {
-        const cat = (ev.category || '').toLowerCase()
-        if (!vibeCats.includes(cat) && !userCategories.includes(cat)) return []
-      }
-      const { score, reasons } = scoreForYou(ev)
-      if (score < 30) return []
-      return [{ ev, score, reasons }]
-    })
-    scored.sort((a, b) => b.score - a.score)
-    return scored
-  })()
 
   // ── Join Bottom Sheet state ──────────────────────────────────────────────
   const [joinSheet, setJoinSheet] = useState<{ visible: boolean; ev: any | null; step: 1 | 2 | 3 | 4; format: string; transport: string; crewPref: string; groupMin: number; groupMax: number }>(
@@ -688,45 +541,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 <CaretDown size={10} color="#A5B4FC" weight="bold" />
               </TouchableOpacity>
 
-              {/* Vibe — outline, muted */}
-              <TouchableOpacity onPress={() => { setDraftVibe(tonightVibe); setVibeEditOpen(true) }}
-                activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
-                  backgroundColor: 'transparent',
-                  borderWidth: 1,
-                  borderColor: tonightVibe ? (SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy)?.color || '#E2E8F0') + '33' : '#E2E8F0' }}>
-                {tonightVibe ? (() => {
-                  const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe.energy) || SOCIAL_ENERGY[2]
-                  return <>
-                    <energyInfo.Icon size={12} color={energyInfo.color + 'B0'} weight="duotone" />
-                    <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: energyInfo.color + 'CC' }}>{energyInfo.label}</Text>
-                    <CaretDown size={10} color="#CBD5E1" weight="bold" />
-                  </>
-                })() : <>
-                  <Sparkle size={12} color="#94A3B8" weight="duotone" />
-                  <Text style={{ fontSize: 12, fontFamily: 'Outfit-Medium', color: '#94A3B8' }}>My Vibe</Text>
-                  <CaretDown size={10} color="#CBD5E1" weight="bold" />
-                </>}
-              </TouchableOpacity>
-
-              {/* Calendar pill removed — its job is now the When toggle below. */}
+              {/* Vibe + For You / All toggle removed — overlapping filters
+                  with the When / Type / Categories controls below confused
+                  testers, and vibe scoring didn't work with the current narrow
+                  category data. Profile still tracks vibe for future use. */}
 
             </View>
-          </View>
-
-          {/* All / For You toggle */}
-          <View style={{ flexDirection: 'row', marginHorizontal: 20, marginBottom: 14, backgroundColor: '#EEF2FF', borderRadius: 14, padding: 3 }}>
-            <TouchableOpacity onPress={() => setForYouFilter(false)} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center',
-              backgroundColor: !forYouFilter ? '#fff' : 'transparent',
-              shadowColor: !forYouFilter ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: !forYouFilter ? 2 : 0 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: !forYouFilter ? '#4338CA' : '#94A3B8' }}>All Events</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setForYouFilter(true)} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4,
-              backgroundColor: forYouFilter ? '#fff' : 'transparent',
-              shadowColor: forYouFilter ? '#6366F1' : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: forYouFilter ? 2 : 0 }}>
-              <Sparkle size={13} color={forYouFilter ? '#EC4899' : '#94A3B8'} weight="duotone" />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: forYouFilter ? '#EC4899' : '#94A3B8' }}>For You</Text>
-            </TouchableOpacity>
           </View>
 
           {/* When (date range) segmented control. 'Custom' both flags the
@@ -873,7 +693,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             scroll of chips was the biggest visual-density complaint in friend's
             feedback — a popup keeps category power-users happy without
             crowding the home toolbar for everyone. */}
-        {!forYouFilter && (officialAll.length > 0 || communityAll.length > 0) && (
+        {(officialAll.length > 0 || communityAll.length > 0) && (
           <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity onPress={() => setCategoryModalOpen(true)} activeOpacity={0.8}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99,
@@ -945,112 +765,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         </Modal>
 
         {/* ── FOR YOU ── */}
-        {forYouFilter && (
-          <View>
-            <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 14 }}>
-              <Text style={{ fontSize: 26, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.5 }}>Picked for you ✨</Text>
-              <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>Based on your vibe, interests and languages</Text>
-            </View>
-            {forYouEvents.length === 0 ? (
-              <View style={{ alignItems: 'center', paddingTop: 24, paddingHorizontal: 32, paddingBottom: 32 }}>
-                <Image source={require('../../assets/images/community_empty.png')} style={{ width: 160, height: 122, marginBottom: 14 }} resizeMode="contain" />
-                <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', textAlign: 'center' }}>Your picks are warming up ✨</Text>
-                <Text style={{ fontSize: 13, fontFamily: 'Outfit-Regular', color: '#94A3B8', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Add more interests to get better recommendations</Text>
-                <TouchableOpacity onPress={() => setVibeEditOpen(true)} activeOpacity={0.85}
-                  style={{ marginTop: 20, borderRadius: 14, overflow: 'hidden' }}>
-                  <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={{ paddingVertical: 13, paddingHorizontal: 24 }}>
-                    <Text style={{ fontSize: 14, fontFamily: 'Outfit-SemiBold', color: '#fff' }}>Improve my vibe</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 16 }}>
-                {forYouEvents.map(({ ev, score, reasons }: any) => {
-                  const CatIcon = CATEGORY_ICON[ev.category] || MapPin
-                  const bgColors = CATEGORY_BG[ev.category] || ['#EEF2FF', '#C7D2FE']
-                  const iconColor = CATEGORY_COLOR[ev.category] || '#4338CA'
-                  return (
-                    <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
-                      style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: '#6366F1', shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
-                        <LinearGradient colors={bgColors as any}
-                          style={{ width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <CatIcon size={22} color={iconColor} weight="duotone" />
-                        </LinearGradient>
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-                            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
-                            <View style={{ paddingHorizontal: 9, paddingVertical: 3, borderRadius: 99, backgroundColor: '#EDE9FE', borderWidth: 1, borderColor: '#DDD6FE' }}>
-                              <Text style={{ fontSize: 11, fontFamily: 'Outfit-SemiBold', color: '#6D28D9' }}>{score >= 70 ? `${score}% match` : 'Good match'}</Text>
-                            </View>
-                          </View>
-                          {reasons.length > 0 && (
-                            <Text style={{ fontSize: 12, color: '#8B5CF6', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{reasons.join(' · ')}</Text>
-                          )}
-                        </View>
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                          <CalendarBlank size={12} color="#94A3B8" weight="regular" />
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }}>{prettyEventTime(ev.date_label || ev.time_label || ev.time) || ''}</Text>
-                        </View>
-                        {(ev.location || ev.venue) && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 }}>
-                            <PhMapPin size={12} color="#94A3B8" weight="regular" />
-                            <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{(ev.location || ev.venue || '').split(',')[0].trim()}</Text>
-                          </View>
-                        )}
-                        <View style={{ marginLeft: 'auto', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99, backgroundColor: ev.type === 'community' ? '#EEF2FF' : '#FEF3C7' }}>
-                          <Text style={{ fontSize: 10, fontFamily: 'Outfit-SemiBold', color: ev.type === 'community' ? '#4338CA' : '#B45309' }}>{ev.type === 'community' ? 'Community' : 'Official'}</Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  )
-                })}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ── TONIGHT VIBE PICKS ── */}
-        {/* Tonight Vibe surfaces top-3 official events for the mood, so it
-            shouldn't render when the Type toggle is restricted to Community. */}
-        {!forYouFilter && typeFilter !== 'community' && vibeEvents.length > 0 && (() => {
-          const energyInfo = SOCIAL_ENERGY.find(e => e.id === tonightVibe?.energy) || SOCIAL_ENERGY[2]
-          return (
-            <View style={{ marginTop: 28, marginBottom: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 12 }}>
-                <energyInfo.Icon size={18} color={energyInfo.color} weight="duotone" />
-                <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Tonight's Vibe</Text>
-                <View style={{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: energyInfo.color + '14' }}>
-                  <Text style={{ fontSize: 10, fontFamily: 'Outfit-Medium', color: energyInfo.color, letterSpacing: 0.1 }}>{energyInfo.label}</Text>
-                </View>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 4 }}>
-                {vibeEvents.map((ev: any) => (
-                  <TouchableOpacity key={ev.id} onPress={() => onEventPress(ev)} activeOpacity={0.88}
-                    style={{ width: 148, borderRadius: 16, overflow: 'hidden', backgroundColor: '#fff', shadowColor: energyInfo.color, shadowOpacity: 0.10, shadowRadius: 8, elevation: 2 }}>
-                    {ev.image_url ? (
-                      <Image source={{ uri: ev.image_url }} style={{ width: '100%', height: 68 }} resizeMode="cover" />
-                    ) : (
-                      <LinearGradient colors={(CATEGORY_BG[ev.category] || ['#EEF2FF','#C7D2FE']) as any} style={{ width: '100%', height: 68, alignItems: 'center', justifyContent: 'center' }}>
-                        {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={26} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
-                      </LinearGradient>
-                    )}
-                    <View style={{ padding: 9 }}>
-                      <Text style={{ fontSize: 12, fontFamily: 'Outfit-SemiBold', color: '#1E1B4B', marginBottom: 3 }} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'Outfit-Medium' }} numberOfLines={1}>{prettyEventTime(ev.date_label || ev.time_label) || ''}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )
-        })()}
+        {/* For You section and Tonight's Vibe strip removed — overlapping
+            with the When/Type/Categories controls; vibe-scoring didn't work
+            with the current narrow category data anyway. */}
 
         {/* ── OFFICIAL EVENTS ── */}
-        {!forYouFilter && typeFilter !== 'community' && officialDbLoading && (
+        {typeFilter !== 'community' && officialDbLoading && (
           <>
             <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Official Events</Text>
@@ -1069,7 +789,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
             </ScrollView>
           </>
         )}
-        {!forYouFilter && typeFilter !== 'community' && !officialDbLoading && officialDbEvents.length > 0 && (
+        {typeFilter !== 'community' && !officialDbLoading && officialDbEvents.length > 0 && (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1224,7 +944,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
         )}
 
         {/* ── COMMUNITY ── */}
-        {!forYouFilter && typeFilter !== 'official' && (<>
+        {typeFilter !== 'official' && (<>
         {communityAll.length > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1330,51 +1050,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
 
       </ScrollView>
 
-      {/* ── Vibe Edit Modal ── */}
-      <Modal visible={vibeEditOpen} transparent animationType="slide" onRequestClose={() => setVibeEditOpen(false)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} activeOpacity={1} onPress={() => setVibeEditOpen(false)} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom + 16, 36) }}>
-          <View style={{ width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
-          <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: 26, color: '#1E1B4B', letterSpacing: -0.5, marginBottom: 20 }}>Tonight's vibe</Text>
-
-          {/* Social energy */}
-          <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 11, color: '#94A3B8', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 12 }}>Social Energy</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-            {SOCIAL_ENERGY.map(e => {
-              const on = draftVibe?.energy === e.id
-              const isParty = e.id === 'party'
-              const btn = (
-                <TouchableOpacity key={e.id} onPress={() => setDraftVibe((v: any) => ({ ...v, energy: e.id }))} activeOpacity={0.8}>
-                  {on ? (
-                    <LinearGradient colors={e.grad}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20,
-                        shadowColor: e.color, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
-                      <e.Icon size={18} color={e.color} weight="duotone" />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: e.color }}>{e.label}</Text>
-                    </LinearGradient>
-                  ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20,
-                      backgroundColor: 'rgba(248,250,252,0.9)', borderWidth: 1.5, borderColor: '#E2E8F0' }}>
-                      <e.Icon size={18} color="#CBD5E1" weight="regular" />
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#94A3B8' }}>{e.label}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              )
-              return isParty && on
-                ? <Animated.View key={e.id} style={{ transform: [{ scale: pulseAnim }] }}>{btn}</Animated.View>
-                : btn
-            })}
-          </View>
-
-          <TouchableOpacity onPress={() => { setTonightVibe(draftVibe); setVibeEditOpen(false) }}
-            style={{ borderRadius: 16, paddingVertical: 15, alignItems: 'center', overflow: 'hidden' }}>
-            <LinearGradient colors={['#6366F1','#818CF8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-            <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff' }}>Save vibe</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      {/* Vibe edit modal removed alongside the pill that triggered it. */}
 
       {/* ── Join Bottom Sheet ── */}
       <Modal visible={joinSheet.visible} transparent animationType="slide" onRequestClose={closeJoinSheet}>

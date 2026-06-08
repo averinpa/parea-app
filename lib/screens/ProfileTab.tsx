@@ -221,19 +221,9 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
                 )
               })}
             </View>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
-            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 24 }}>
-              {SOCIAL_ENERGY.map(e => {
-                const on = draft.socialEnergy === e.id
-                return (
-                  <TouchableOpacity key={e.id} onPress={() => setDraft((v: any) => ({ ...v, socialEnergy: e.id }))}
-                    style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
-                    <e.Icon size={18} color={on ? '#fff' : '#94A3B8'} weight="duotone" />
-                    <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center', marginTop: 3 }}>{e.label}</Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
+            {/* Social energy block removed — the Vibe / For You concept was
+                pulled from Home for being confusing. Profile data (drinks,
+                smoking, pets) still scores crew compatibility. */}
             {[
               { key: 'drinksPref', label: '🍷 Alcohol', opts: ['Social drinker', 'Rarely', "Don't drink"] },
               { key: 'smokingPref', label: '🚬 Smoking', opts: ['Non-smoker', 'Social', 'Smoker'] },
