@@ -510,7 +510,15 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
             const realAttendees = isCommunity ? (communityEventMembers[ev.id] || []) : (ev.type === 'official' ? (eventAttendeesMap[ev.id] || []) : [])
             const passedIds = new Set(passedRequests[ev.id] || [])
             const partners   = isCommunity ? realAttendees : realAttendees
-            const realPartners = partners.filter((p: any) => p._real && !passedIds.has(p.id))
+            // Exclude people who are already members of a crew for this event —
+            // otherwise a duo-seeker sees a crew member listed BOTH inside the
+            // "join directly" crew card AND below as a lone invitable person
+            // (Daria's screenshot: Nikos appeared twice). Inviting a crew member
+            // as duo would also pull them into a duplicate chat.
+            const inAnyCrewIds = new Set<string>(
+              (crewsByEvent[ev.id] || []).flatMap((c: any) => (c.members || []).map((m: any) => m.id))
+            )
+            const realPartners = partners.filter((p: any) => p._real && !passedIds.has(p.id) && !inAnyCrewIds.has(p.id))
             const hasRealAttendees = realPartners.length > 0
             // found = me (1) + non-skipped real partners
             const found      = hasRealAttendees ? realPartners.length + 1 : 1
