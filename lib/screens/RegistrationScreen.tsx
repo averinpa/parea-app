@@ -126,11 +126,7 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
               {/* Google */}
               {onGoogleSignIn && (
                 <TouchableOpacity onPress={() => {
-                  if (!agreed) {
-                    setShowAgreementWarning(true)
-                    Alert.alert('Agree to the Terms first', 'Please tick the box at the bottom to accept our Terms of Service and Privacy Policy before continuing.')
-                    return
-                  }
+                  if (!agreed) { setShowAgreementWarning(true); return }
                   onGoogleSignIn()
                 }}
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
@@ -151,11 +147,7 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
               {/* Apple (iOS only) */}
               {Platform.OS === 'ios' && onAppleSignIn && (
                 <TouchableOpacity onPress={() => {
-                  if (!agreed) {
-                    setShowAgreementWarning(true)
-                    Alert.alert('Agree to the Terms first', 'Please tick the box at the bottom to accept our Terms of Service and Privacy Policy before continuing.')
-                    return
-                  }
+                  if (!agreed) { setShowAgreementWarning(true); return }
                   onAppleSignIn()
                 }}
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
