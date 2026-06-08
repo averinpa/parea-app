@@ -125,7 +125,14 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
 
               {/* Google */}
               {onGoogleSignIn && (
-                <TouchableOpacity onPress={onGoogleSignIn}
+                <TouchableOpacity onPress={() => {
+                  if (!agreed) {
+                    setShowAgreementWarning(true)
+                    Alert.alert('Agree to the Terms first', 'Please tick the box at the bottom to accept our Terms of Service and Privacy Policy before continuing.')
+                    return
+                  }
+                  onGoogleSignIn()
+                }}
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
                     height: 54, borderRadius: 16, backgroundColor: '#fff',
                     borderWidth: 1, borderColor: 'rgba(139,92,246,0.12)',
@@ -143,7 +150,14 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
 
               {/* Apple (iOS only) */}
               {Platform.OS === 'ios' && onAppleSignIn && (
-                <TouchableOpacity onPress={onAppleSignIn}
+                <TouchableOpacity onPress={() => {
+                  if (!agreed) {
+                    setShowAgreementWarning(true)
+                    Alert.alert('Agree to the Terms first', 'Please tick the box at the bottom to accept our Terms of Service and Privacy Policy before continuing.')
+                    return
+                  }
+                  onAppleSignIn()
+                }}
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
                     height: 54, borderRadius: 16, backgroundColor: '#111827', marginBottom: 16 }}>
                   <Svg width={16} height={16} viewBox="0 0 814 1000">
