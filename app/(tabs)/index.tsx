@@ -7279,9 +7279,24 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                       <LinearGradient colors={eventDetail.gradient as any} style={{ height: 280 }} />
                     )}
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 40, paddingHorizontal: 20, paddingBottom: 20 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
-                        {CATEGORY_EMOJI[eventDetail.category] || '📍'} {eventDetail.category?.toUpperCase()}{eventDetail.distance && eventDetail.distance !== '0km' ? ` · ${eventDetail.distance}` : ''}
-                      </Text>
+                      {(() => {
+                        // Drop the category for official events (scraper miscategorized — e.g. RUES
+                        // CINE ART as "Kids Shows"). Community events keep it (user-set, reliable).
+                        const isOfficial = eventDetail.type === 'official'
+                        const dist = eventDetail.distance && eventDetail.distance !== '0km' ? eventDetail.distance : ''
+                        let line = ''
+                        if (isOfficial) {
+                          line = dist ? `📍 ${dist}` : ''
+                        } else {
+                          line = `${CATEGORY_EMOJI[eventDetail.category] || '📍'} ${eventDetail.category?.toUpperCase() || ''}${dist ? ` · ${dist}` : ''}`
+                        }
+                        if (!line) return null
+                        return (
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>
+                            {line}
+                          </Text>
+                        )
+                      })()}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <Text style={{ fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.4, lineHeight: 28, flexShrink: 1 }}>{eventDetail.title}</Text>
                         {eventDetail.visibility === 'private' && (
