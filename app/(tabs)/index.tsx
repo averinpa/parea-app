@@ -7460,7 +7460,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                           // For official events: show all event_attendees (people who joined
                           // this event in Parea, across all crews + still in pool).
-                          const evRefId = eventDetail._dbId ?? eventDetail.id
+                          // event_attendees.event_ref_id stores the app-side id with the
+                          // 100_000 offset (matches eventDetail.id) — _dbId is the raw DB
+                          // id (e.g. 232 for 100232) which would query the wrong key.
+                          const evRefId = eventDetail.id
                           const { data: attendees } = await supabase
                             .from('event_attendees')
                             .select('profile_id, profiles:profile_id(id, name, photos, bio, age, color)')
