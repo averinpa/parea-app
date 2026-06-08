@@ -221,9 +221,19 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
                 )
               })}
             </View>
-            {/* Social energy block removed — the Vibe / For You concept was
-                pulled from Home for being confusing. Profile data (drinks,
-                smoking, pets) still scores crew compatibility. */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>Social energy</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 24 }}>
+              {SOCIAL_ENERGY.map(e => {
+                const on = draft.socialEnergy === e.id
+                return (
+                  <TouchableOpacity key={e.id} onPress={() => setDraft((v: any) => ({ ...v, socialEnergy: e.id }))}
+                    style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14, backgroundColor: on ? '#3730A3' : '#F8FAFC', borderWidth: 1.5, borderColor: on ? '#3730A3' : '#E2E8F0' }}>
+                    <e.Icon size={18} color={on ? '#fff' : '#94A3B8'} weight="duotone" />
+                    <Text style={{ fontSize: 9, fontWeight: '700', color: on ? '#fff' : '#94A3B8', textAlign: 'center', marginTop: 3 }}>{e.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
             {[
               { key: 'drinksPref', label: '🍷 Alcohol', opts: ['Social drinker', 'Rarely', "Don't drink"] },
               { key: 'smokingPref', label: '🚬 Smoking', opts: ['Non-smoker', 'Social', 'Smoker'] },
@@ -578,6 +588,7 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
           const bio = (userData?.bio || '').trim()
           const interests = userData?.interests || []
           const langs = userData?.langs || []
+          const socialEnergy = userData?.socialEnergy
           const musicGenres = userData?.musicGenres || []
           const drinksPref = userData?.drinksPref
           const transport = userData?.transport
@@ -589,13 +600,15 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
           if (bio) strength += 15; else tips.push('Add a one-line bio')
           if (interests.length >= 3) strength += 15; else tips.push(`Pick ${3 - interests.length} more interest${3 - interests.length === 1 ? '' : 's'}`)
           if (langs.length >= 1) strength += 10; else tips.push('Add at least 1 language')
+          if (socialEnergy) strength += 10; else tips.push('Set your social energy')
           if (musicGenres.length >= 1) strength += 10; else tips.push('Pick a music vibe')
           if (drinksPref) strength += 5
           strength = Math.min(100, strength)
 
+          const energyLabel = SOCIAL_ENERGY.find(e => e.id === socialEnergy)?.label
           const transportLabel = transport === 'car' ? 'Has a car' : transport === 'lift' ? 'Open to carpool' : transport === 'meet' ? 'Meet there' : null
           const langLabels = langs.slice(0, 3).map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c)
-          const vibeParts = [transportLabel, langLabels.join(' / ')].filter(Boolean)
+          const vibeParts = [energyLabel, transportLabel, langLabels.join(' / ')].filter(Boolean)
 
           return (
             <View style={{ paddingHorizontal: 20, gap: 14, marginBottom: 32 }}>
