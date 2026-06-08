@@ -862,7 +862,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                 borderWidth: 1, borderColor: categoryFilter ? '#6366F1' : '#E2E8F0' }}>
               <MagnifyingGlass size={12} color={categoryFilter ? '#fff' : '#64748B'} weight="duotone" />
               <Text style={{ fontSize: 12, fontWeight: '700', color: categoryFilter ? '#fff' : '#64748B', textTransform: 'capitalize' }}>
-                {categoryFilter || 'Categories'}
+                {categoryFilter === 'kids shows' ? 'Shows' : (categoryFilter || 'Categories')}
               </Text>
               {categoryFilter && (
                 <TouchableOpacity onPress={() => setCategoryFilter(null)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
@@ -898,10 +898,16 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                   const knownIds = new Set(CAT_FILTERS.map(f => f.id))
                   const ordered: { id: string; label: string }[] = []
                   CAT_FILTERS.forEach(f => { if (counts.has(f.id)) ordered.push(f) })
+                  // Cosmetic relabels for scraper-tagged categories that read
+                  // awkwardly (e.g. RUES CINE ART came in as "Kids Shows"
+                  // because the source taxonomy is messy — most are adult).
+                  const CAT_RELABEL: Record<string, string> = {
+                    'kids shows': 'Shows',
+                  }
                   const extras = [...counts.entries()]
                     .filter(([id]) => !knownIds.has(id))
                     .sort((a, b) => b[1] - a[1])
-                    .map(([id]) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }))
+                    .map(([id]) => ({ id, label: CAT_RELABEL[id] || (id.charAt(0).toUpperCase() + id.slice(1)) }))
                   const chips = [{ id: '', label: 'All categories' }, ...ordered, ...extras]
                   return (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
