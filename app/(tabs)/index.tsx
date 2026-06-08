@@ -2485,6 +2485,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           const next = prev.filter((c: any) => {
             if (c.type !== 'duo' && c.type !== 'group') return true
             if (typeof c.id !== 'number') return true
+            // Local-only chats use a negative stable id (e.g. -1_000_000 - evId)
+            // for hosted-event group chats that live only in this client's state.
+            // They never appear in DB chat_members, so the reconcile would drop
+            // them every reload — and the poll would re-create them and re-fire
+            // "X joined the group" every time.
+            if (c.id < 0) return true
             if (dbIdSet.has(c.id)) return true
             if (c.isNew) return true
             const createdMs = Date.parse(c.time)
@@ -3951,7 +3957,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             // reconciles to a single entry instead of stacking duplicates.
             const stableLocalId = -1_000_000 - evId
             if (prev.some((c: any) => c.id === stableLocalId)) return prev
-            addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${confirmedJoiners[0]?.name} joined the group`, body: ev.title || '', chatId: 0 })
+            // Baseline gate — same as the existing-chat path above. First poll
+            // after reload restores history silently; only NEW joiners after the
+            // initial-load window get an inbox toast.
+            const isInitialLoad = !persistLoadedState || !chatNotifReadyRef.current
+            if (!isInitialLoad) {
+              addNotif({ type: 'member_joined', emoji: '✅', color: '#10B981', title: `${confirmedJoiners[0]?.name} joined the group`, body: ev.title || '', chatId: 0 })
+            }
             // Anchor chat expiry to the event time, not "now + 24h". Otherwise
             // every fresh app start the local chat gets re-created with a new
             // 24h window — past events would never clean up locally.
