@@ -883,7 +883,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
           <TouchableOpacity activeOpacity={1} onPress={() => setCategoryModalOpen(false)}
             style={{ flex: 1, backgroundColor: 'rgba(15,12,31,0.55)', justifyContent: 'flex-end' }}>
             <TouchableOpacity activeOpacity={1} onPress={() => {}}
-              style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32, maxHeight: '70%' }}>
+              style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18, paddingBottom: Math.max(32, insets.bottom + 20), maxHeight: '70%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <Text style={{ fontSize: 18, fontWeight: '900', color: '#1E1B4B', letterSpacing: -0.3 }}>Filter by category</Text>
                 <TouchableOpacity onPress={() => setCategoryModalOpen(false)}
