@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/((?!terms|privacy).*)", "destination": "/index.html" }
+    { "source": "/event/:id", "destination": "/index.html" },
+    { "source": "/event/:id/:rest*", "destination": "/index.html" }
   ]
 }
