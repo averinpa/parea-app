@@ -984,9 +984,9 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       {(() => { const CatIcon = CATEGORY_ICON[ev.category] || PhMapPin; return <CatIcon size={36} color={CATEGORY_COLOR[ev.category] || '#4338CA'} weight="duotone" /> })()}
                     </LinearGradient>
                   )}
-                  <View style={{ position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(30,27,75,0.65)' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 0.4, textTransform: 'capitalize' }}>{ev.category || 'Event'}</Text>
-                  </View>
+                  {/* Category overlay removed — scraper miscategorized many events
+                      (e.g. RUES CINE ART tagged as "Kids Shows"). Category filter
+                      lives in the top tabs; the badge on the image misled users. */}
                   {ev.is_promoted && (
                     <View style={{ position: 'absolute', top: 10, right: 10, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, backgroundColor: '#f59e0b' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><PushPin size={9} color="#fff" weight="duotone" /><Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>FEATURED</Text></View>
