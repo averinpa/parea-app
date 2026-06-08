@@ -613,7 +613,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                     return (
                       <LinearGradient colors={[gc0, gc1]}
                         style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', elevation: 3 }}>
-                        <Text style={{ fontSize: 26 }}>{chat.eventEmoji || '🎉'}</Text>
+                        <PhUsersThree size={26} color="#fff" weight="duotone" />
                       </LinearGradient>
                     )
                   }
@@ -663,7 +663,9 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                     <Text style={{ fontSize: 11, color: chat.isNew ? CHATS_COLOR : '#CBD5E1', fontWeight: chat.isNew ? '700' : '400', marginLeft: 8, flexShrink: 0 }}>{formatChatTime(chat.time)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                    <Text style={{ fontSize: 13 }}>{chat.eventEmoji || '📍'}</Text>
+                    {chat.type === 'duo'
+                      ? <PhMapPin size={12} color={CHATS_COLOR} weight="duotone" />
+                      : <PhUsersThree size={12} color={CHATS_COLOR} weight="duotone" />}
                     <Text style={{ fontSize: 11, color: CHATS_COLOR, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>
                       {chat.type === 'duo' ? chat.event : `${chat.members} members`}
                     </Text>

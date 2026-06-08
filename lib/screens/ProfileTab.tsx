@@ -578,7 +578,6 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
           const bio = (userData?.bio || '').trim()
           const interests = userData?.interests || []
           const langs = userData?.langs || []
-          const socialEnergy = userData?.socialEnergy
           const musicGenres = userData?.musicGenres || []
           const drinksPref = userData?.drinksPref
           const transport = userData?.transport
@@ -590,15 +589,13 @@ export function ProfileTab({ userData, onUpdateUserData, onLogOut, city, setCity
           if (bio) strength += 15; else tips.push('Add a one-line bio')
           if (interests.length >= 3) strength += 15; else tips.push(`Pick ${3 - interests.length} more interest${3 - interests.length === 1 ? '' : 's'}`)
           if (langs.length >= 1) strength += 10; else tips.push('Add at least 1 language')
-          if (socialEnergy) strength += 10; else tips.push('Set your social energy')
           if (musicGenres.length >= 1) strength += 10; else tips.push('Pick a music vibe')
           if (drinksPref) strength += 5
           strength = Math.min(100, strength)
 
-          const energyLabel = SOCIAL_ENERGY.find(e => e.id === socialEnergy)?.label
           const transportLabel = transport === 'car' ? 'Has a car' : transport === 'lift' ? 'Open to carpool' : transport === 'meet' ? 'Meet there' : null
           const langLabels = langs.slice(0, 3).map((c: string) => LANGUAGES_LIST.find(l => l.code === c)?.label || c)
-          const vibeParts = [energyLabel, transportLabel, langLabels.join(' / ')].filter(Boolean)
+          const vibeParts = [transportLabel, langLabels.join(' / ')].filter(Boolean)
 
           return (
             <View style={{ paddingHorizontal: 20, gap: 14, marginBottom: 32 }}>
