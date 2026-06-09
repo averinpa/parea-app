@@ -865,17 +865,23 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                       <PhMapPin size={11} color={ev.location || ev.distance ? '#94A3B8' : 'transparent'} weight="regular" />
                       <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }} numberOfLines={1}>{ev.location || ev.distance || ''}</Text>
                     </View>
-                    {(() => {
-                      const st = crewStats[ev.id]
-                      if (!st || st.crews === 0) return null
-                      const spotsTxt = st.spotsLeft === 0 ? 'crew full' : `${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'} left`
-                      return (
-                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700', marginTop: 8 }}>
-                          {st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}
-                        </Text>
-                      )
-                    })()}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: crewStats[ev.id]?.crews ? 6 : 8 }}>
+                    {/* Reserve a fixed slot for the crew line so the I'm Going button
+                        always lands at the same Y across all three cards in the row
+                        — otherwise the card without crew info shows the button
+                        higher and the row looks ragged. */}
+                    <View style={{ height: 16, marginTop: 8, justifyContent: 'center' }}>
+                      {(() => {
+                        const st = crewStats[ev.id]
+                        if (!st || st.crews === 0) return null
+                        const spotsTxt = st.spotsLeft === 0 ? 'crew full' : `${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'} left`
+                        return (
+                          <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>
+                            {st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}
+                          </Text>
+                        )
+                      })()}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
                       {(() => { const st = getJoinState(ev); const active = st !== 'none'; return (
                         <TouchableOpacity
                           onPress={() => { if (!active) openJoinSheet(ev) }}
