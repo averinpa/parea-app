@@ -252,7 +252,7 @@ Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' B
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData, onCancelHostedEvent, crewStats = {} }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData, onCancelHostedEvent, crewStats = {}, seenNewEventIds = [] }: any) {
   const insets = useSafeAreaInsets()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -1461,34 +1461,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const insetsBottomRef = useRef(insets.bottom)
   insetsBottomRef.current = insets.bottom
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
-  // When user navigates away from Home, mark all events that currently show
-  // a NEW chip as seen — they've been on screen long enough to count as viewed.
-  // Tracks the previous active tab via ref so the transition can be detected
-  // without firing on initial mount.
-  const prevActiveTabRef = useRef<typeof activeTab>('home')
-  useEffect(() => {
-    if (prevActiveTabRef.current === 'home' && activeTab !== 'home') {
-      const now = Date.now()
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
-      const freshlyLoaded = [...feedOfficialDbEventsRef.current, ...dbCommunityEventsRef.current]
-        .filter((e: any) => {
-          if (!e.created_at) return false
-          const age = now - new Date(e.created_at).getTime()
-          return !isNaN(age) && age <= SEVEN_DAYS_MS
-        })
-        .map((e: any) => e.id)
-        .filter((id: any) => typeof id === 'number')
-      if (freshlyLoaded.length) {
-        setSeenNewEventIds(prev => {
-          const merged = new Set(prev)
-          freshlyLoaded.forEach(id => merged.add(id))
-          if (merged.size === prev.length) return prev
-          return [...merged]
-        })
-      }
-    }
-    prevActiveTabRef.current = activeTab
-  }, [activeTab])
+  // Mark an event as "seen" — called when the user actually opens its detail
+  // (tapping the card). Cards still in the feed that the user hasn't scrolled
+  // to / interacted with stay flagged NEW. Persisted via seenNewEventIds.
+  const markEventSeen = (eventId: number) => {
+    if (typeof eventId !== 'number') return
+    setSeenNewEventIds(prev => prev.includes(eventId) ? prev : [...prev, eventId])
+  }
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
   const [createStep, setCreateStep] = useState(1)
@@ -5145,7 +5124,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <SafeAreaView style={s.fill} edges={Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
-            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={setEventDetail} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents.map(uc => { const dbVer = dbCommunityEvents.find(d => d.id === uc.id); return dbVer ? { ...uc, participantsCount: dbVer.participantsCount } : uc }), ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} crewStats={crewStatsByEvent} />
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={(ev: any) => { markEventSeen(ev?.id); setEventDetail(ev) }} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents.map(uc => { const dbVer = dbCommunityEvents.find(d => d.id === uc.id); return dbVer ? { ...uc, participantsCount: dbVer.participantsCount } : uc }), ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} crewStats={crewStatsByEvent} seenNewEventIds={seenNewEventIds} />
           </View>
           <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, bottom: 0, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
           <VibeCheckTab
