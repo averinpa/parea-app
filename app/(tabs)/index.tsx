@@ -3784,6 +3784,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             // reconciles to a single entry instead of stacking duplicates.
             const stableLocalId = -1_000_000 - evId
             if (prev.some((c: any) => c.id === stableLocalId)) return prev
+            // Don't re-add the local stable-id placeholder if a real DB chat
+            // for this event already exists in the list. Reconcile drops the
+            // placeholder when the DB chat arrives, but this poller fires every
+            // 5s and was re-adding the placeholder → user saw two 'Pot' cards
+            // (one DB-backed at chat 129, one local placeholder at -1000097).
+            if (prev.some((c: any) => typeof c.id === 'number' && c.id > 0 && (c.hostEventId === evId || c.communityEventId === evId || c.eventRefId === evId))) return prev
             // Baseline gate — same as the existing-chat path above. First poll
             // after reload restores history silently; only NEW joiners after the
             // initial-load window get an inbox toast.
