@@ -829,10 +829,14 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     </View>
                   )}
                   {/* NEW chip — fires when the event landed in the feed in the
-                      last 7 days. Sits opposite the Popular sticker (top-right,
-                      below FEATURED if present) so the two never collide. */}
+                      last 7 days AND the user hasn't seen it yet. Once they
+                      leave Home (or open the event detail), it's marked seen
+                      and won't show NEW the next time the feed re-renders.
+                      Sits opposite the Popular sticker (top-right, below
+                      FEATURED if present) so the two never collide. */}
                   {(() => {
                     if (!ev.created_at) return null
+                    if (seenNewEventIds.includes(ev.id)) return null
                     const ageMs = Date.now() - new Date(ev.created_at).getTime()
                     if (isNaN(ageMs) || ageMs > 7 * 24 * 60 * 60 * 1000) return null
                     return (
@@ -1457,6 +1461,34 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const insetsBottomRef = useRef(insets.bottom)
   insetsBottomRef.current = insets.bottom
   const [activeTab, setActiveTab] = useState<'home' | 'vibecheck' | 'messages' | 'profile'>('home')
+  // When user navigates away from Home, mark all events that currently show
+  // a NEW chip as seen — they've been on screen long enough to count as viewed.
+  // Tracks the previous active tab via ref so the transition can be detected
+  // without firing on initial mount.
+  const prevActiveTabRef = useRef<typeof activeTab>('home')
+  useEffect(() => {
+    if (prevActiveTabRef.current === 'home' && activeTab !== 'home') {
+      const now = Date.now()
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+      const freshlyLoaded = [...feedOfficialDbEventsRef.current, ...dbCommunityEventsRef.current]
+        .filter((e: any) => {
+          if (!e.created_at) return false
+          const age = now - new Date(e.created_at).getTime()
+          return !isNaN(age) && age <= SEVEN_DAYS_MS
+        })
+        .map((e: any) => e.id)
+        .filter((id: any) => typeof id === 'number')
+      if (freshlyLoaded.length) {
+        setSeenNewEventIds(prev => {
+          const merged = new Set(prev)
+          freshlyLoaded.forEach(id => merged.add(id))
+          if (merged.size === prev.length) return prev
+          return [...merged]
+        })
+      }
+    }
+    prevActiveTabRef.current = activeTab
+  }, [activeTab])
   const [messagesInitialSubTab, setMessagesInitialSubTab] = useState<'going' | 'messages'>('going')
   const [createOpen, setCreateOpen] = useState(false)
   const [createStep, setCreateStep] = useState(1)
@@ -1634,6 +1666,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [joinedEvents, setJoinedEvents] = useState<Record<number, 'pending' | 'joined' | 'confirmed'>>({})
   const [cancelledEventIds, setCancelledEventIds] = useState<number[]>([])
   const cancelledEventIdsRef = useRef<Set<number>>(new Set())
+  // Event ids the user has already seen in the feed — once they've been on
+  // screen at least once, the green NEW chip stops showing (they're not "new"
+  // to this user anymore). Persisted so it survives reload.
+  const [seenNewEventIds, setSeenNewEventIds] = useState<number[]>([])
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
@@ -2777,6 +2813,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           }
         }
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
+        if (Array.isArray(saved.seenNewEventIds)) setSeenNewEventIds(saved.seenNewEventIds)
         // Build cleaned chatMessages first so we can use it to patch chatList previews
         const cleanedMessages: Record<string, any[]> = {}
         if (saved.chatMessages) {
@@ -2871,7 +2908,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests,
       approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap,
-      lastReadAtMap,
+      lastReadAtMap, seenNewEventIds,
       // Persist notifications so dismissed/read state survives app reload and we
       // don't re-add the same "X joined" notif from each polling cycle.
       notifications,
@@ -2879,7 +2916,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // entries created a race where polling fired before seen-keys loaded.
       seenNotifKeys: [...seenNotifKeysRef.current],
     }))
-  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications, seenNewEventIds])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   // Gated on plansHydrated: the joinedEvents backfill from DB (which sets
