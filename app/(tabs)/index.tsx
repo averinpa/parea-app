@@ -3375,7 +3375,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     const poll = async () => {
       const { data: memberships } = await supabase
         .from('chat_members')
-        .select('chat_id, chats:chat_id(id, type, event_id, last_msg)')
+        .select('chat_id, chats:chat_id(id, type, event_id, last_msg, created_at)')
         .eq('profile_id', userData.dbId)
       if (!memberships || memberships.length === 0) return
       for (const m of memberships) {
@@ -3412,7 +3412,13 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           avatars: otherMembers.map((p: any) => p.photo).filter(Boolean),
           colors: otherMembers.map((p: any) => p.color), memberProfiles: otherMembers,
           lastMsg: chat.last_msg || '🎉 You\'re in the crew!',
-          time: new Date().toISOString(), isNew: existing?.isNew ?? true, chatExpiresAt: existing?.chatExpiresAt || (Date.now() + 7 * 24 * 60 * 60 * 1000),
+          // Use real DB created_at — otherwise a fresh install's poll re-syncs
+          // every existing chat with time=now, the chatList growth + isFresh
+          // check fires 'Group chat is live!' for old chats. Keep existing.time
+          // first if already in the list (the chat may have a more accurate
+          // last-activity timestamp from realtime updates).
+          time: existing?.time || chat.created_at || new Date().toISOString(),
+          isNew: existing?.isNew ?? true, chatExpiresAt: existing?.chatExpiresAt || (Date.now() + 7 * 24 * 60 * 60 * 1000),
         }
         if (isCommunityChat) newChat.communityEventId = chat.event_id
         setChatList(prev => {
