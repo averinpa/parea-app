@@ -1,14 +1,16 @@
 import React, { useState } from 'react'
 import { Modal, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { REPORT_REASONS } from '../feed-constants'
 
 export function ReportModal({ profile, onClose, onSubmit }: { profile: any; onClose: () => void; onSubmit: (reason: string, details: string) => void }) {
   const [selected, setSelected] = useState('')
   const [details, setDetails] = useState('')
+  const insets = useSafeAreaInsets()
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={onClose} />
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 36 }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: Math.max(36, insets.bottom + 24) }}>
         <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', marginBottom: 4 }}>Report {profile?.name}</Text>
         <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 18 }}>Select a reason. We review all reports.</Text>
         {REPORT_REASONS.map(r => (
