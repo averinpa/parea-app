@@ -68,7 +68,7 @@ function EventThumb({ uri, emoji, colors }: { uri: string; emoji?: string; color
   )
 }
 
-export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, crewsByEvent = {}, officialEventChatMap = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {}, onBlockUser, onReportUser, plansLoading = false }: {
+export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, crewsByEvent = {}, officialEventChatMap = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {}, onBlockUser, onReportUser, plansLoading = false, userDbId }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   plansLoading?: boolean;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>; allEvents?: any[]; onEventDetail?: (ev: any) => void;
@@ -77,6 +77,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
   onVibeCheck?: (ev: any) => void; onLeaveEvent?: (ev: any) => void; onUpdatePlans?: (ev: any) => void;
   initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; hostConfirmedMembers?: Record<number, any[]>; approvedAtMap?: Record<number, number>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>; passedRequests?: Record<number, string[]>;
   onBlockUser?: (profile: any) => void; onReportUser?: (profile: any) => void;
+  userDbId?: string;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   useEffect(() => { if (initialSubTab) setSubTab(initialSubTab) }, [initialSubTab])
@@ -337,7 +338,14 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
               const hasReal       = nonPassedAttendees.length > 0
               const found         = hasReal ? nonPassedAttendees.length + 1 : 1
               const isActive      = hasReal && found >= threshold
-              const crewProfiles  = hasReal ? nonPassedAttendees.slice(0, cap - 1) : []
+              // Avatars on a Plans card represent MY crew for this event — not
+              // the global attendee pool. Previously we showed the first N people
+              // from event_attendees, which looked like a fake "5 in your crew"
+              // strip even before the user joined a chat. Use joinedCrew.members
+              // (DB-driven chat membership) when available; otherwise empty.
+              const crewProfiles  = (joinedCrew?.members || [])
+                .filter((m: any) => m.id !== userDbId && !passedIdsPlans.has(m.id))
+                .slice(0, cap - 1)
 
               // Smart status badge
               const isConfirmed = joinedEvents[ev.id] === 'confirmed'
@@ -445,20 +453,20 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                     <View style={{ height: 1, backgroundColor: 'rgba(99,102,241,0.08)', marginBottom: 14 }} />
 
                     {/* Crew avatars + counter + button */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       {isCommunity ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
                           {isConfirmed
                             ? <CheckCircle size={14} color="#16a34a" />
                             : joinedEvents[ev.id] === 'pending'
                             ? <Clock size={14} color="#d97706" />
                             : <Check size={14} color="#16a34a" />}
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: isConfirmed ? '#16a34a' : joinedEvents[ev.id] === 'pending' ? '#d97706' : '#16a34a' }}>
+                          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: isConfirmed ? '#16a34a' : joinedEvents[ev.id] === 'pending' ? '#d97706' : '#16a34a', flexShrink: 1 }}>
                             {isConfirmed ? 'You\'re in the group' : joinedEvents[ev.id] === 'pending' ? 'Waiting for host' : 'Host approved you'}
                           </Text>
                         </View>
                       ) : (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                           <View style={{ flexDirection: 'row' }}>
                             <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#6366F1', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                               <Text style={{ fontSize: 12 }}>😊</Text>
@@ -469,7 +477,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                               </View>
                             ))}
                           </View>
-                          <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
+                          <Text numberOfLines={1} style={{ fontSize: 12, color: '#64748B', fontWeight: '600', flexShrink: 1 }}>
                             {/* Show crew members from chat. If user isn't in any crew yet,
                                 say so explicitly instead of misleading "1/5 in crew". */}
                             {(() => {
@@ -496,7 +504,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                           onEventDetail?.(ev)
                         }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12 }}>
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: PLANS_COLOR, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, flexShrink: 0 }}>
                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>View event</Text>
                         <ChevronRight size={14} color="#fff" />
                       </TouchableOpacity>

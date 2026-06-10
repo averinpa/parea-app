@@ -6122,6 +6122,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             initialSubTab={messagesInitialSubTab}
             plansLoading={!plansHydrated}
             chatList={chatList}
+            userDbId={userData?.dbId}
             passedRequests={passedRequests}
             onOpenChat={(chat) => {
               setOpenChat(chat)
