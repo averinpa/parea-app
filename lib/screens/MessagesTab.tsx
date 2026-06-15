@@ -10,7 +10,7 @@ import {
   CalendarDays, MessageCircle, Crown, Trash2, Users, ChevronRight, CheckCircle,
   Clock, MoreHorizontal, X, Check, User,
 } from 'lucide-react-native'
-import { ChatTeardrop, Car as PhCar, MapPin as PhMapPin, Users as PhUsers, UsersThree as PhUsersThree, Confetti as PhConfetti, HandWaving as PhHand } from '../phosphor-icons'
+import { ChatTeardrop, Car as PhCar, MapPin as PhMapPin, Users as PhUsers, UsersThree as PhUsersThree, Confetti as PhConfetti, HandWaving as PhHand, Fire as PhFire } from '../phosphor-icons'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
 import { MOCK_EVENTS, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, FLAG_MAP, CATEGORY_COLOR, CATEGORY_BG } from '../feed-constants'
 import { isEventPast, prettyEventTime, parseEventDateTime } from '../feed-helpers'
@@ -68,7 +68,7 @@ function EventThumb({ uri, emoji, colors }: { uri: string; emoji?: string; color
   )
 }
 
-export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, crewsByEvent = {}, officialEventChatMap = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {}, onBlockUser, onReportUser, plansLoading = false, userDbId }: {
+export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = {}, userEventFormat = {}, userEventTransport = {}, crewsByEvent = {}, officialEventChatMap = {}, onVibeCheck, onLeaveEvent, onUpdatePlans, initialSubTab, hostedEvents = [], approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onCancelHostedEvent, onPlansOpen, allEvents = [], onEventDetail, eventAttendeesMap = {}, passedRequests = {}, onBlockUser, onReportUser, plansLoading = false, userDbId, boostedEvents = {}, onBoostEvent }: {
   chatList: any[]; onOpenChat: (c: any) => void; onLeaveChat?: (id: number, addSystemMsg?: boolean) => void;
   plansLoading?: boolean;
   joinedEvents?: Record<number, string>; userEventFormat?: Record<number, string>; userEventTransport?: Record<number, string>; allEvents?: any[]; onEventDetail?: (ev: any) => void;
@@ -78,6 +78,8 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
   initialSubTab?: 'going' | 'messages'; hostedEvents?: any[]; approvedJoiners?: Record<number, any[]>; hostConfirmedMembers?: Record<number, any[]>; approvedAtMap?: Record<number, number>; onCancelHostedEvent?: (ev: any) => void; onPlansOpen?: () => void; eventAttendeesMap?: Record<number, any[]>; passedRequests?: Record<number, string[]>;
   onBlockUser?: (profile: any) => void; onReportUser?: (profile: any) => void;
   userDbId?: string;
+  boostedEvents?: Record<number, number>;
+  onBoostEvent?: (ev: any) => void;
 }) {
   const [subTab, setSubTab] = useState<'going' | 'messages'>(initialSubTab || 'going')
   useEffect(() => { if (initialSubTab) setSubTab(initialSubTab) }, [initialSubTab])
@@ -242,10 +244,24 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                 // prettyEventTime returns e.g. "22 May, 09:30" — swap the comma
                 // for a middle-dot to match the rest of the new card style.
                 const whenLabel = (prettyEventTime(ev.time) || '').replace(/,\s*/, ' · ')
+                const boostExpiry = boostedEvents[ev.id]
+                const isBoosted = boostExpiry && boostExpiry > Date.now()
+                const hoursLeft = isBoosted ? Math.max(0, Math.ceil((boostExpiry - Date.now()) / 3600000)) : 0
                 return (
-                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.2)', shadowColor: PLANS_COLOR, shadowOpacity: 0.12, shadowRadius: 16, elevation: 4 }}>
-                  <LinearGradient colors={ev.gradient as any} style={{ height: 6 }} />
+                <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1.5, borderColor: isBoosted ? 'rgba(251,146,60,0.45)' : 'rgba(245,158,11,0.2)', shadowColor: isBoosted ? '#FB923C' : PLANS_COLOR, shadowOpacity: isBoosted ? 0.22 : 0.12, shadowRadius: 16, elevation: 4 }}>
+                  <LinearGradient colors={isBoosted ? ['#FB923C', '#EF4444'] : ev.gradient as any} style={{ height: 6 }} />
                   <View style={{ padding: 16 }}>
+                    {/* FEATURED ribbon when boosted */}
+                    {isBoosted && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <LinearGradient colors={['#FB923C', '#EF4444']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 99 }}>
+                          <PhFire size={11} color="#fff" weight="fill" />
+                          <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 0.4 }}>FEATURED</Text>
+                        </LinearGradient>
+                        <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>· {hoursLeft}h left</Text>
+                      </View>
+                    )}
                     {/* Title row with trash on the right */}
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                       <Text style={{ fontSize: 17, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', flex: 1, letterSpacing: -0.2 }} numberOfLines={2}>{ev.title}</Text>
@@ -280,6 +296,17 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                       <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>View event</Text>
                       <ChevronRight size={15} color="#fff" />
                     </TouchableOpacity>
+                    {/* Boost CTA — only when event is not currently boosted.
+                        Subtle outlined card with flame icon — premium feel without
+                        screaming. Tap opens the BoostSheet paywall. */}
+                    {!isBoosted && (
+                      <TouchableOpacity activeOpacity={0.85}
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBoostEvent?.(ev) }}
+                        style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(251,146,60,0.06)', borderWidth: 1, borderColor: 'rgba(251,146,60,0.25)' }}>
+                        <PhFire size={14} color="#FB923C" weight="fill" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#FB923C' }}>Boost to top — free during launch</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
                 )

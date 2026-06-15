@@ -1,0 +1,127 @@
+import React, { useEffect, useRef } from 'react'
+import { Animated, Modal, Pressable, Text, TouchableOpacity, View } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as Haptics from 'expo-haptics'
+import { Fire, Sparkle, CheckCircle as PhCheckCircle, X } from '../phosphor-icons'
+
+// Boost paywall sheet — shown when a community-event host taps "Boost".
+// Visual feel: dark premium glass with a warm orange→pink gradient header,
+// matching the POPULAR sticker family. "Free during launch" is the
+// hint-don't-enforce signal — UI is in place, real IAP wires up later when
+// Apple/Google developer accounts are ready.
+export function BoostSheet({ visible, event, onClose, onConfirm }: {
+  visible: boolean
+  event: any | null
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const insets = useSafeAreaInsets()
+  const slide = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(slide, { toValue: 1, useNativeDriver: true, tension: 80, friction: 14 }).start()
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    } else {
+      Animated.timing(slide, { toValue: 0, duration: 220, useNativeDriver: true }).start()
+    }
+  }, [visible])
+
+  const translateY = slide.interpolate({ inputRange: [0, 1], outputRange: [600, 0] })
+  const opacity = slide.interpolate({ inputRange: [0, 1], outputRange: [0, 1] })
+
+  return (
+    <Modal transparent animationType="none" visible={visible} onRequestClose={onClose} statusBarTranslucent>
+      <Animated.View style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.72)', opacity }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <Animated.View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          transform: [{ translateY }],
+          backgroundColor: '#0F0C1F',
+          borderTopLeftRadius: 28, borderTopRightRadius: 28,
+          paddingBottom: Math.max(28, insets.bottom + 20),
+          shadowColor: '#FB923C', shadowOpacity: 0.5, shadowRadius: 30, shadowOffset: { width: 0, height: -8 },
+        }}>
+          {/* Drag handle */}
+          <View style={{ alignSelf: 'center', width: 44, height: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 10 }} />
+
+          {/* Header — orange/pink gradient strip with flame */}
+          <View style={{ alignItems: 'center', paddingTop: 18, paddingHorizontal: 24 }}>
+            <LinearGradient
+              colors={['#FB923C', '#EF4444', '#EC4899']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#EF4444', shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
+              <Fire size={36} color="#fff" weight="fill" />
+            </LinearGradient>
+
+            <Text style={{ fontSize: 24, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -0.5, marginTop: 18 }}>
+              Boost your event
+            </Text>
+            {event?.title && (
+              <Text numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Outfit-Medium', color: 'rgba(255,255,255,0.55)', marginTop: 4, maxWidth: 280 }}>
+                {event.title}
+              </Text>
+            )}
+          </View>
+
+          {/* Benefits */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 22, gap: 12 }}>
+            {[
+              { title: 'Top of the feed for 48 hours', sub: 'Featured spot above all other community events' },
+              { title: 'Glowing FEATURED sticker', sub: 'Designer flame badge — your card stands out' },
+              { title: '3-5× more discovery', sub: 'Get seen by people who would never scroll that far' },
+            ].map((b, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(251,146,60,0.18)' }}>
+                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(251,146,60,0.18)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <PhCheckCircle size={16} color="#FB923C" weight="fill" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff', marginBottom: 2 }}>{b.title}</Text>
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 17 }}>{b.sub}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Price + CTA */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)', textDecorationLine: 'line-through' }}>
+                €2.99
+              </Text>
+              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Sparkle size={10} color="#43E97B" weight="fill" />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#43E97B', letterSpacing: 0.3 }}>FREE DURING LAUNCH</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity activeOpacity={0.88} onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm() }}
+              style={{ borderRadius: 99, overflow: 'hidden' }}>
+              <LinearGradient
+                colors={['#FB923C', '#EF4444']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+                <Fire size={18} color="#fff" weight="fill" />
+                <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: 0.2 }}>
+                  Boost for free
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 12, lineHeight: 16 }}>
+              48 hours of featured placement. No subscription, no auto-renewal.
+              {'\n'}When launch ends, regular price is €2.99 per boost.
+            </Text>
+          </View>
+
+          {/* Close X */}
+          <TouchableOpacity onPress={onClose} hitSlop={12}
+            style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={14} color="rgba(255,255,255,0.6)" />
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  )
+}

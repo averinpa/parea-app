@@ -33,6 +33,7 @@ import { DobBottomSheet } from '../../lib/components/DobBottomSheet'
 import { AnimatedInterestChip } from '../../lib/components/AnimatedInterestChip'
 import { ReportModal } from '../../lib/components/ReportModal'
 import { ProfilePreviewSheet } from '../../lib/components/ProfilePreviewSheet'
+import { BoostSheet } from '../../lib/components/BoostSheet'
 import { LocationPicker } from '../../lib/components/LocationPicker'
 import { CrewPoolSheet } from '../../lib/components/CrewPoolSheet'
 import { LandingScreen } from '../../lib/screens/LandingScreen'
@@ -252,7 +253,7 @@ Score each candidate 0-100 for companion compatibility.${user.eventContext ? ' B
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
 
-function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData, onCancelHostedEvent, crewStats = {}, seenNewEventIds = [] }: any) {
+function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, joinedEvents, onJoin, userInterests, setUserEventFormat, setUserEventTransport, onJoinConfirmed, pendingJoinEv, onPendingJoinConsumed, extraEvents, approvedJoiners = {}, tonightVibe, setTonightVibe, onBellPress, unreadCount, bellShake, userData, onCancelHostedEvent, crewStats = {}, seenNewEventIds = [], boostedEvents = {} }: any) {
   const insets = useSafeAreaInsets()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -389,7 +390,12 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
     if (!isInDateRange(parseEventDate(ev.date_label || ev.time || ''))) return false
     return true
   }).sort((a, b) => {
-    // Promoted always at the top
+    // Boosted events always at the very top — that's the paywall promise.
+    const aBoost = (boostedEvents?.[a.id] || 0) > Date.now()
+    const bBoost = (boostedEvents?.[b.id] || 0) > Date.now()
+    if (aBoost && !bBoost) return -1
+    if (!aBoost && bBoost) return 1
+    // Then promoted (editor-set is_promoted).
     if (a.is_promoted && !b.is_promoted) return -1
     if (!a.is_promoted && b.is_promoted) return 1
     // Otherwise strict date ascending — earliest upcoming first.
@@ -1021,6 +1027,19 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                         <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E1B4B', flex: 1 }} numberOfLines={1}>{ev.title}</Text>
+                        {/* FEATURED — community event the host has paid to boost.
+                            Sits at the front of the title row so it pops first. */}
+                        {(() => {
+                          const exp = boostedEvents?.[ev.id]
+                          if (!exp || exp <= Date.now()) return null
+                          return (
+                            <LinearGradient colors={['#FB923C', '#EF4444']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99 }}>
+                              <Fire size={9} color="#fff" weight="fill" />
+                              <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 0.3 }}>FEATURED</Text>
+                            </LinearGradient>
+                          )
+                        })()}
                         {(() => {
                           if (!ev.created_at) return null
                           if (seenNewEventIds.includes(ev.id)) return null
@@ -1679,6 +1698,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // screen at least once, the green NEW chip stops showing (they're not "new"
   // to this user anymore). Persisted so it survives reload.
   const [seenNewEventIds, setSeenNewEventIds] = useState<number[]>([])
+  // Boosted community events — map of eventId → expiresAt (ms). Set when host
+  // confirms a boost in BoostSheet (free during launch, real IAP later).
+  // Used for sorting (boosted on top) and FEATURED-sticker rendering.
+  const [boostedEvents, setBoostedEvents] = useState<Record<number, number>>({})
+  const [boostSheetEvent, setBoostSheetEvent] = useState<any>(null)
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
@@ -2828,6 +2852,16 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (Array.isArray(saved.seenNewEventIds)) setSeenNewEventIds(saved.seenNewEventIds)
+        if (saved.boostedEvents && typeof saved.boostedEvents === 'object') {
+          // Drop expired boosts on hydrate so the FEATURED sticker doesn't
+          // linger past the 48h window between sessions.
+          const now = Date.now()
+          const active: Record<number, number> = {}
+          Object.entries(saved.boostedEvents).forEach(([k, v]) => {
+            if (typeof v === 'number' && v > now) active[Number(k)] = v
+          })
+          setBoostedEvents(active)
+        }
         // Build cleaned chatMessages first so we can use it to patch chatList previews
         const cleanedMessages: Record<string, any[]> = {}
         if (saved.chatMessages) {
@@ -2922,7 +2956,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests,
       approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap,
-      lastReadAtMap, seenNewEventIds,
+      lastReadAtMap, seenNewEventIds, boostedEvents,
       // Persist notifications so dismissed/read state survives app reload and we
       // don't re-add the same "X joined" notif from each polling cycle.
       notifications,
@@ -2930,7 +2964,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // entries created a race where polling fired before seen-keys loaded.
       seenNotifKeys: [...seenNotifKeysRef.current],
     }))
-  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications, seenNewEventIds, persistLoadedState])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications, seenNewEventIds, persistLoadedState, boostedEvents])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   // Gated on plansHydrated: the joinedEvents backfill from DB (which sets
@@ -5165,7 +5199,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <SafeAreaView style={s.fill} edges={Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, display: activeTab === 'home' ? 'flex' : 'none' }}>
-            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={(ev: any) => { markEventSeen(ev?.id); setEventDetail(ev) }} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents.map(uc => { const dbVer = dbCommunityEvents.find(d => d.id === uc.id); return dbVer ? { ...uc, participantsCount: dbVer.participantsCount } : uc }), ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} crewStats={crewStatsByEvent} seenNewEventIds={seenNewEventIds} />
+            <HomeTab city={city} setCityOpen={setCityOpen} feedFilter={feedFilter} setFeedFilter={setFeedFilter} onEventPress={(ev: any) => { markEventSeen(ev?.id); setEventDetail(ev) }} joinedEvents={joinedEvents} onJoin={handleJoinEvent} userInterests={userData?.interests || []} setUserEventFormat={setUserEventFormat} setUserEventTransport={setUserEventTransport} onJoinConfirmed={handleJoinConfirmed} pendingJoinEv={pendingJoinEv} onPendingJoinConsumed={() => setPendingJoinEv(null)} extraEvents={[...userCreatedEvents.map(uc => { const dbVer = dbCommunityEvents.find(d => d.id === uc.id); return dbVer ? { ...uc, participantsCount: dbVer.participantsCount } : uc }), ...dbCommunityEvents.filter(e => !userCreatedEvents.some(u => u.id === e.id))]} approvedJoiners={approvedJoiners} tonightVibe={tonightVibe} setTonightVibe={(v: any) => { setTonightVibe(v); onUpdateUserData?.({ socialEnergy: v.energy, drinksPref: v.drinks, smokingPref: v.smoking }) }} onBellPress={openNotifPanel} unreadCount={unreadCount} bellShake={bellShake} userData={userData} onCancelHostedEvent={(ev: any) => { setUserCreatedEvents(prev => prev.filter(e => e.id !== ev.id)); setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n }); setChatList(prev => prev.filter(c => c.hostEventId !== ev.id)); showToast("Event deleted 🗑️") }} crewStats={crewStatsByEvent} seenNewEventIds={seenNewEventIds} boostedEvents={boostedEvents} />
           </View>
           <View style={{ position: 'absolute', top: -insets.top, left: 0, right: 0, bottom: 0, display: activeTab === 'vibecheck' ? 'flex' : 'none' }}>
           <VibeCheckTab
@@ -6141,6 +6175,8 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             chatList={chatList}
             userDbId={userData?.dbId}
             passedRequests={passedRequests}
+            boostedEvents={boostedEvents}
+            onBoostEvent={(ev: any) => setBoostSheetEvent(ev)}
             onOpenChat={(chat) => {
               setOpenChat(chat)
               setChatList(prev => prev.map(c => c.id === chat.id ? { ...c, isNew: false } : c))
@@ -7182,6 +7218,10 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                         showToast('Others can find it in the feed now', 'Plan published', '✓')
+                        // Soft-sell Boost right after create: most-motivated moment to
+                        // pitch (host just published, wants people). Small delay so the
+                        // toast lands first and the create-modal close animation finishes.
+                        setTimeout(() => { setBoostSheetEvent(newEvent) }, 700)
                         } catch (e) {
                           console.warn('create event failed:', e)
                           showToast('Please try again', 'Could not publish', '⚠️')
@@ -7644,6 +7684,22 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           above handles taps from inside the chat. */}
       {chatPartnerPreview && !openChat && <ProfilePreviewSheet profile={chatPartnerPreview} onClose={() => setChatPartnerPreview(null)} onBlock={handleBlock} onReport={(p) => setReportTarget(p)} />}
       {reportTarget && <ReportModal profile={reportTarget} onClose={() => setReportTarget(null)} onSubmit={(reason, details) => handleReport(reportTarget, reason, details)} />}
+      <BoostSheet
+        visible={!!boostSheetEvent}
+        event={boostSheetEvent}
+        onClose={() => setBoostSheetEvent(null)}
+        onConfirm={() => {
+          const evId = boostSheetEvent?.id
+          if (typeof evId === 'number') {
+            // 48-hour featured window. Real IAP wires up here later — for v1
+            // it's the "free during launch" path: instant grant, no payment.
+            const expiresAt = Date.now() + 48 * 60 * 60 * 1000
+            setBoostedEvents(prev => ({ ...prev, [evId]: expiresAt }))
+            showToast('Boost activated 🔥', '48 hours of featured placement', '✨')
+          }
+          setBoostSheetEvent(null)
+        }}
+      />
 
 
       {/* ── Notification Panel ─────────────────────────────────────────────── */}
