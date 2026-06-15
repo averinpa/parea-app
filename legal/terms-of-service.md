@@ -1,8 +1,8 @@
 # Terms of Service
 
 **Parea App**
-Last updated: 1 April 2026
-Version: 1.0
+Last updated: 10 June 2026
+Version: 1.1
 
 ---
 
@@ -12,7 +12,7 @@ By creating an account on Parea, you confirm that you have read, understood, and
 
 If you do not agree to these Terms, you must not use Parea.
 
-These Terms constitute a legally binding agreement between you and Parea ("we", "us", "our"), operated from the Republic of Cyprus.
+These Terms constitute a legally binding agreement between you and Parea ("we", "us", "our"), operated as a private individual by **Pavel Averin**, Kalymnou 14, Limassol 3048, Cyprus.
 
 ---
 

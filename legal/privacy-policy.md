@@ -1,18 +1,18 @@
 # Privacy Policy
 
 **Parea App**
-Last updated: 1 April 2026
-Version: 1.0
+Last updated: 10 June 2026
+Version: 1.1
 
 ---
 
 ## 1. Who We Are
 
-Parea ("we", "us", "our") is a social event mobile application operated from the Republic of Cyprus.
+Parea ("we", "us", "our") is a social event mobile application operated as a private individual from the Republic of Cyprus.
 
 **Data Controller:**
-Parea
-Cyprus
+Pavel Averin
+Kalymnou 14, Limassol 3048, Cyprus
 Contact: privacy@joinparea.app
 
 If you have any questions about how we handle your personal data, please contact us at **privacy@joinparea.app**. We will respond within 30 calendar days.
