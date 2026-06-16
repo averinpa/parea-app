@@ -2900,25 +2900,34 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
           // Patch each chat's lastMsg/time from the most recent message in chatMessages.
           // Without this, preview can show stale "Waiting for crew to join..." after restart
           // when actual conversation has happened since.
-          const patched = deduped.map((c: any) => {
-            const msgs = cleanedMessages[c.id] || []
-            const last = msgs[msgs.length - 1]
-            // Clear stale isNew on launch — realtime will re-flag only chats
-            // that actually have unread messages arriving after this reload.
-            // If the last cached message is the user's own send, they've
-            // obviously seen it.
-            const cleared: any = { ...c, isNew: false }
-            // Backfill chatExpiresAt for chats persisted before this field was
-            // standardized. Without it the auto-cleanup pass can't expire the
-            // chat once its backing event drops out of the feed (e.g. scraper
-            // stops returning a past official event), and it lingers forever.
-            if (!cleared.chatExpiresAt) {
-              cleared.chatExpiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000
-            }
-            if (!last) return cleared
-            const previewText = last.from === 'me' ? `You: ${last.text}` : (last.senderName ? `${last.senderName}: ${last.text}` : last.text)
-            return { ...cleared, lastMsg: previewText || cleared.lastMsg, time: last._ts || cleared.time }
-          })
+          const nowMs = Date.now()
+          const patched = deduped
+            // Drop chats whose stored expiry is already in the past. Without
+            // this, AsyncStorage hydrate puts every cached chat into state
+            // immediately, and the cleanup pass running a tick later removes
+            // the expired ones — visible to the user as a "flash then a few
+            // disappear" effect on reload. Filtering here makes them never
+            // appear in the first place.
+            .filter((c: any) => !(c.chatExpiresAt && c.chatExpiresAt < nowMs))
+            .map((c: any) => {
+              const msgs = cleanedMessages[c.id] || []
+              const last = msgs[msgs.length - 1]
+              // Clear stale isNew on launch — realtime will re-flag only chats
+              // that actually have unread messages arriving after this reload.
+              // If the last cached message is the user's own send, they've
+              // obviously seen it.
+              const cleared: any = { ...c, isNew: false }
+              // Backfill chatExpiresAt for chats persisted before this field was
+              // standardized. Without it the auto-cleanup pass can't expire the
+              // chat once its backing event drops out of the feed (e.g. scraper
+              // stops returning a past official event), and it lingers forever.
+              if (!cleared.chatExpiresAt) {
+                cleared.chatExpiresAt = nowMs + 7 * 24 * 60 * 60 * 1000
+              }
+              if (!last) return cleared
+              const previewText = last.from === 'me' ? `You: ${last.text}` : (last.senderName ? `${last.senderName}: ${last.text}` : last.text)
+              return { ...cleared, lastMsg: previewText || cleared.lastMsg, time: last._ts || cleared.time }
+            })
           setChatList(patched)
         }
         if (saved.cancelledEventIds) {
