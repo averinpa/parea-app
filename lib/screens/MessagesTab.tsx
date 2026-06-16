@@ -627,7 +627,17 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
       {/* Chats tab */}
       {subTab === 'messages' && (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, gap: 10, paddingBottom: 32 }}>
-          {visibleChats.length === 0 && (
+          {/* Wait for the events backfill to finish before rendering chats —
+              otherwise the event-based cleanup pass running a moment later
+              prunes 'long-dead' entries and the user sees a couple of chats
+              flash in then disappear (Daria's report). plansLoading covers
+              the exact window we need: from login until hydrate + initial
+              joinedEvents backfill are both complete. */}
+          {plansLoading ? (
+            <View style={{ alignItems: 'center', paddingTop: 80 }}>
+              <ActivityIndicator size="small" color="#818CF8" />
+            </View>
+          ) : visibleChats.length === 0 && (
             <View style={{ alignItems: 'center', paddingTop: 72, paddingHorizontal: 32 }}>
               <View style={{ width: 100, height: 100, marginBottom: 24, alignItems: 'center', justifyContent: 'center' }}>
                 <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#EEF2FF' }} />
@@ -640,7 +650,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
               </Text>
             </View>
           )}
-          {[...visibleChats].sort((a, b) => {
+          {!plansLoading && [...visibleChats].sort((a, b) => {
             // Most-recent activity first. `time` is usually an ISO timestamp
             // (created_at / last message); fall back to chat id (higher = newer)
             // when it's a bare "HH:MM" string that can't be parsed.
