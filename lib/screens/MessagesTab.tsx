@@ -156,8 +156,18 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
     const ev = evId
       ? eventPool.find((e: any) => e.id === evId)
       : (chat.event ? eventPool.find((e: any) => e.title === chat.event) : null)
-    if (!ev) return false  // can't resolve → keep visible (don't drop blindly)
-    return isLongDeadEv(ev)
+    if (ev) return isLongDeadEv(ev)
+    // No event found in the current feed. This is the case Daria's screenshot
+    // hit — orphan chats from events that were unsubscribed, deleted, or
+    // dropped by the scraper. If the chat itself is old (>7d) and has zero
+    // peers (only the user), it's a dead orphan — drop it. New chats with no
+    // event linkage yet stay visible (real chats sometimes hydrate before
+    // their event reference resolves).
+    const t = Date.parse(chat.time || '')
+    const isOld = !isNaN(t) && (now - t) > SEVEN_DAYS_MS
+    const noPeers = (chat.members || 1) <= 1
+    if (isOld && noPeers) return true
+    return false
   }
   const visibleExpiredEvents = expiredAllEvents.filter((ev: any) => !isLongDeadEv(ev))
   const visibleChats = chatList.filter(c => !isLongDeadChat(c))
