@@ -7228,9 +7228,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                         setCreateLangs([]); setCreateVibe(null); setCreateCustom(''); setCreateImage(null); setCreateVisibility('public');
                         setCalViewYear(new Date().getFullYear()); setCalViewMonth(new Date().getMonth());
                         showToast('Others can find it in the feed now', 'Plan published', '✓')
-                        // Boost is offered explicitly via the "Boost to top" button
-                        // on the Plans card — not auto-popped here. Auto-popup felt
-                        // pushy across multiple event creations (Daria's feedback).
+                        // Always pitch Boost right after create — host is in their most-
+                        // motivated moment (just published, wants attendees). The sheet
+                        // adapts on its own: free trial if available, otherwise €2.99
+                        // 'Coming soon'. No nag-state, both copies are useful.
+                        setTimeout(() => { setBoostSheetEvent(newEvent) }, 700)
                         } catch (e) {
                           console.warn('create event failed:', e)
                           showToast('Please try again', 'Could not publish', '⚠️')
