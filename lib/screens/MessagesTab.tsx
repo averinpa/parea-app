@@ -149,17 +149,34 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
     return evStartMs > 0 && evStartMs + SEVEN_DAYS_MS < now
   }
   const eventPool = [...allEvents, ...hostedEvents]
-  // Defensive dedup: multiple paths may add the same chat to state (hydrate +
-  // realtime + poll), and not every setChatList call deduplicates. Render
-  // each id only once — first occurrence wins. Without this Daria sees the
-  // same DB chat listed twice (one stale snapshot from AsyncStorage hydrate,
-  // one fresh from realtime) for events like 'Лох' and 'Прол'.
+  // Defensive dedup at render. Catches two patterns:
+  //   1. Same chat.id appears twice (different state-update paths each pushed
+  //      it without dedup).
+  //   2. A local stable-id placeholder for an event sits next to a real DB
+  //      chat for the same event — both pass id-dedup because their ids are
+  //      different (negative vs positive), but they represent the same chat.
+  //      Use the chat's event-pointing fields to fold them.
+  // Prefer keeping positive (DB-backed) ids over negative stable-id
+  // placeholders by sorting positive-id entries first before dedup.
   const seenChatIds = new Set<any>()
-  const dedupedChatList = chatList.filter((c: any) => {
-    if (seenChatIds.has(c.id)) return false
-    seenChatIds.add(c.id)
-    return true
-  })
+  const seenEventKeys = new Set<string>()
+  const dedupedChatList = [...chatList]
+    .sort((a: any, b: any) => {
+      const aPos = typeof a.id === 'number' && a.id > 0
+      const bPos = typeof b.id === 'number' && b.id > 0
+      if (aPos && !bPos) return -1
+      if (!aPos && bPos) return 1
+      return 0
+    })
+    .filter((c: any) => {
+      if (seenChatIds.has(c.id)) return false
+      const evId = c.eventRefId ?? c.communityEventId ?? c.hostEventId
+      const evKey = evId != null ? `${c.type || 'group'}:ev:${evId}` : null
+      if (evKey && seenEventKeys.has(evKey)) return false
+      seenChatIds.add(c.id)
+      if (evKey) seenEventKeys.add(evKey)
+      return true
+    })
   const isLongDeadChat = (chat: any) => {
     const evId = chat.eventRefId || chat.communityEventId || chat.hostEventId
     // Try to resolve the linked event. For duo chats event_id is NULL in DB,
