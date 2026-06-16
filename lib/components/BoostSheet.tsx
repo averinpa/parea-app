@@ -3,7 +3,7 @@ import { Animated, Modal, Pressable, Text, TouchableOpacity, View } from 'react-
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
-import { RocketLaunch, Sparkle, CheckCircle as PhCheckCircle, X } from '../phosphor-icons'
+import { TrendUp, Sparkle, CheckCircle as PhCheckCircle, X } from '../phosphor-icons'
 
 // Boost paywall sheet — shown when a community-event host taps "Boost".
 // Visual feel: dark premium glass with a violet→pink gradient header
@@ -53,7 +53,7 @@ export function BoostSheet({ visible, event, onClose, onConfirm }: {
               colors={['#8B5CF6', '#A78BFA', '#EC4899']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={{ width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#A78BFA', shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
-              <RocketLaunch size={34} color="#fff" weight="fill" />
+              <TrendUp size={36} color="#fff" weight="fill" />
             </LinearGradient>
 
             <Text style={{ fontSize: 24, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -0.5, marginTop: 18 }}>
@@ -93,7 +93,7 @@ export function BoostSheet({ visible, event, onClose, onConfirm }: {
               </Text>
               <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Sparkle size={10} color="#43E97B" weight="fill" />
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#43E97B', letterSpacing: 0.3 }}>FREE DURING LAUNCH</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#43E97B', letterSpacing: 0.3 }}>FREE FOR EARLY USERS</Text>
               </View>
             </View>
 
@@ -103,16 +103,17 @@ export function BoostSheet({ visible, event, onClose, onConfirm }: {
                 colors={['#8B5CF6', '#EC4899']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
-                <RocketLaunch size={18} color="#fff" weight="fill" />
+                <TrendUp size={18} color="#fff" weight="fill" />
                 <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: 0.2 }}>
-                  Boost for free
+                  Boost — free
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
 
             <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 12, lineHeight: 16 }}>
               48 hours of featured placement. No subscription, no auto-renewal.
-              {'\n'}When launch ends, regular price is €2.99 per boost.
+              {'\n'}Free while we're in early access — when we enable payments,
+              {'\n'}existing users keep boosting free as a thank-you.
             </Text>
           </View>
 
