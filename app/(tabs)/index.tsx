@@ -34,6 +34,7 @@ import { AnimatedInterestChip } from '../../lib/components/AnimatedInterestChip'
 import { ReportModal } from '../../lib/components/ReportModal'
 import { ProfilePreviewSheet } from '../../lib/components/ProfilePreviewSheet'
 import { BoostSheet } from '../../lib/components/BoostSheet'
+import { BoostIcon } from '../../lib/components/BoostIcon'
 import { LocationPicker } from '../../lib/components/LocationPicker'
 import { CrewPoolSheet } from '../../lib/components/CrewPoolSheet'
 import { LandingScreen } from '../../lib/screens/LandingScreen'
@@ -1036,7 +1037,7 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           return (
                             <LinearGradient colors={['#8B5CF6', '#EC4899']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99 }}>
-                              <Sparkle size={9} color="#fff" weight="fill" />
+                              <BoostIcon size={10} color="#fff" />
                               <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 0.3 }}>FEATURED</Text>
                             </LinearGradient>
                           )
@@ -1704,6 +1705,12 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   // Used for sorting (boosted on top) and FEATURED-sticker rendering.
   const [boostedEvents, setBoostedEvents] = useState<Record<number, number>>({})
   const [boostSheetEvent, setBoostSheetEvent] = useState<any>(null)
+  // Early-access free-boost allowance: each user gets 1 free Boost. After
+  // that, the sheet shows the regular €2.99 price + "Coming soon" (real IAP
+  // isn't wired yet, so we don't try to charge). Persisted so the count
+  // survives reload — gives Daria a clean transition to paid in v2.
+  const FREE_BOOST_ALLOWANCE = 1
+  const [boostsUsed, setBoostsUsed] = useState(0)
   const [vibes, setVibes] = useState<number[]>([])
   const [dbSeekers, setDbSeekers] = useState<any[]>([])
   const [feedOfficialDbEvents, setFeedOfficialDbEvents] = useState<any[]>([])
@@ -2853,6 +2860,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
         }
         if (saved.passedRequests) setPassedRequests(saved.passedRequests)
         if (Array.isArray(saved.seenNewEventIds)) setSeenNewEventIds(saved.seenNewEventIds)
+        if (typeof saved.boostsUsed === 'number') setBoostsUsed(saved.boostsUsed)
         if (saved.boostedEvents && typeof saved.boostedEvents === 'object') {
           // Drop expired boosts on hydrate so the FEATURED sticker doesn't
           // linger past the 48h window between sessions.
@@ -2957,7 +2965,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
     AsyncStorage.setItem(PERSIST_KEY, JSON.stringify({
       joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests,
       approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap,
-      lastReadAtMap, seenNewEventIds, boostedEvents,
+      lastReadAtMap, seenNewEventIds, boostedEvents, boostsUsed,
       // Persist notifications so dismissed/read state survives app reload and we
       // don't re-add the same "X joined" notif from each polling cycle.
       notifications,
@@ -2965,7 +2973,7 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       // entries created a race where polling fired before seen-keys loaded.
       seenNotifKeys: [...seenNotifKeysRef.current],
     }))
-  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications, seenNewEventIds, persistLoadedState, boostedEvents])
+  }, [joinedEvents, userEventFormat, userEventTransport, userCreatedEvents, pendingJoinRequests, approvedJoiners, passedRequests, chatList, chatMessages, sentCrewInvites, cancelledEventIds, officialEventChatMap, lastReadAtMap, notifications, seenNewEventIds, persistLoadedState, boostedEvents, boostsUsed])
 
   // ── Cleanup stale event_attendees rows once after persist loaded ─────────
   // Gated on plansHydrated: the joinedEvents backfill from DB (which sets
@@ -7688,15 +7696,25 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
       <BoostSheet
         visible={!!boostSheetEvent}
         event={boostSheetEvent}
+        freeBoostsLeft={Math.max(0, FREE_BOOST_ALLOWANCE - boostsUsed)}
         onClose={() => setBoostSheetEvent(null)}
         onConfirm={() => {
           const evId = boostSheetEvent?.id
+          const freeLeft = Math.max(0, FREE_BOOST_ALLOWANCE - boostsUsed)
+          if (freeLeft === 0) {
+            // No free boosts left and real IAP isn't wired yet — surface a
+            // friendly "coming soon" instead of silently doing nothing.
+            showToast("We'll let you know when paid boosts go live", 'Coming soon', '⏳')
+            setBoostSheetEvent(null)
+            return
+          }
           if (typeof evId === 'number') {
             // 48-hour featured window. Real IAP wires up here later — for v1
-            // it's the "free during launch" path: instant grant, no payment.
+            // it's the "first boost free" path: instant grant, no payment.
             const expiresAt = Date.now() + 48 * 60 * 60 * 1000
             setBoostedEvents(prev => ({ ...prev, [evId]: expiresAt }))
-            showToast('Boost activated 🔥', '48 hours of featured placement', '✨')
+            setBoostsUsed(prev => prev + 1)
+            showToast('Boost activated ✨', '48 hours of featured placement', '🚀')
           }
           setBoostSheetEvent(null)
         }}

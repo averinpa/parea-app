@@ -3,7 +3,8 @@ import { Animated, Modal, Pressable, Text, TouchableOpacity, View } from 'react-
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
-import { TrendUp, Sparkle, CheckCircle as PhCheckCircle, X } from '../phosphor-icons'
+import { Sparkle, CheckCircle as PhCheckCircle, X } from '../phosphor-icons'
+import { BoostIcon } from './BoostIcon'
 
 // Boost paywall sheet — shown when a community-event host taps "Boost".
 // Visual feel: dark premium glass with a violet→pink gradient header
@@ -11,12 +12,14 @@ import { TrendUp, Sparkle, CheckCircle as PhCheckCircle, X } from '../phosphor-i
 // our own POPULAR sticker — so the FEATURED upgrade stays its own visual
 // lane). "Free during launch" is the hint-don't-enforce signal — UI is in
 // place, real IAP wires up later when Apple/Google developer accounts ready.
-export function BoostSheet({ visible, event, onClose, onConfirm }: {
+export function BoostSheet({ visible, event, freeBoostsLeft = 0, onClose, onConfirm }: {
   visible: boolean
   event: any | null
+  freeBoostsLeft?: number
   onClose: () => void
   onConfirm: () => void
 }) {
+  const isFree = freeBoostsLeft > 0
   const insets = useSafeAreaInsets()
   const slide = useRef(new Animated.Value(0)).current
 
@@ -53,7 +56,7 @@ export function BoostSheet({ visible, event, onClose, onConfirm }: {
               colors={['#8B5CF6', '#A78BFA', '#EC4899']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={{ width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#A78BFA', shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
-              <TrendUp size={36} color="#fff" weight="fill" />
+              <BoostIcon size={40} color="#fff" />
             </LinearGradient>
 
             <Text style={{ fontSize: 24, fontFamily: 'ClashDisplay-Bold', color: '#fff', letterSpacing: -0.5, marginTop: 18 }}>
@@ -88,32 +91,38 @@ export function BoostSheet({ visible, event, onClose, onConfirm }: {
           {/* Price + CTA */}
           <View style={{ paddingHorizontal: 24, paddingTop: 22 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
-              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)', textDecorationLine: 'line-through' }}>
-                €2.99
-              </Text>
-              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Sparkle size={10} color="#43E97B" weight="fill" />
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#43E97B', letterSpacing: 0.3 }}>FREE FOR EARLY USERS</Text>
-              </View>
+              {isFree ? (
+                <>
+                  <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)', textDecorationLine: 'line-through' }}>
+                    €2.99
+                  </Text>
+                  <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99, backgroundColor: 'rgba(67,233,123,0.15)', borderWidth: 1, borderColor: 'rgba(67,233,123,0.35)', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Sparkle size={10} color="#43E97B" weight="fill" />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#43E97B', letterSpacing: 0.3 }}>YOUR FIRST BOOST FREE</Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={{ fontSize: 24, fontFamily: 'ClashDisplay-Bold', color: '#fff' }}>€2.99</Text>
+              )}
             </View>
 
-            <TouchableOpacity activeOpacity={0.88} onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onConfirm() }}
-              style={{ borderRadius: 99, overflow: 'hidden' }}>
+            <TouchableOpacity activeOpacity={isFree ? 0.88 : 1} onPress={() => { Haptics.notificationAsync(isFree ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning); onConfirm() }}
+              style={{ borderRadius: 99, overflow: 'hidden', opacity: isFree ? 1 : 0.7 }}>
               <LinearGradient
-                colors={['#8B5CF6', '#EC4899']}
+                colors={isFree ? ['#8B5CF6', '#EC4899'] : ['rgba(167,139,250,0.3)', 'rgba(236,72,153,0.3)']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
-                <TrendUp size={18} color="#fff" weight="fill" />
+                <BoostIcon size={18} color="#fff" />
                 <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: 0.2 }}>
-                  Boost — free
+                  {isFree ? 'Boost — free' : 'Coming soon'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
 
             <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 12, lineHeight: 16 }}>
-              48 hours of featured placement. No subscription, no auto-renewal.
-              {'\n'}Free while we're in early access — when we enable payments,
-              {'\n'}existing users keep boosting free as a thank-you.
+              {isFree
+                ? 'Your first Boost is free — try it, see the lift.\n48 hours of featured placement. No subscription, no auto-renewal.'
+                : "You've used your free Boost.\nPaid boosts go live in the next release — we'll let you know."}
             </Text>
           </View>
 
