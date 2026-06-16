@@ -3,7 +3,8 @@ import { Animated, Modal, Pressable, Text, TouchableOpacity, View } from 'react-
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
-import { ArrowFatUp, ArrowUp, Star, UsersThree, Shield, Sparkle, X } from '../phosphor-icons'
+import { Rocket } from 'lucide-react-native'
+import { ArrowUp, Star, UsersThree, Shield, Sparkle, X } from '../phosphor-icons'
 
 // Boost paywall sheet — matches Daria's mockup exactly:
 // - Hero: filled violet→pink arrow with glow (no 3D pedestal — flat with shadow)
@@ -60,11 +61,11 @@ export function BoostSheet({ visible, event, freeBoostsLeft = 0, onClose, onConf
             <X size={16} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
 
-          {/* Hero: compact gradient rounded-square with arrow inside */}
+          {/* Hero: compact gradient rounded-square with diagonal rocket inside */}
           <View style={{ alignItems: 'center', paddingTop: 18 }}>
             <LinearGradient colors={['#A78BFA', '#EC4899']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
               style={{ width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#A78BFA', shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}>
-              <ArrowFatUp size={42} color="#fff" weight="fill" />
+              <Rocket size={36} color="#fff" strokeWidth={2.2} />
             </LinearGradient>
           </View>
 
