@@ -261,7 +261,9 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                 const dbBoostExpiry = ev.boost_expires_at ? new Date(ev.boost_expires_at).getTime() : 0
                 const localBoostExpiry = boostedEvents[ev.id] || 0
                 const boostExpiry = Math.max(dbBoostExpiry, localBoostExpiry)
-                const isBoosted = boostExpiry && boostExpiry > Date.now()
+                // Force boolean — `0 && expr` returns 0, which leaks into JSX
+                // and triggers 'Text strings must be rendered within a <Text>'.
+                const isBoosted = boostExpiry > 0 && boostExpiry > Date.now()
                 const hoursLeft = isBoosted ? Math.max(0, Math.ceil((boostExpiry - Date.now()) / 3600000)) : 0
                 return (
                 <View key={ev.id} style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1.5, borderColor: isBoosted ? 'rgba(139,92,246,0.45)' : 'rgba(245,158,11,0.2)', shadowColor: isBoosted ? '#A78BFA' : PLANS_COLOR, shadowOpacity: isBoosted ? 0.22 : 0.12, shadowRadius: 16, elevation: 4 }}>
