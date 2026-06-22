@@ -5481,7 +5481,11 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 event_ref_id: ev.id, event_title: ev.title,
                 inviter_id: userData.dbId, invitee_id: person.id, status: 'pending', chat_id: chatId,
               }, { onConflict: 'event_ref_id,inviter_id,invitee_id' })
-              if (invErr) { console.warn('crew_invite upsert error (myCrew):', invErr.message); showToast('Try again', "Couldn't send invite", '⚠️'); return }
+              if (invErr) {
+                console.warn('crew_invite upsert error (myCrew):', JSON.stringify(invErr))
+                showToast(invErr.message || 'Try again', "Couldn't send invite", '⚠️')
+                return
+              }
               setSentCrewInvites(prev => ({ ...prev, [key]: 'pending' }))
               sendPush([person.id], `${userData?.name || 'Someone'} invited you to their crew 💜`,
                 `For "${ev.title}" — open VibeCheck to reply`, { screen: 'vibecheck', eventId: ev.id, type: 'match', emoji: '💜', color: '#EC4899' })
