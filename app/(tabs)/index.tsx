@@ -6361,9 +6361,36 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               setDbCommunityEvents(prev => prev.filter(e => e.id !== ev.id))
               setPendingJoinRequests(prev => { const n = { ...prev }; delete n[ev.id]; return n })
               setApprovedJoiners(prev => { const n = { ...prev }; delete n[ev.id]; return n })
-              setChatList(prev => prev.filter(c => c.hostEventId !== ev.id))
+              // Collect chat ids that point at this event under ANY of the
+              // foreign-key fields the chat object can carry. Filtering only
+              // on hostEventId leaked community-style chats (linked via
+              // communityEventId or eventRefId), so the chat lingered in the
+              // Chats tab as an empty husk after delete.
+              const orphanChatIds = chatListRef.current
+                .filter((c: any) =>
+                  c.hostEventId === ev.id ||
+                  c.communityEventId === ev.id ||
+                  c.eventRefId === ev.id ||
+                  (ev.title && c.event === ev.title)
+                )
+                .map((c: any) => c.id)
+                .filter((id: any) => typeof id === 'number' && id > 0 && id < 1e12)
+              setChatList(prev => prev.filter(c =>
+                c.hostEventId !== ev.id &&
+                c.communityEventId !== ev.id &&
+                c.eventRefId !== ev.id &&
+                !(ev.title && c.event === ev.title)
+              ))
               supabase.from('community_events').delete().eq('id', ev.id).then(({ error, status, statusText }) => { console.log('community_events delete:', { eventId: ev.id, error: error?.message, status, statusText }) })
               supabase.from('join_requests').delete().eq('event_id', ev.id).then(({ error, count }) => { console.log('join_requests delete:', { eventId: ev.id, error: error?.message, count }) })
+              // Tear down the chats too. Cascade-style: messages → chat_members
+              // → chats. Without this, the chat row hangs around with all its
+              // messages deleted (or not) and re-appears via realtime / poll.
+              if (orphanChatIds.length > 0) {
+                supabase.from('messages').delete().in('chat_id', orphanChatIds).then(({ error }) => { if (error) console.log('messages delete:', error.message) })
+                supabase.from('chat_members').delete().in('chat_id', orphanChatIds).then(({ error }) => { if (error) console.log('chat_members delete:', error.message) })
+                supabase.from('chats').delete().in('id', orphanChatIds).then(({ error, count }) => { console.log('chats delete on event cancel:', { ids: orphanChatIds, error: error?.message, count }) })
+              }
               showToast('All requests and chats removed', 'Event cancelled 🗑️', '🗑️')
             }}
             onVibeCheck={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}
