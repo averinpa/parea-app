@@ -5442,6 +5442,19 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
               }
               // Ensure my crew chat exists (reuse if I already have one for this event).
               let chatId: number | null = officialEventChatMap[ev.id] || null
+              // Defend against stale cache: officialEventChatMap can still point
+              // at a chat row that was deleted (event-cancel cascade, orphan
+              // cleanup SQL, etc.). Confirm the row exists in DB; if not, drop
+              // the stale id so we fall through to the create-new path below
+              // and crew_invites.chat_id FK doesn't trip.
+              if (chatId != null) {
+                const { data: existingChat } = await supabase
+                  .from('chats').select('id').eq('id', chatId).maybeSingle()
+                if (!existingChat) {
+                  chatId = null
+                  setOfficialEventChatMap(prev => { const n = { ...prev }; delete n[ev.id]; return n })
+                }
+              }
               const { data: myRow } = await supabase.from('event_attendees')
                 .select('group_size_min, group_size_max')
                 .eq('event_ref_id', ev.id).eq('profile_id', userData.dbId).maybeSingle()
