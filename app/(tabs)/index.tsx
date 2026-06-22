@@ -6276,7 +6276,15 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                   .then(({ error }) => { if (error) console.warn('last_read_at update error:', error.message) })
               }
             }}
-            hostedEvents={userCreatedEvents}
+            hostedEvents={userCreatedEvents.map((uc: any) => {
+              // Pull boost_expires_at from the DB-backed copy so Plans renders
+              // the FEATURED ribbon AND hides the Boost CTA on actively
+              // boosted events. Without this merge, MessagesTab's isBoosted
+              // is always false (userCreatedEvents has no boost field) and
+              // the host can re-tap Boost on top of an active one.
+              const dbVer = dbCommunityEvents.find((d: any) => d.id === uc.id)
+              return dbVer ? { ...uc, boost_expires_at: dbVer.boost_expires_at } : uc
+            })}
             onLeaveChat={(id, addSystemMsg) => {
               if (addSystemMsg) {
                 setChatMessages(prev => ({
