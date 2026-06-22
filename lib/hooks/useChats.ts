@@ -199,12 +199,26 @@ export function useChats({ userDbId, userName, onChatRemoved, lastReadAtMap }: {
         const last = latestByChat[c.id]
         if (!last) return c
         const isMe = last.sender_id === userDbId
-        const isSystem = /(left|joined) the group/.test(last.text || '')
+        const txt = last.text || ''
+        // System messages we generate locally (no sender) shouldn't ever flag
+        // unread. Cover both "X left/joined the group" and the crew lifecycle
+        // copy ("🎉 You joined the crew!", "⏳ Waiting for crew to join…",
+        // "X joined the crew"). Bracket on the emoji/keyword set, not on full
+        // exact strings — copy drifts.
+        const isSystem = /(left|joined) the group/.test(txt)
+          || /^[🎉⏳⚠️✨]/.test(txt)
+          || /joined the crew/i.test(txt)
+          || /waiting for crew/i.test(txt)
         // Telegram-style unread: chat is unread only if latest message is from
-        // someone else AND was sent after we last read this chat.
+        // someone else AND was sent after we last read this chat. If we have
+        // NO lastReadAt record for this chat (lastReadMs === 0 — e.g. she read
+        // it on a different device, or persistence dropped it), trust the
+        // launch-time isNew reset (false) and don't re-flag. Otherwise an
+        // unconditional `> 0` comparison lights up the Chats dot for every
+        // historical chat after a reinstall / data-clear.
         const lastReadMs = (lastReadAtMap || {})[c.id] || 0
         const lastMsgMs = new Date(last.created_at).getTime()
-        const hasUnread = !isMe && !isSystem && lastMsgMs > lastReadMs
+        const hasUnread = !isMe && !isSystem && lastReadMs > 0 && lastMsgMs > lastReadMs
         if (isSystem) return { ...c, lastMsg: last.text, time: last.created_at, isNew: false }
         const sender = (c.memberProfiles || []).find((p: any) => p.id === last.sender_id)
         const previewText = isMe
