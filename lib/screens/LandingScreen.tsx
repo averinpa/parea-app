@@ -236,26 +236,27 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
           {(() => {
             const heroFz = Math.round(hFz * 1.15)
             const heroLh = Math.round(hLh * 1.1)
-            // Mask needs extra vertical headroom for descenders ('y' in
-            // 'got you', 'p' in 'happening'). heroLh is just the line
-            // box height; descenders extend below, so the MaskedView
-            // height = heroFz * 1.5 to clear them.
-            const maskH = Math.round(heroFz * 1.5)
+            // Both the Text lineHeight AND the mask container height must
+            // be generous enough to fit descenders ('y' in 'got you', 'p'
+            // in 'happening', 'g' in 'got'). RN clips descenders below the
+            // line box if lineHeight is too tight, so push both to
+            // fontSize * 1.5.
+            const maskLh = Math.round(heroFz * 1.5)
             return (
               <>
                 <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: heroLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
                 <MaskedView
-                  style={{ height: maskH }}
+                  style={{ height: maskLh }}
                   maskElement={
-                    <View style={{ height: maskH, justifyContent: 'center' }}>
-                      <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: heroLh, color: '#000' }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
+                    <View style={{ height: maskLh, justifyContent: 'center' }}>
+                      <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: maskLh, color: '#000' }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
                     </View>
                   }>
                   <LinearGradient
                     colors={['#A78BFA', '#EC4899', '#F97316']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={{ height: maskH }}
+                    style={{ height: maskLh }}
                   />
                 </MaskedView>
                 {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: heroLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
