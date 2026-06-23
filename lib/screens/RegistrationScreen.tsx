@@ -88,17 +88,36 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
             </View>
 
             {/* Hero */}
+            {/* Matches the landing splash voice: Outfit-Bold + bumped size,
+                accent word ('people') rendered with the same violet→pink→
+                orange MaskedView gradient as the wordmark. lineHeight on
+                the masked line is fontSize * 1.5 so descenders ('p' in
+                'people') don't clip. */}
             <View style={{ paddingHorizontal: 24, paddingTop: 18, minHeight: 210, overflow: 'visible' }}>
-              <View>
-                <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: hFz, color: '#111827', letterSpacing: -1.5, lineHeight: hLh }}>Find your</Text>
-                <MaskedView
-                  maskElement={<Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: hFz, letterSpacing: -1.5, lineHeight: hLh, color: '#000' }}>people</Text>}
-                >
-                  <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                    <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: hFz, letterSpacing: -1.5, lineHeight: hLh, opacity: 0 }}>people</Text>
-                  </LinearGradient>
-                </MaskedView>
-              </View>
+              {(() => {
+                const heroFz = Math.round(hFz * 1.15)
+                const heroLh = Math.round(hLh * 1.1)
+                const maskLh = Math.round(heroFz * 1.5)
+                return (
+                  <View>
+                    <Text style={{ fontFamily: 'Outfit-Bold', fontSize: heroFz, color: '#111827', letterSpacing: -1.2, lineHeight: heroLh }}>Find your</Text>
+                    <MaskedView
+                      style={{ height: maskLh }}
+                      maskElement={
+                        <View style={{ height: maskLh, justifyContent: 'center' }}>
+                          <Text style={{ fontFamily: 'Outfit-Bold', fontSize: heroFz, letterSpacing: -1.2, lineHeight: maskLh, color: '#000' }}>people</Text>
+                        </View>
+                      }>
+                      <LinearGradient
+                        colors={['#A78BFA', '#EC4899', '#F97316']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ height: maskLh }}
+                      />
+                    </MaskedView>
+                  </View>
+                )
+              })()}
               <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 14, color: '#6B7280', lineHeight: 22, marginTop: 12 }}>
                 {'Join companions going to the\nsame events in your city.'}
               </Text>
