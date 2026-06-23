@@ -364,19 +364,18 @@ const ls = StyleSheet.create({
   headlineBlock: {
     marginTop: 12,
   },
-  // Funnel Display Bold — rounded display sans. Modern, confident but
-  // friendly (no sharp geometric edges like ClashDisplay, no magazine
-  // feel like Instrument Serif). Closest to the rounded Parea wordmark
-  // letterforms so the splash reads as one cohesive brand.
+  // Geist Bold — Vercel's modern variable sans. Sharp, confident,
+  // tech-forward. Used by Vercel, Linear inline copy, modern SaaS.
+  // Cleaner geometry than ClashDisplay but more presence than Outfit.
   headlineLine: {
-    fontFamily: 'FunnelDisplay-Bold',
+    fontFamily: 'Geist-Bold',
     color: '#F8FAFC',
-    letterSpacing: -1.2,
+    letterSpacing: -1.5,
   },
   headlineAccent: {
-    fontFamily: 'FunnelDisplay-Bold',
+    fontFamily: 'Geist-Bold',
     color: '#FB923C',
-    letterSpacing: -1.2,
+    letterSpacing: -1.5,
   },
   // Softer variants — Outfit-Bold is more rounded/geometric and matches
   // the curved letterforms of the Parea wordmark. Slightly tighter letter-
