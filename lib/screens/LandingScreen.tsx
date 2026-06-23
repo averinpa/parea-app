@@ -220,11 +220,25 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
         </View>
 
         {/* ── Headline ── */}
+        {/* Slide 1 uses Outfit-Bold (softer, rounder letterforms) to match
+            the new rounded Parea wordmark. Other slides stay on the
+            original ClashDisplay-Bold so Daria can compare side-by-side
+            before we promote the softer style everywhere. */}
         <Animated.View
           style={[ls.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineY }] }]}>
-          <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
-          <Text style={[ls.headlineAccent, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
-          {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
+          {slide === 0 ? (
+            <>
+              <Text style={[ls.headlineLineSoft,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
+              <Text style={[ls.headlineAccentSoft, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
+              {!!cur.line3 && <Text style={[ls.headlineLineSoft, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
+            </>
+          ) : (
+            <>
+              <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
+              <Text style={[ls.headlineAccent, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
+              {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
+            </>
+          )}
           <Text style={[ls.subtitle, { fontSize: subFz, lineHeight: subLh, marginTop: subMT }]}>{cur.sub}</Text>
         </Animated.View>
 
@@ -360,6 +374,19 @@ const ls = StyleSheet.create({
     fontFamily: 'ClashDisplay-Bold',
     color: '#FB923C',
     letterSpacing: -1.5,
+  },
+  // Softer variants — Outfit-Bold is more rounded/geometric and matches
+  // the curved letterforms of the Parea wordmark. Slightly tighter letter-
+  // spacing keeps the headline tight despite the wider glyphs.
+  headlineLineSoft: {
+    fontFamily: 'Outfit-Bold',
+    color: '#F8FAFC',
+    letterSpacing: -1,
+  },
+  headlineAccentSoft: {
+    fontFamily: 'Outfit-Bold',
+    color: '#FB923C',
+    letterSpacing: -1,
   },
   subtitle: {
     fontFamily: 'Outfit-Regular',
