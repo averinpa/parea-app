@@ -32,6 +32,10 @@ export const LANGUAGES_LIST = [
   { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
   { code: 'fr', flag: '🇫🇷', label: 'Français' },
   { code: 'he', flag: '🇮🇱', label: 'Hebrew' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
+  { code: 'it', flag: '🇮🇹', label: 'Italiano' },
+  { code: 'pl', flag: '🇵🇱', label: 'Polski' },
+  { code: 'ar', flag: '🇸🇦', label: 'Arabic' },
 ]
 
 export const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
