@@ -226,10 +226,12 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
         </View>
 
         {/* ── Headline ── */}
-        {/* Back to the original heavy ClashDisplay-Bold + orange accent
-            style for all slides — Daria preferred that to the editorial
-            redesign. Only the slide-1 copy changed (kept the value-prop
-            rewrite, dropped the 'tonight' framing). */}
+        {/* Headline rendered in Instrument Serif — the editorial display
+            face used by Substack / Linear / Hinge on hero pages. Reads
+            premium and 'curated', not 'shouty tech bro' like
+            ClashDisplay-Bold did. If Daria likes the vibe but wants a
+            different specific font we'll swap easily — Geist and Funnel
+            Display are both already loaded. */}
         <Animated.View
           style={[ls.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineY }] }]}>
           <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
@@ -362,19 +364,18 @@ const ls = StyleSheet.create({
   headlineBlock: {
     marginTop: 12,
   },
+  // Instrument Serif — editorial display face. Substack / Linear / Hinge
+  // hero typography 2026. Reads premium and curated, not techy. The accent
+  // word also stays serif (just orange) so the rhythm doesn't break.
   headlineLine: {
-    // Semibold instead of Bold + tighter tracking — keeps display presence
-    // but reads more elegant, less shouty. The 2026-modern approach used
-    // by Linear, Cash App, Headspace splashes: confident heavyweight but
-    // not 'tech bro' geometric Bold.
-    fontFamily: 'ClashDisplay-Semibold',
+    fontFamily: 'InstrumentSerif',
     color: '#F8FAFC',
-    letterSpacing: -2,
+    letterSpacing: -0.5,
   },
   headlineAccent: {
-    fontFamily: 'ClashDisplay-Semibold',
+    fontFamily: 'InstrumentSerif',
     color: '#FB923C',
-    letterSpacing: -2,
+    letterSpacing: -0.5,
   },
   // Softer variants — Outfit-Bold is more rounded/geometric and matches
   // the curved letterforms of the Parea wordmark. Slightly tighter letter-
