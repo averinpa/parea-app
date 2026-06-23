@@ -364,18 +364,19 @@ const ls = StyleSheet.create({
   headlineBlock: {
     marginTop: 12,
   },
-  // Instrument Serif — editorial display face. Substack / Linear / Hinge
-  // hero typography 2026. Reads premium and curated, not techy. The accent
-  // word also stays serif (just orange) so the rhythm doesn't break.
+  // Funnel Display Bold — rounded display sans. Modern, confident but
+  // friendly (no sharp geometric edges like ClashDisplay, no magazine
+  // feel like Instrument Serif). Closest to the rounded Parea wordmark
+  // letterforms so the splash reads as one cohesive brand.
   headlineLine: {
-    fontFamily: 'InstrumentSerif',
+    fontFamily: 'FunnelDisplay-Bold',
     color: '#F8FAFC',
-    letterSpacing: -0.5,
+    letterSpacing: -1.2,
   },
   headlineAccent: {
-    fontFamily: 'InstrumentSerif',
+    fontFamily: 'FunnelDisplay-Bold',
     color: '#FB923C',
-    letterSpacing: -0.5,
+    letterSpacing: -1.2,
   },
   // Softer variants — Outfit-Bold is more rounded/geometric and matches
   // the curved letterforms of the Parea wordmark. Slightly tighter letter-
