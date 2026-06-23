@@ -13,15 +13,18 @@ import { AuroraBg } from '../components/AuroraBg'
 
 // Wordmark rendered as a gradient-filled "Parea" so the splash matches
 // the Play Store feature graphic. MaskedView clips a violet→pink→orange
-// LinearGradient to the shape of the text. Used in place of the older
-// logo.png + flat text combo, which read as a different brand than the
-// store listing.
-function PareaWordmark({ size = 32 }: { size?: number }) {
+// LinearGradient to the shape of the text. Width is generous (size * 4.2)
+// to make sure none of the letters get clipped — Daria reported only the
+// 'P' was visible at size * 3.6 because ClashDisplay-Bold is wider than
+// the typical 0.6-of-em average.
+export function PareaWordmark({ size = 44 }: { size?: number }) {
+  const width = Math.round(size * 4.2)
+  const height = Math.round(size * 1.25)
   return (
     <MaskedView
-      style={{ height: size * 1.05, flexDirection: 'row' }}
+      style={{ width, height }}
       maskElement={
-        <View style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center' }}>
+        <View style={{ width, height, justifyContent: 'center' }}>
           <Text style={{ fontFamily: 'ClashDisplay-Bold', fontSize: size, letterSpacing: -1, color: '#000' }}>
             Parea
           </Text>
@@ -31,7 +34,7 @@ function PareaWordmark({ size = 32 }: { size?: number }) {
         colors={['#A78BFA', '#EC4899', '#F97316']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={{ flex: 1 }}
+        style={{ width, height }}
       />
     </MaskedView>
   )
@@ -39,6 +42,10 @@ function PareaWordmark({ size = 32 }: { size?: number }) {
 
 const { width: W, height: H } = Dimensions.get('window')
 
+// CTA labels normalised to similar length so the button text renders at
+// the same font size across all three slides — earlier 'Show me what's on'
+// auto-shrank while 'Find my people' (shorter) stayed at full size and
+// the two read as visually inconsistent when swiping back and forth.
 const LANDING_SLIDES = [
   {
     img: require('../../assets/images/characters_dark.png.png'),
@@ -46,7 +53,7 @@ const LANDING_SLIDES = [
     line2: 'happening',
     line3: 'tonight?',
     sub: 'Find events and people going out in your city.',
-    btnLabel: "Show me what's on",
+    btnLabel: 'Show me events',
     imgScale: 0.85,
     tags: ['Wine bar', 'Live music', 'Theatre'],
   },
@@ -56,7 +63,7 @@ const LANDING_SLIDES = [
     line2: 'we got you.',
     line3: '',
     sub: 'Browse events, join spontaneously, meet your crew.',
-    btnLabel: 'Find something tonight',
+    btnLabel: 'Find a plan tonight',
     imgScale: 1.0,
     tags: ['🎉 Party', '🌴 Beach', '🎤 Concerts'],
   },
@@ -170,12 +177,11 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
       <SafeAreaView style={ls.safe}>
 
         {/* ── Logo ── */}
-        {/* Gradient wordmark to match the Play Store feature graphic. The
-            old logo.png was a flat lowercase 'parea' which made the splash
-            and store listing look like two different brands. */}
+        {/* Pure gradient wordmark to match the Play Store feature graphic.
+            No icon — Daria wants the splash to read as the same brand mark
+            as the store listing, not 'icon + text'. */}
         <Animated.View style={[ls.logoRow, { opacity: logoOpacity }]}>
-          <Image source={require('../../assets/images/icon.png')} style={ls.logoMark} resizeMode="contain" />
-          <PareaWordmark size={28} />
+          <PareaWordmark size={36} />
         </Animated.View>
 
         {/* ── Hero block ── */}
@@ -254,11 +260,7 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={ls.ctaGradient}>
-              <Text
-                style={ls.ctaText}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}>
+              <Text style={ls.ctaText} numberOfLines={1}>
                 {isLast ? 'Find my people' : cur.btnLabel}
               </Text>
             </LinearGradient>
