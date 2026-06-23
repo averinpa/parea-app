@@ -58,11 +58,16 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
   return (
     <LinearGradient colors={['#F8F7FF', '#FFF7F5']} style={s.fill}>
       {/* Background blobs */}
-      <View style={{ position: 'absolute', top: -90, right: -90, width: 340, height: 340, borderRadius: 170, backgroundColor: '#C4B5FD', opacity: 0.18 }} />
-      <View style={{ position: 'absolute', top: 140, right: -30, width: 150, height: 150, borderRadius: 75, backgroundColor: '#DDD6FE', opacity: 0.13 }} />
-      <View style={{ position: 'absolute', bottom: 200, left: -70, width: 240, height: 240, borderRadius: 120, backgroundColor: '#C4B5FD', opacity: 0.11 }} />
-      <View style={{ position: 'absolute', bottom: 100, right: 50, width: 48, height: 48, borderRadius: 24, backgroundColor: '#FED7AA', opacity: 0.65 }} />
-      <View style={{ position: 'absolute', top: 220, left: 28, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FED7AA', opacity: 0.5 }} />
+      {/* Decorative bubbles — balanced diagonally so the screen reads
+          symmetric: violet bubble top-right + orange bubble bottom-left
+          (and the reverse), small dots filling the corners. Previous
+          layout had bubbles bunched on the right side. */}
+      <View style={{ position: 'absolute', top: -90, right: -90, width: 320, height: 320, borderRadius: 160, backgroundColor: '#C4B5FD', opacity: 0.18 }} />
+      <View style={{ position: 'absolute', bottom: -80, left: -80, width: 280, height: 280, borderRadius: 140, backgroundColor: '#C4B5FD', opacity: 0.13 }} />
+      <View style={{ position: 'absolute', top: 180, left: -40, width: 140, height: 140, borderRadius: 70, backgroundColor: '#FED7AA', opacity: 0.18 }} />
+      <View style={{ position: 'absolute', bottom: 140, right: -40, width: 140, height: 140, borderRadius: 70, backgroundColor: '#FED7AA', opacity: 0.18 }} />
+      <View style={{ position: 'absolute', top: 320, right: 36, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FED7AA', opacity: 0.55 }} />
+      <View style={{ position: 'absolute', bottom: 280, left: 36, width: 22, height: 22, borderRadius: 11, backgroundColor: '#C4B5FD', opacity: 0.55 }} />
 
       <StatusBar style="dark" />
       <SafeAreaView style={s.fill}>
@@ -119,7 +124,7 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
                 )
               })()}
               <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 14, color: '#6B7280', lineHeight: 22, marginTop: 12 }}>
-                {'Join companions going to the\nsame events in your city.'}
+                {'Match into crews. Show up together.'}
               </Text>
             </View>
 
@@ -183,14 +188,17 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
                 {isEmailValid && <PhCheckCircle size={20} color="#22c55e" weight="duotone" />}
               </View>
 
-              {/* Continue */}
+              {/* Continue — same brand 3-stop gradient as the Parea
+                  wordmark and landing CTA. Disabled state stays at 0.45
+                  opacity so the gradient still reads as the brand button
+                  (just muted), not a dead grey rectangle. */}
               <TouchableOpacity onPress={handleContinue} disabled={isChecking} activeOpacity={0.88}
-                style={{ marginTop: 18, borderRadius: 28, overflow: 'hidden', opacity: isValid ? 1 : 0.55 }}>
-                <LinearGradient colors={['#8B5CF6', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ marginTop: 18, borderRadius: 28, overflow: 'hidden', opacity: isValid ? 1 : 0.45 }}>
+                <LinearGradient colors={['#A78BFA', '#EC4899', '#F97316']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                   style={{ height: 56, alignItems: 'center', justifyContent: 'center' }}>
                   {isChecking
                     ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#fff', letterSpacing: 0.2 }}>Continue</Text>}
+                    : <Text style={{ fontSize: 16, fontFamily: 'Outfit-Bold', color: '#fff', letterSpacing: 0.2 }}>Continue</Text>}
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -218,7 +226,7 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
                     onPress={() => WebBrowser.openBrowserAsync('https://joinparea.app/privacy')}>
                     Privacy Policy
                   </Text>
-                  {'. I confirm I am 18 years of age or older.'}
+                  {'. I\'m 18+.'}
                 </Text>
               </TouchableOpacity>
               {showAgreementWarning && (
