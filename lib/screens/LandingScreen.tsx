@@ -226,17 +226,37 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
         </View>
 
         {/* ── Headline ── */}
-        {/* Headline rendered in Instrument Serif — the editorial display
-            face used by Substack / Linear / Hinge on hero pages. Reads
-            premium and 'curated', not 'shouty tech bro' like
-            ClashDisplay-Bold did. If Daria likes the vibe but wants a
-            different specific font we'll swap easily — Geist and Funnel
-            Display are both already loaded. */}
+        {/* Expressive / energy style — Daria picked option 2.
+            Headline size bumped, accent word rendered with the same
+            violet→pink→orange MaskedView gradient as the Parea wordmark
+            so the splash carries a single brand color story. Outfit-Bold
+            gives roundness + confidence (still has energy, not editorial). */}
         <Animated.View
           style={[ls.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineY }] }]}>
-          <Text style={[ls.headlineLine,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
-          <Text style={[ls.headlineAccent, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
-          {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
+          {(() => {
+            const heroFz = Math.round(hFz * 1.15)
+            const heroLh = Math.round(hLh * 1.1)
+            return (
+              <>
+                <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: heroLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
+                <MaskedView
+                  style={{ height: heroLh }}
+                  maskElement={
+                    <View style={{ height: heroLh, justifyContent: 'center' }}>
+                      <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: heroLh, color: '#000' }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
+                    </View>
+                  }>
+                  <LinearGradient
+                    colors={['#A78BFA', '#EC4899', '#F97316']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ height: heroLh }}
+                  />
+                </MaskedView>
+                {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: heroFz, lineHeight: heroLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
+              </>
+            )
+          })()}
           <Text style={[ls.subtitle, { fontSize: subFz, lineHeight: subLh, marginTop: subMT }]}>{cur.sub}</Text>
         </Animated.View>
 
@@ -364,18 +384,19 @@ const ls = StyleSheet.create({
   headlineBlock: {
     marginTop: 12,
   },
-  // Geist Bold — Vercel's modern variable sans. Sharp, confident,
-  // tech-forward. Used by Vercel, Linear inline copy, modern SaaS.
-  // Cleaner geometry than ClashDisplay but more presence than Outfit.
+  // Outfit-Bold — rounded humanist sans, friendly + confident. The accent
+  // word renders via MaskedView gradient instead of a flat orange so it
+  // ties into the Parea wordmark palette. headlineAccent style is unused
+  // now (gradient replaces it) but kept for compatibility.
   headlineLine: {
-    fontFamily: 'Geist-Bold',
+    fontFamily: 'Outfit-Bold',
     color: '#F8FAFC',
-    letterSpacing: -1.5,
+    letterSpacing: -1.2,
   },
   headlineAccent: {
-    fontFamily: 'Geist-Bold',
+    fontFamily: 'Outfit-Bold',
     color: '#FB923C',
-    letterSpacing: -1.5,
+    letterSpacing: -1.2,
   },
   // Softer variants — Outfit-Bold is more rounded/geometric and matches
   // the curved letterforms of the Parea wordmark. Slightly tighter letter-
