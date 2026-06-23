@@ -173,11 +173,12 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
       <SafeAreaView style={ls.safe}>
 
         {/* ── Logo ── */}
-        {/* Pure gradient wordmark to match the Play Store feature graphic.
-            No icon — Daria wants the splash to read as the same brand mark
-            as the store listing, not 'icon + text'. */}
+        {/* Centered hero wordmark — the official transparent PNG matching
+            the Play Store feature graphic. Daria flagged that the older
+            small left-aligned wordmark felt like a placeholder; this
+            anchors the splash with a proper brand mark up top. */}
         <Animated.View style={[ls.logoRow, { opacity: logoOpacity }]}>
-          <PareaWordmark size={36} />
+          <PareaWordmark size={42} />
         </Animated.View>
 
         {/* ── Hero block ── */}
@@ -309,9 +310,10 @@ const ls = StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
+    justifyContent: 'center',
+    height: 60,
     gap: 10,
-    marginLeft: -8,
+    marginTop: 8,
   },
   logoImg: {
     width: 120,
