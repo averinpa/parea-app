@@ -363,14 +363,18 @@ const ls = StyleSheet.create({
     marginTop: 12,
   },
   headlineLine: {
-    fontFamily: 'ClashDisplay-Bold',
+    // Semibold instead of Bold + tighter tracking — keeps display presence
+    // but reads more elegant, less shouty. The 2026-modern approach used
+    // by Linear, Cash App, Headspace splashes: confident heavyweight but
+    // not 'tech bro' geometric Bold.
+    fontFamily: 'ClashDisplay-Semibold',
     color: '#F8FAFC',
-    letterSpacing: -1.5,
+    letterSpacing: -2,
   },
   headlineAccent: {
-    fontFamily: 'ClashDisplay-Bold',
+    fontFamily: 'ClashDisplay-Semibold',
     color: '#FB923C',
-    letterSpacing: -1.5,
+    letterSpacing: -2,
   },
   // Softer variants — Outfit-Bold is more rounded/geometric and matches
   // the curved letterforms of the Parea wordmark. Slightly tighter letter-
