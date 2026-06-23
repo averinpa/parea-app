@@ -40,10 +40,13 @@ const { width: W, height: H } = Dimensions.get('window')
 const LANDING_SLIDES = [
   {
     img: require('../../assets/images/characters_dark.png.png'),
-    line1: "What's",
-    line2: 'happening',
-    line3: 'tonight?',
-    sub: 'Find events and people going out in your city.',
+    // Slide 1 rewritten editorial-style: single value prop ('crew for any
+    // plan' — same line as the feature graphic), specific differentiator
+    // ('matching by vibe'), no random orange word.
+    line1: 'Find your crew',
+    line2: 'for any plan.',
+    line3: '',
+    sub: 'Match into crews of 2 to 20 based on your vibe.\nThen show up together.',
     btnLabel: 'Show me events',
     imgScale: 0.85,
     tags: ['Wine bar', 'Live music', 'Theatre'],
@@ -220,17 +223,18 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
         </View>
 
         {/* ── Headline ── */}
-        {/* Slide 1 uses Outfit-Bold (softer, rounder letterforms) to match
-            the new rounded Parea wordmark. Other slides stay on the
-            original ClashDisplay-Bold so Daria can compare side-by-side
-            before we promote the softer style everywhere. */}
+        {/* Slide 1 reframed as an editorial-style hero: smaller font,
+            single value prop, no random orange accent word. SemiBold
+            (not Bold) so it reads quieter — premium, not shouty.
+            Slides 2-3 keep the original heavy ClashDisplay-Bold + orange
+            accent for the A/B comparison. */}
         <Animated.View
           style={[ls.headlineBlock, { opacity: headlineOpacity, transform: [{ translateY: headlineY }] }]}>
           {slide === 0 ? (
             <>
-              <Text style={[ls.headlineLineSoft,   { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
-              <Text style={[ls.headlineAccentSoft, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>
-              {!!cur.line3 && <Text style={[ls.headlineLineSoft, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
+              <Text style={[ls.headlineEditorial, { fontSize: Math.round(hFz * 0.82), lineHeight: Math.round(hLh * 0.85) }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line1}</Text>
+              {!!cur.line2 && <Text style={[ls.headlineEditorial, { fontSize: Math.round(hFz * 0.82), lineHeight: Math.round(hLh * 0.85) }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line2}</Text>}
+              {!!cur.line3 && <Text style={[ls.headlineEditorial, { fontSize: Math.round(hFz * 0.82), lineHeight: Math.round(hLh * 0.85) }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
             </>
           ) : (
             <>
@@ -239,7 +243,7 @@ export function LandingScreen({ onCreateAccount, onLogin, onGoogleSignIn, onAppl
               {!!cur.line3 && <Text style={[ls.headlineLine, { fontSize: hFz, lineHeight: hLh }]} numberOfLines={1} adjustsFontSizeToFit>{cur.line3}</Text>}
             </>
           )}
-          <Text style={[ls.subtitle, { fontSize: subFz, lineHeight: subLh, marginTop: subMT }]}>{cur.sub}</Text>
+          <Text style={[slide === 0 ? ls.subtitleEditorial : ls.subtitle, { fontSize: subFz, lineHeight: subLh, marginTop: subMT }]}>{cur.sub}</Text>
         </Animated.View>
 
         {/* ── Bottom ── */}
@@ -387,6 +391,19 @@ const ls = StyleSheet.create({
     fontFamily: 'Outfit-Bold',
     color: '#FB923C',
     letterSpacing: -1,
+  },
+  // Editorial — quieter, premium. SemiBold not Bold, no orange accent.
+  // Slightly off-white for warmth. Letter spacing tighter for editorial
+  // density (think NYT, Substack, Linear).
+  headlineEditorial: {
+    fontFamily: 'Outfit-SemiBold',
+    color: '#F1F5F9',
+    letterSpacing: -0.5,
+  },
+  subtitleEditorial: {
+    fontFamily: 'Outfit-Regular',
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: 0.1,
   },
   subtitle: {
     fontFamily: 'Outfit-Regular',
