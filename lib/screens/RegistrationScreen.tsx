@@ -77,29 +77,14 @@ export function RegistrationScreen({ onBack, onSendOtp, onGoogleSignIn, onAppleS
               <TouchableOpacity onPress={onBack} style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: 'rgba(139,92,246,0.08)', alignItems: 'center', justifyContent: 'center' }}>
                 <CaretLeft size={18} color="#7C3AED" weight="bold" />
               </TouchableOpacity>
-              {(() => {
-                const size = 32
-                const width = Math.round(size * 4.4)
-                const height = Math.round(size * 1.3)
-                return (
-                  <MaskedView
-                    style={{ width, height }}
-                    maskElement={
-                      <View style={{ width, height, justifyContent: 'center' }}>
-                        <Text style={{ fontFamily: 'Outfit-Bold', fontSize: size, letterSpacing: -1.5, color: '#000' }}>
-                          Parea
-                        </Text>
-                      </View>
-                    }>
-                    <LinearGradient
-                      colors={['#A78BFA', '#EC4899', '#F97316']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{ width, height }}
-                    />
-                  </MaskedView>
-                )
-              })()}
+              {/* Brand wordmark from the official transparent PNG (matches
+                  the Play Store feature graphic). Aspect ~4:1 so width
+                  = height * 4 keeps proportions correct. */}
+              <Image
+                source={require('../../assets/images/parea-wordmark.png')}
+                style={{ width: 128, height: 32 }}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Hero */}
