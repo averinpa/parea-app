@@ -13,6 +13,7 @@ import {
 import { ChatTeardrop, Car as PhCar, MapPin as PhMapPin, Users as PhUsers, UsersThree as PhUsersThree, Confetti as PhConfetti, HandWaving as PhHand, Sparkle as PhSparkle } from '../phosphor-icons'
 import { BoostIcon } from '../components/BoostIcon'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MOCK_EVENTS, VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, FLAG_MAP, CATEGORY_COLOR, CATEGORY_BG } from '../feed-constants'
 import { isEventPast, prettyEventTime, parseEventDateTime } from '../feed-helpers'
 
@@ -104,6 +105,8 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
   const crewSheetAnim = useRef(new Animated.Value(0)).current
   const hasNew = chatList.some(c => c.isNew)
   const [memberPreview, setMemberPreview] = useState<any>(null)
+  // Branded cancel-event confirmation (replaces native Alert.alert).
+  const [cancelEventTarget, setCancelEventTarget] = useState<any>(null)
 
   const openCrewSheet = (ev: any, profiles: any[], found: number, cap: number) => {
     setCrewSheet({ ev, profiles, found, cap })
@@ -317,10 +320,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
                         onPress={(e) => {
                           e.stopPropagation?.()
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                          Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event and its chat.', [
-                            { text: 'Cancel Event', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
-                            { text: 'Keep', style: 'cancel' },
-                          ])
+                          setCancelEventTarget(ev)
                         }}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center' }}
@@ -943,6 +943,20 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
         </Modal>
       )}
       {memberPreview && <ProfilePreviewSheet profile={memberPreview} onClose={() => setMemberPreview(null)} onBlock={onBlockUser} onReport={onReportUser} />}
+      <ConfirmDialog
+        visible={!!cancelEventTarget}
+        title={`Cancel "${cancelEventTarget?.title || ''}"?`}
+        body="This will delete the event and its chat."
+        confirmText="Cancel event"
+        cancelText="Keep"
+        destructive
+        onConfirm={() => {
+          const ev = cancelEventTarget
+          setCancelEventTarget(null)
+          if (ev) onCancelHostedEvent?.(ev)
+        }}
+        onClose={() => setCancelEventTarget(null)}
+      />
     </View>
   )
 }

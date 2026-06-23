@@ -17,6 +17,7 @@ import {
 } from '../phosphor-icons'
 import { ProfilePreviewSheet } from '../components/ProfilePreviewSheet'
 import { CrewPoolSheet } from '../components/CrewPoolSheet'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import {
   VIBE_FORMAT_MAX, VIBE_FORMAT_THRESHOLD, VIBE_FORMAT_LABEL, FLAG_MAP, LANG_CODE, QUEUE_PROFILES,
 } from '../feed-constants'
@@ -48,6 +49,9 @@ function PulsingStatusBadge({ label, color, bg, border }: { label: string; color
 
 export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEventTransport, onGoHome, onConfirm, onLeave, hostedEvents = [], pendingJoinRequests = {}, approvedJoiners = {}, hostConfirmedMembers = {}, approvedAtMap = {}, onApproveJoiner, onRejectJoiner, onPassJoiner, passedRequests = {}, userData, tonightVibe, onGoToMessages, eventAttendeesMap = {}, communityEventMembers = {}, incomingCrewInvites = [], sentCrewInvites = {}, onAcceptInvite, onDeclineInvite, onCancelHostedEvent, readyCountMap = {}, crewPreviewMap = {}, passedIdsByEvent = {}, onPassMember, onJoinCrew, crewsByEvent = {}, onJoinSpecificCrew, onCreateNewCrew, onInviteToMyCrew, officialEventChatMap = {}, topInset = 0, onBlockUser, onReportUser }: any) {
   const insets = useSafeAreaInsets()
+  // Custom-styled cancel-event confirmation in place of the OS Alert.alert
+  // (which rendered as a plain Material dialog and felt off-brand).
+  const [cancelEventTarget, setCancelEventTarget] = useState<any>(null)
   // Official + approved community events — shown as crew cards
   const notExpired = (e: any) => e.expiresAt ? e.expiresAt > Date.now() : !isEventPast(e.date_label || e.time || '')
   const myEvents = (allEvents || []).filter((e: any) => {
@@ -293,10 +297,7 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                        Alert.alert(`Cancel "${ev.title}"?`, 'This will delete the event.', [
-                          { text: 'Cancel Event', style: 'destructive', onPress: () => onCancelHostedEvent?.(ev) },
-                          { text: 'Keep', style: 'cancel' },
-                        ])
+                        setCancelEventTarget(ev)
                       }}
                       activeOpacity={0.7}
                       style={{ padding: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)' }}
@@ -1543,6 +1544,20 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
         onJoin={() => { if (crewPoolEv) onJoinCrew?.(crewPoolEv) }}
         onClose={() => setCrewPoolEv(null)}
         onOpenProfile={(m: any) => setPreviewProfile(m)}
+      />
+      <ConfirmDialog
+        visible={!!cancelEventTarget}
+        title={`Cancel "${cancelEventTarget?.title || ''}"?`}
+        body="This will delete the event and notify everyone in the crew."
+        confirmText="Cancel event"
+        cancelText="Keep"
+        destructive
+        onConfirm={() => {
+          const ev = cancelEventTarget
+          setCancelEventTarget(null)
+          if (ev) onCancelHostedEvent?.(ev)
+        }}
+        onClose={() => setCancelEventTarget(null)}
       />
     </View>
   )
