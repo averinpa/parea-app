@@ -107,20 +107,21 @@ export async function buyBoost(): Promise<void> {
   if (!iap) {
     throw new Error('Paid Boost is only available in the Play Store build.')
   }
-  // Warm the SKU into the library cache before requesting the purchase.
-  // Without this getProducts call, requestPurchase has no product info and
-  // Google Play Billing rejects the request with 'Missing purchase request
-  // configuration' — even though the product is Active in Play Console.
+  // react-native-iap 15.x (Nitro) renamed getProducts → fetchProducts and
+  // requires the purchase request to be platform-namespaced
+  // ({ google: { skus } }) instead of the legacy flat { skus } shape.
+  // Calling the old method names threw 'undefined is not a function' in
+  // production. https://docs.iap.dev/api/methods/core
   let products: any[] = []
   try {
-    products = await iap.getProducts({ skus: [BOOST_SKU] })
-    console.log('iap.getProducts result:', JSON.stringify(products))
+    products = await iap.fetchProducts([BOOST_SKU], 'inapp')
+    console.log('iap.fetchProducts result:', JSON.stringify(products))
   } catch (e: any) {
-    console.warn('iap.getProducts threw:', e?.message, e?.code)
+    console.warn('iap.fetchProducts threw:', e?.message, e?.code)
     throw new Error(`Google Play: ${e?.message || 'cannot fetch product'}`)
   }
   if (!Array.isArray(products) || products.length === 0) {
     throw new Error(`Boost product not found. The product may still be propagating on Google Play (can take a few hours after creation). SKU: ${BOOST_SKU}`)
   }
-  await iap.requestPurchase({ skus: [BOOST_SKU] })
+  await iap.requestPurchase({ google: { skus: [BOOST_SKU] } })
 }
