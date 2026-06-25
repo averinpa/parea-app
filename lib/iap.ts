@@ -66,7 +66,12 @@ export async function startIap(handlers: {
     _purchaseSub = iap.purchaseUpdatedListener(async (purchase: Purchase) => {
       try {
         await handlers.onValidated(purchase)
-        await iap.finishTransaction({ purchase, isConsumable: true })
+        // 15.x: finishTransaction takes platform-namespaced params with
+        // purchaseToken (not the full purchase object). isConsumable=true
+        // re-grants the SKU so the user can buy Boost again every 48h.
+        await iap.finishTransaction({
+          android: { purchaseToken: purchase.purchaseToken, isConsumable: true },
+        })
       } catch (e: any) {
         console.warn('iap purchase handler error:', e?.message)
       }
