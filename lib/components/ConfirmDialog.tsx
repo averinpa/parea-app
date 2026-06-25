@@ -57,7 +57,7 @@ export function ConfirmDialog({
       <Animated.View style={{ flex: 1, backgroundColor: 'rgba(5,3,15,0.6)', opacity, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
         <Pressable onPress={onClose} style={{ position: 'absolute', inset: 0 } as any} />
         <Animated.View style={{ width: '100%', maxWidth: 360, backgroundColor: '#fff', borderRadius: 24, padding: 24, transform: [{ scale }], shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, elevation: 12 }}>
-          <Text style={{ fontSize: 20, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.4, textAlign: 'center' }}>
+          <Text style={{ fontSize: 20, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: 0, textAlign: 'center', lineHeight: 28 }}>
             {title}
           </Text>
           {!!body && (

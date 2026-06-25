@@ -945,7 +945,7 @@ export function MessagesTab({ chatList, onOpenChat, onLeaveChat, joinedEvents = 
       {memberPreview && <ProfilePreviewSheet profile={memberPreview} onClose={() => setMemberPreview(null)} onBlock={onBlockUser} onReport={onReportUser} />}
       <ConfirmDialog
         visible={!!cancelEventTarget}
-        title={`Cancel "${cancelEventTarget?.title || ''}"?`}
+        title={`Cancel “${cancelEventTarget?.title || ''}”?`}
         body="This will delete the event and its chat."
         confirmText="Cancel event"
         cancelText="Keep"
