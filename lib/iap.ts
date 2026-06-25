@@ -66,12 +66,10 @@ export async function startIap(handlers: {
     _purchaseSub = iap.purchaseUpdatedListener(async (purchase: Purchase) => {
       try {
         await handlers.onValidated(purchase)
-        // 15.x: finishTransaction takes platform-namespaced params with
-        // purchaseToken (not the full purchase object). isConsumable=true
-        // re-grants the SKU so the user can buy Boost again every 48h.
-        await iap.finishTransaction({
-          android: { purchaseToken: purchase.purchaseToken, isConsumable: true },
-        })
+        // top-level finishTransaction(): { purchase: Purchase, isConsumable? }
+        // (the platform-namespaced { android: {...} } shape from the Nitro
+        // spec is for the lower-level native binding, not this wrapper).
+        await iap.finishTransaction({ purchase, isConsumable: true })
       } catch (e: any) {
         console.warn('iap purchase handler error:', e?.message)
       }
@@ -119,7 +117,10 @@ export async function buyBoost(): Promise<void> {
   // production. https://docs.iap.dev/api/methods/core
   let products: any[] = []
   try {
-    products = await iap.fetchProducts([BOOST_SKU], 'inapp')
+    // top-level fetchProducts() takes ONE ProductRequest object:
+    // { skus: string[], type: 'in-app' | 'subs' | 'all' }. Not two positional
+    // args, and the type uses a dash ('in-app'), not 'inapp'.
+    products = await iap.fetchProducts({ skus: [BOOST_SKU], type: 'in-app' })
     console.log('iap.fetchProducts result:', JSON.stringify(products))
   } catch (e: any) {
     console.warn('iap.fetchProducts threw:', e?.message, e?.code)
