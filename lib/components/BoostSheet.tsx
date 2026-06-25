@@ -122,10 +122,10 @@ export function BoostSheet({ visible, event, freeBoostsLeft = 0, onClose, onConf
               onPress={() => { Haptics.notificationAsync(isFree ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning); onConfirm() }}
               style={{ borderRadius: 99, overflow: 'hidden' }}>
               <LinearGradient
-                colors={isFree ? ['#8B5CF6', '#EC4899'] : ['rgba(139,92,246,0.35)', 'rgba(236,72,153,0.35)']}
+                colors={['#8B5CF6', '#EC4899']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 style={{ paddingVertical: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
-                <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: isFree ? '#1A0E2E' : 'rgba(255,255,255,0.85)', letterSpacing: 0.2 }}>
+                <Text style={{ fontSize: 16, fontFamily: 'ClashDisplay-Semibold', color: '#1A0E2E', letterSpacing: 0.2 }}>
                   Boost my plan
                 </Text>
               </LinearGradient>
