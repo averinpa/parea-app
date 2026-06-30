@@ -24,18 +24,23 @@ export const INTEREST_CATEGORY_PALETTE = {
   tech:     { bg: '#EEF2FF', selectedBg: '#E0E7FF', border: '#C7D2FE', selectedBorder: '#4338CA', iconColor: '#818CF8', text: '#3730A3' },
 } as const
 
+// English / Russian / Greek pinned to the top (Cyprus locals + primary user
+// base), the rest alphabetised by label. The previous order was add-order and
+// read as random in the Languages pill picker — Daria flagged it as messy.
+// One source of truth so every screen that renders LANGUAGES_LIST (onboarding,
+// create-event, profile, preview sheet) shows the same order.
 export const LANGUAGES_LIST = [
   { code: 'en', flag: '🇬🇧', label: 'English' },
   { code: 'ru', flag: '🇷🇺', label: 'Russian' },
   { code: 'el', flag: '🇬🇷', label: 'Greek' },
-  { code: 'uk', flag: '🇺🇦', label: 'Ukrainian' },
+  { code: 'ar', flag: '🇸🇦', label: 'Arabic' },
   { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
   { code: 'fr', flag: '🇫🇷', label: 'Français' },
   { code: 'he', flag: '🇮🇱', label: 'Hebrew' },
-  { code: 'es', flag: '🇪🇸', label: 'Español' },
   { code: 'it', flag: '🇮🇹', label: 'Italiano' },
   { code: 'pl', flag: '🇵🇱', label: 'Polski' },
-  { code: 'ar', flag: '🇸🇦', label: 'Arabic' },
+  { code: 'uk', flag: '🇺🇦', label: 'Ukrainian' },
 ]
 
 export const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
