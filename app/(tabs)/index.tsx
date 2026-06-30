@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — Parea Mobile
 import { Feather, Ionicons } from '@expo/vector-icons'
-import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama, Lock, Globe } from 'lucide-react-native'
+import { Users, UsersRound, PartyPopper, Dumbbell, UtensilsCrossed, Briefcase, Leaf, Palette, Pencil, CheckCircle, Zap, Car, MapPin, ThumbsUp, User, Radio, Clock, Search, Trash2, Crown, Check, Minus, MessageCircle, X, ChevronRight, ChevronDown, CalendarDays, MoreHorizontal, Coffee, Wine, Cpu, Gamepad2, Music, Drama, Lock, Globe } from 'lucide-react-native'
 import { Bell as PhBell, MagnifyingGlass, CalendarBlank, CaretDown, CaretLeft, CaretRight, MapPin as PhMapPin, Sparkle, Coffee as PhCoffee, Barbell, Wine as PhWine, GameController, Cpu as PhCpu, Leaf as PhLeaf, ForkKnife, Palette as PhPalette, MusicNotes, UsersThree, Car as PhCar, Star as PhStar, Ticket as PhTicket, PushPin, HouseLine, Couch, Scales, Butterfly, Confetti, Prohibit, Wind, Fire, Drop, CheckCircle as PhCheckCircle, Warning, Clock as PhClock, Trash as PhTrash, ChatTeardrop, HandWaving, Crosshair, TennisBall, Mountains, YinYang, AirplaneTilt, Books, Camera as PhCamera, MaskHappy, Umbrella, MicrophoneStage, WaveSine, Scissors as PhScissors, TShirt, FilmSlate, PersonSimpleSwim, Briefcase as PhBriefcase, Egg, SunHorizon, Handshake, Coins, Laptop, Sailboat } from '../../lib/phosphor-icons'
 import Svg, { Circle, Path } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
@@ -1554,6 +1554,9 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
   const [createDescription, setCreateDescription] = useState('')
   const [createDriving, setCreateDriving] = useState(false)
   const [createLangs, setCreateLangs] = useState<string[]>([])
+  // Collapsed by default — only EN/RU/EL pills are visible; everything else is
+  // behind a "+N more" chip so the picker doesn't read as a wall of flags.
+  const [createLangsExpanded, setCreateLangsExpanded] = useState(false)
   const [createCrewPref, setCreateCrewPref] = useState<string>('any')
   const [createVisibility, setCreateVisibility] = useState<'public' | 'private'>('public')
   // True while the final "Create plan" submit is uploading the cover + inserting
@@ -7249,21 +7252,50 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                           })}
                         </View>
                       </View>
-                      {/* Languages */}
+                      {/* Languages — 3 pinned for Cyprus + a "+N more" chip
+                          that reveals the rest inline. Selected-but-not-pinned
+                          langs are auto-promoted to the always-visible row so
+                          collapsing doesn't hide a user's existing choice. */}
                       <View>
                         <Text style={{ fontSize: 18, fontFamily: 'ClashDisplay-Bold', color: '#1E1B4B', letterSpacing: -0.3 }}>Languages</Text>
                         <Text style={{ fontSize: 12, color: '#94A3B8', fontFamily: 'Outfit-Medium', marginTop: 2, marginBottom: 10 }}>Pick at least one — we use it to match the right people</Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                          {LANGUAGES_LIST.map((l: any) => (
-                            <TouchableOpacity key={l.code} onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])} activeOpacity={0.8}
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 99,
-                                backgroundColor: createLangs.includes(l.code) ? '#EEF2FF' : '#F8FAFC',
-                                borderWidth: 1.5, borderColor: createLangs.includes(l.code) ? '#6366F1' : 'transparent' }}>
-                              <Text style={{ fontSize: 15 }}>{l.flag || '🌐'}</Text>
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: createLangs.includes(l.code) ? '#6366F1' : '#64748B' }}>{l.label}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
+                        {(() => {
+                          const PINNED = ['en', 'ru', 'el']
+                          const isPinned = (code: string) => PINNED.includes(code)
+                          const isSelected = (code: string) => createLangs.includes(code)
+                          const alwaysShown = LANGUAGES_LIST.filter((l: any) => isPinned(l.code) || isSelected(l.code))
+                          const hidden = LANGUAGES_LIST.filter((l: any) => !isPinned(l.code) && !isSelected(l.code))
+                          const renderPill = (l: any) => {
+                            const sel = isSelected(l.code)
+                            return (
+                              <TouchableOpacity key={l.code}
+                                onPress={() => setCreateLangs(prev => prev.includes(l.code) ? prev.filter((x: string) => x !== l.code) : [...prev, l.code])}
+                                activeOpacity={0.8}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 99,
+                                  backgroundColor: sel ? '#EEF2FF' : '#F8FAFC',
+                                  borderWidth: 1.5, borderColor: sel ? '#6366F1' : 'transparent' }}>
+                                <Text style={{ fontSize: 15 }}>{l.flag || '🌐'}</Text>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: sel ? '#6366F1' : '#64748B' }}>{l.label}</Text>
+                              </TouchableOpacity>
+                            )
+                          }
+                          return (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                              {alwaysShown.map(renderPill)}
+                              {createLangsExpanded && hidden.map(renderPill)}
+                              {hidden.length > 0 && (
+                                <TouchableOpacity onPress={() => setCreateLangsExpanded(v => !v)} activeOpacity={0.8}
+                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 99,
+                                    backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.3)', borderStyle: 'dashed' }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>
+                                    {createLangsExpanded ? 'Show less' : `+${hidden.length} more`}
+                                  </Text>
+                                  <ChevronDown size={14} color="#6366F1" style={{ transform: [{ rotate: createLangsExpanded ? '180deg' : '0deg' }] }} />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )
+                        })()}
                       </View>
                       {/* Driving */}
                       <TouchableOpacity onPress={() => setCreateDriving(v => !v)} activeOpacity={0.85}
