@@ -6507,7 +6507,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                 supabase.from('chat_members').delete().in('chat_id', orphanChatIds).then(({ error }) => { if (error) console.log('chat_members delete:', error.message) })
                 supabase.from('chats').delete().in('id', orphanChatIds).then(({ error, count }) => { console.log('chats delete on event cancel:', { ids: orphanChatIds, error: error?.message, count }) })
               }
-              showToast('All requests and chats removed', 'Event cancelled 🗑️', '🗑️')
+              // 'Cancelled' implies the event was still upcoming and you killed
+              // it; expired events are already over, so trash is just history
+              // cleanup. Surface that with a neutral 'Removed' copy.
+              const isExpired = ev.expiresAt
+                ? ev.expiresAt <= Date.now()
+                : isEventPast(ev.date_label || ev.time || '')
+              showToast(
+                isExpired ? 'Cleared from your past plans' : 'All requests and chats removed',
+                isExpired ? 'Event removed 🗑️' : 'Event cancelled 🗑️',
+                '🗑️',
+              )
             }}
             onVibeCheck={() => { setActiveTab('vibecheck'); markNotifsReadForPlans() }}
             onPlansOpen={markNotifsReadForPlans}
@@ -6596,7 +6606,17 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
                     }
                   })
               }
-              showToast('A new spot is now open for others', 'Spot freed 🎟️', '🎟️')
+              // Same gating as onCancelHostedEvent — 'Spot freed' makes no
+              // sense for an expired event (no spot to free), so swap to
+              // neutral 'Event removed' when the event is already past.
+              const isExpired = ev.expiresAt
+                ? ev.expiresAt <= Date.now()
+                : isEventPast(ev.date_label || ev.time || '')
+              showToast(
+                isExpired ? 'Cleared from your past plans' : 'A new spot is now open for others',
+                isExpired ? 'Event removed 🗑️' : 'Spot freed 🎟️',
+                isExpired ? '🗑️' : '🎟️',
+              )
             }}
             onUpdatePlans={ev => {
               setActiveTab('home')
