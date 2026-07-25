@@ -275,8 +275,15 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
 
   const subtitle = (() => {
     if (hasHostActivity) return 'You have join requests'
-    const totalReal = myEvents.reduce((sum: number, e: any) => sum + (eventAttendeesMap[e.id]?.length || 0), 0)
-    if (myEvents.length > 0 && totalReal > 0) return `${totalReal} ${totalReal === 1 ? 'person' : 'people'} in your crew`
+    // Count actual crew members across active crew chats — NOT everyone who
+    // ever opted-in on an event. Previous version summed eventAttendeesMap
+    // which showed 'N people in your crew' when N was really 'N candidates
+    // across all events I'm on' (misleading, since a candidate ≠ crewmate).
+    const realCrewMembers = myEvents.reduce((sum: number, e: any) => {
+      const crews = crewsByEvent[e.id] || []
+      return sum + crews.reduce((s: number, c: any) => s + (c.members?.length || 0), 0)
+    }, 0)
+    if (realCrewMembers > 0) return `${realCrewMembers} ${realCrewMembers === 1 ? 'person' : 'people'} in your crew`
     const lookingCount = myEvents.length + visibleHosted.length
     if (lookingCount > 0) return `${lookingCount} event${lookingCount > 1 ? 's' : ''} · looking for crew...`
     if (myApprovedCommunityEvents.length > 0) return `You're in — open the chat`
@@ -642,7 +649,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                         {isCommunity ? 'GROUP MEMBERS' : isParty ? 'PARTY · OPEN TO JOIN' : 'CREW FOUND'}
                       </Text>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor }}>
-                        {isCommunity ? `${ev.participantsCount || cap} going` : `${found} / ${cap}`}
+                        {/* Cap the numerator at cap so we never render '4/2' — if the
+                            event has more candidates than the user's format allows,
+                            it means overflow into another crew, not that a duo has
+                            grown to 4. */}
+                        {isCommunity ? `${ev.participantsCount || cap} going` : `${Math.min(found, cap)} / ${cap}`}
                       </Text>
                     </View>
                     <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 }}>
@@ -650,7 +661,10 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                         colors={isActive ? ['#43E97B','#38ef7d'] : ['#6366F1','#818CF8']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                         style={{
-                          height: 6, borderRadius: 99, width: `${(found / cap) * 100}%` as any,
+                          // Same cap here — never render a progress bar > 100%
+                          // width (which HTML would happily overflow into the
+                          // next column).
+                          height: 6, borderRadius: 99, width: `${Math.min(found, cap) / cap * 100}%` as any,
                           shadowColor: isActive ? '#43E97B' : '#818CF8',
                           shadowOpacity: 0.9, shadowRadius: 8, elevation: 4,
                         }}
