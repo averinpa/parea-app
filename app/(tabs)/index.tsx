@@ -6200,6 +6200,38 @@ function FeedScreen({ userData = {}, onUpdateUserData, onLogOut }: { userData?: 
             onAcceptInvite={async (invite: any) => {
               if (acceptingInviteRef.current.has(invite.id)) return
               acceptingInviteRef.current.add(invite.id)
+              // Format-mismatch warning — if I opted in as e.g. Duo but the
+              // invite is to join a Squad crew, accepting silently would drop
+              // me into a larger group than I picked (crew size = inviter's
+              // format per session 2026-05-28 decision). Ask explicitly so the
+              // user isn't surprised to find themselves in a 5-person Squad
+              // when they wanted a Duo.
+              {
+                const myFormat = userEventFormat[invite.event_ref_id]
+                const theirFormat = invite._format
+                const formatLabel = (f: string) =>
+                  f === '1+1' ? 'Duo (1+1)'
+                  : f === 'squad' ? 'Squad (up to 5)'
+                  : f === 'party' ? 'Group (up to 20)'
+                  : 'crew'
+                if (myFormat && theirFormat && myFormat !== theirFormat) {
+                  const accept = await new Promise<boolean>(resolve => {
+                    Alert.alert(
+                      `Join their ${formatLabel(theirFormat)}?`,
+                      `You picked ${formatLabel(myFormat)}, but this invite is to a ${formatLabel(theirFormat)}. If you accept, you'll be in their ${formatLabel(theirFormat)} crew instead.`,
+                      [
+                        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                        { text: 'Join', onPress: () => resolve(true) },
+                      ],
+                      { cancelable: true, onDismiss: () => resolve(false) }
+                    )
+                  })
+                  if (!accept) {
+                    acceptingInviteRef.current.delete(invite.id)
+                    return
+                  }
+                }
+              }
               // Stay / Switch crew — model decision C. If I'm already in another
               // crew chat for this event, ask before silently joining a second
               // one (which would leave me as a phantom member of the old crew).
