@@ -43,7 +43,7 @@ export const LANGUAGES_LIST = [
   { code: 'uk', flag: '🇺🇦', label: 'Ukrainian' },
 ]
 
-export const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos']
+export const CITIES = ['Limassol', 'Nicosia', 'Larnaca', 'Paphos', 'Famagusta']
 
 export const MOCK_COMMUNITY_EVENTS: any[] = []
 
@@ -229,8 +229,9 @@ export const CREATE_EVENT_TYPES = [
 ]
 
 export const CITY_CENTERS: Record<string, { lat: number; lng: number }> = {
-  Limassol: { lat: 34.7071, lng: 33.0226 },
-  Nicosia:  { lat: 35.1856, lng: 33.3823 },
-  Larnaca:  { lat: 34.9229, lng: 33.6233 },
-  Paphos:   { lat: 34.7720, lng: 32.4297 },
+  Limassol:  { lat: 34.7071, lng: 33.0226 },
+  Nicosia:   { lat: 35.1856, lng: 33.3823 },
+  Larnaca:   { lat: 34.9229, lng: 33.6233 },
+  Paphos:    { lat: 34.7720, lng: 32.4297 },
+  Famagusta: { lat: 34.9880, lng: 34.0000 },  // Ayia Napa area (free Famagusta district)
 }

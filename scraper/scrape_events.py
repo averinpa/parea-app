@@ -37,15 +37,15 @@ CITY_KEYWORDS = {
     'PAPHOS': 'Paphos', 'PAFOS': 'Paphos',
     'LARNACA': 'Larnaca',
     'FAMAGUSTA': 'Famagusta',
-    'AYIA NAPA': 'Ayia Napa',
-    'PROTARAS': 'Protaras',
+    'AYIA NAPA': 'Famagusta',
+    'PROTARAS': 'Famagusta',
     # Greek forms (nominative + genitive)
     'ΛΕΥΚΩΣΙΑ': 'Nicosia', 'ΛΕΥΚΩΣΙΑΣ': 'Nicosia',
     'ΛΕΜΕΣΟΣ': 'Limassol', 'ΛΕΜΕΣΟΥ': 'Limassol',
     'ΠΑΦΟΣ': 'Paphos', 'ΠΑΦΟΥ': 'Paphos',
     'ΛΑΡΝΑΚΑ': 'Larnaca', 'ΛΑΡΝΑΚΑΣ': 'Larnaca',
     'ΑΜΜΟΧΩΣΤΟΣ': 'Famagusta', 'ΑΜΜΟΧΩΣΤΟΥ': 'Famagusta',
-    'ΑΓΙΑ ΝΑΠΑ': 'Ayia Napa',
+    'ΑΓΙΑ ΝΑΠΑ': 'Famagusta',
     # Limassol venues + suburbs
     'ETKO': 'Limassol', 'CASTLE CLUB': 'Limassol', 'GUABA': 'Limassol',
     'PLATRES': 'Limassol', 'TSIRION': 'Limassol', 'CURIUM': 'Limassol',
@@ -90,14 +90,14 @@ CITY_KEYWORDS = {
     'UNIVERSITY OF NICOSIA': 'Nicosia',
     'INSTITUTE OF NEUROLOGY': 'Nicosia',
     # Ayia Napa / Protaras / Famagusta district
-    'WATERWORLD': 'Ayia Napa',
-    'NISSI BEACH': 'Ayia Napa', 'MAKRONISOS': 'Ayia Napa', 'GRECIAN': 'Ayia Napa',
-    'CAPE GRECO': 'Ayia Napa', 'KONNOS': 'Ayia Napa',
-    'CHALKIES': 'Ayia Napa', 'SANDY-BEACH': 'Ayia Napa', 'SANDY BEACH': 'Ayia Napa',
-    'CLUB ICE': 'Ayia Napa',
-    'AGIA TRIADA': 'Protaras', 'ΑΓΙΑ ΤΡΙΑΔΑ': 'Protaras',
-    'KAPPARIS': 'Protaras', 'NAVA SEASIDE': 'Protaras',
-    'DERYNEIA': 'Protaras', 'ΠΑΡΑΛΙΜΝΙ': 'Protaras',
+    'WATERWORLD': 'Famagusta',
+    'NISSI BEACH': 'Famagusta', 'MAKRONISOS': 'Famagusta', 'GRECIAN': 'Famagusta',
+    'CAPE GRECO': 'Famagusta', 'KONNOS': 'Famagusta',
+    'CHALKIES': 'Famagusta', 'SANDY-BEACH': 'Famagusta', 'SANDY BEACH': 'Famagusta',
+    'CLUB ICE': 'Famagusta',
+    'AGIA TRIADA': 'Famagusta', 'ΑΓΙΑ ΤΡΙΑΔΑ': 'Famagusta',
+    'KAPPARIS': 'Famagusta', 'NAVA SEASIDE': 'Famagusta',
+    'DERYNEIA': 'Famagusta', 'ΠΑΡΑΛΙΜΝΙ': 'Famagusta',
 }
 
 

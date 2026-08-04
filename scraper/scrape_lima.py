@@ -53,8 +53,8 @@ CITY_KEYWORDS = {
     'ΠΑΦΟΣ': 'Paphos', 'ΠΑΦΟΥ': 'Paphos',
     'LARNACA': 'Larnaca', 'ЛАРНАКА': 'Larnaca', 'ΛΑΡΝΑΚΑ': 'Larnaca',
     'FAMAGUSTA': 'Famagusta', 'ФАМАГУСТА': 'Famagusta', 'ΑΜΜΟΧΩΣΤΟΣ': 'Famagusta',
-    'AYIA NAPA': 'Ayia Napa', 'АЙЯ НАПА': 'Ayia Napa', 'АЙЯ-НАПА': 'Ayia Napa',
-    'PROTARAS': 'Protaras', 'ПРОТАРАС': 'Protaras',
+    'AYIA NAPA': 'Famagusta', 'АЙЯ НАПА': 'Famagusta', 'АЙЯ-НАПА': 'Famagusta',
+    'PROTARAS': 'Famagusta', 'ПРОТАРАС': 'Famagusta',
     # Limassol venues + suburbs
     'ETKO': 'Limassol', 'CASTLE CLUB': 'Limassol', 'GUABA': 'Limassol',
     'PLATRES': 'Limassol', 'TSIRION': 'Limassol', 'CURIUM': 'Limassol',
@@ -94,10 +94,10 @@ CITY_KEYWORDS = {
     'ΠΥΛΗ ΑΜΜΟΧΩΣΤ': 'Nicosia', 'FAMAGUSTA GATE': 'Nicosia',
     'UCY': 'Nicosia', 'UNIVERSITY OF CYPRUS': 'Nicosia',
     # Ayia Napa / Protaras venues
-    'NISSI BEACH': 'Ayia Napa', 'MAKRONISOS': 'Ayia Napa', 'GRECIAN': 'Ayia Napa',
-    'CAPE GRECO': 'Ayia Napa', 'KONNOS': 'Ayia Napa',
-    'CHALKIES': 'Ayia Napa', 'SANDY-BEACH': 'Ayia Napa', 'SANDY BEACH': 'Ayia Napa',
-    'AGIA TRIADA': 'Protaras', 'ΑΓΊΑ ΤΡΙΆΔΑ': 'Protaras', 'KAPPARIS': 'Protaras',
+    'NISSI BEACH': 'Famagusta', 'MAKRONISOS': 'Famagusta', 'GRECIAN': 'Famagusta',
+    'CAPE GRECO': 'Famagusta', 'KONNOS': 'Famagusta',
+    'CHALKIES': 'Famagusta', 'SANDY-BEACH': 'Famagusta', 'SANDY BEACH': 'Famagusta',
+    'AGIA TRIADA': 'Famagusta', 'ΑΓΊΑ ΤΡΙΆΔΑ': 'Famagusta', 'KAPPARIS': 'Famagusta',
 }
 
 
