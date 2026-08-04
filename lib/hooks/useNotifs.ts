@@ -80,7 +80,18 @@ export function useNotifs({ persistLoadedRef }: {
       Animated.timing(bellShake, { toValue: 3, duration: 40, useNativeDriver: true }),
       Animated.timing(bellShake, { toValue: 0, duration: 40, useNativeDriver: true }),
     ]).start()
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    // Match / crew moments deserve a distinctive celebratory pulse — the
+    // default Warning haptic is barely perceptible on Android and users
+    // reported not feeling it when a third person joined an existing crew.
+    // Triple-pulse (Success + Medium + Heavy) reads as a clear "tada!".
+    const MATCH_TYPES = new Set(['match', 'group_chat', 'confirmed', 'member_joined', 'crew_match'])
+    if (MATCH_TYPES.has(n.type)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 140)
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 280)
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
+    }
   }
 
   const dismissNotif = (id: string) => {
