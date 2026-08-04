@@ -25,28 +25,98 @@ if not SUPABASE_KEY:
     raise SystemExit('SUPABASE_SERVICE_KEY missing in .env')
 BASE_URL = 'https://www.soldoutticketbox.com'
 
-CITY_KEYWORDS = ['NICOSIA', 'LIMASSOL', 'PAPHOS', 'LARNACA', 'FAMAGUSTA', 'LEFKOSIA', 'LEMESOS']
-
-# Greek venue names map to English city. Cyprus venue pages frequently render
-# the city in Greek even on the English-locale URL (theatres like
-# ΜΑΡΚΙΔΕΙΟ ΘΕΑΤΡΟ ΠΑΦΟΥ), so without this mapping `extract_city` would
-# silently return '' and the app would show the raw Greek string as location.
-GREEK_CITY_MAP = {
-    'ΠΑΦΟΣ': 'Paphos', 'ΠΑΦΟΥ': 'Paphos',
+# Venue → city map. First-scrape venues (theatre/amphitheatre names, etc.)
+# often don't have the city in the visible venue text ("Curium Ancient
+# Theatre", "Pissouri Amphitheatre"), so we hard-code the ones seen on
+# soldout Cyprus pages. Kept in sync with the lima scraper's map — same
+# venues appear on both aggregators, no reason for the two to disagree.
+CITY_KEYWORDS = {
+    # Direct city names
+    'NICOSIA': 'Nicosia', 'LEFKOSIA': 'Nicosia',
+    'LIMASSOL': 'Limassol', 'LEMESOS': 'Limassol',
+    'PAPHOS': 'Paphos', 'PAFOS': 'Paphos',
+    'LARNACA': 'Larnaca',
+    'FAMAGUSTA': 'Famagusta',
+    'AYIA NAPA': 'Ayia Napa',
+    'PROTARAS': 'Protaras',
+    # Greek forms (nominative + genitive)
     'ΛΕΥΚΩΣΙΑ': 'Nicosia', 'ΛΕΥΚΩΣΙΑΣ': 'Nicosia',
     'ΛΕΜΕΣΟΣ': 'Limassol', 'ΛΕΜΕΣΟΥ': 'Limassol',
+    'ΠΑΦΟΣ': 'Paphos', 'ΠΑΦΟΥ': 'Paphos',
     'ΛΑΡΝΑΚΑ': 'Larnaca', 'ΛΑΡΝΑΚΑΣ': 'Larnaca',
     'ΑΜΜΟΧΩΣΤΟΣ': 'Famagusta', 'ΑΜΜΟΧΩΣΤΟΥ': 'Famagusta',
+    'ΑΓΙΑ ΝΑΠΑ': 'Ayia Napa',
+    # Limassol venues + suburbs
+    'ETKO': 'Limassol', 'CASTLE CLUB': 'Limassol', 'GUABA': 'Limassol',
+    'PLATRES': 'Limassol', 'TSIRION': 'Limassol', 'CURIUM': 'Limassol',
+    'KOURION': 'Limassol', 'EPISKOPI': 'Limassol', 'GOVERNOR': 'Limassol',
+    'PISSOURI': 'Limassol', 'KOLOSSI': 'Limassol', 'MOUTTAGIAKA': 'Limassol',
+    'MAZE VENUE': 'Limassol', 'VASILEOS KONSTANTINOU': 'Limassol',
+    'KTIMA CAMELOT': 'Limassol', 'PANO AMIANTOS': 'Limassol', 'AMIANTOS': 'Limassol',
+    'WAREHOUSE BY IT': 'Limassol', 'IT QUARTER': 'Limassol',
+    'LYSITHEA': 'Limassol', 'OLD MARKET ST': 'Limassol', 'MASON BAR': 'Limassol',
+    'SELINE': 'Limassol', 'BAD ZEBRA': 'Limassol',
+    'ENAERIOS': 'Limassol', 'DASOUDI': 'Limassol', 'AKROTIRI': 'Limassol',
+    'COLUMBIA SUN': 'Limassol', 'MUNICIPAL GARDEN THEATRE': 'Limassol',
+    'ZANTE VENUE': 'Limassol', 'MEADOW PARADISE': 'Limassol',
+    # Paphos venues + suburbs
+    'CHLORAKA': 'Paphos', 'KISSONERGA': 'Paphos', 'CORAL BAY': 'Paphos',
+    'PEYIA': 'Paphos', 'EMBA': 'Paphos', 'GEROSKIPOU': 'Paphos',
+    'TECHNOPOLIS 20': 'Paphos', 'AKAMAS': 'Paphos',
+    'ΛΙΜΑΝΑΚΙ': 'Paphos', 'MINTHIS': 'Paphos', 'LATCHI': 'Paphos',
+    'POLIS': 'Paphos', 'PORTO LATSI': 'Paphos', 'ΛΑΤΣΙ': 'Paphos',
+    'ARODES': 'Paphos', 'ΑΡΟΔΕΣ': 'Paphos',
+    'SAILAWAY': 'Paphos', 'AGIA MARINA CHRYSOCHOUS': 'Paphos',
+    'CHRYSOCHOUS': 'Paphos', 'ΧΡΥΣΟΧΟΥΣ': 'Paphos',
+    # Larnaca venues + suburbs
+    'MACKENZIE': 'Larnaca', 'OCEANIA BEACH': 'Larnaca', 'HAVANA BEACH': 'Larnaca',
+    'FINIKOUDES': 'Larnaca', 'DHEKELIA': 'Larnaca',
+    'OROKLINI': 'Larnaca', 'PYLA': 'Larnaca', 'ZYGI': 'Larnaca',
+    'PLAGE DU SOLEIL': 'Larnaca', 'PLAGEDUSOLEIL': 'Larnaca', 'AKAKIA': 'Larnaca',
+    'KATO DRYS': 'Larnaca', 'LEFKARA': 'Larnaca',
+    # Nicosia venues + suburbs
+    'LAKATAMIA': 'Nicosia', 'ΛΑΚΑΤΑΜΙΑ': 'Nicosia',
+    'PALLAS THEATER': 'Nicosia', 'PALLAS THEAT': 'Nicosia',
+    'ΘΕΑΤΡΟ ΠΑΛΛΑΣ': 'Nicosia',
+    'LEA WOMEN': 'Nicosia', 'SUNMOON': 'Nicosia',
+    'SATIRIKO': 'Nicosia', 'ATHALASSA': 'Nicosia', 'STROVOLOS': 'Nicosia',
+    'DEFTERA': 'Nicosia', 'ΔΕΥΤΕΡΑ': 'Nicosia',
+    'LATSIA': 'Nicosia', 'AGLANTZIA': 'Nicosia',
+    'ENGOMI': 'Nicosia', 'EGKOMI': 'Nicosia', 'MAKEDONITISSA': 'Nicosia',
+    'DASOUPOLIS': 'Nicosia', 'KAIMAKLI': 'Nicosia',
+    'FOREST MARKET CYPRUS': 'Nicosia',
+    'ΠΥΛΗ ΑΜΜΟΧΩΣΤΟΥ': 'Nicosia', 'FAMAGUSTA GATE': 'Nicosia',
+    'UCY': 'Nicosia', 'UNIVERSITY OF CYPRUS': 'Nicosia',
+    'UNIVERSITY OF NICOSIA': 'Nicosia',
+    'INSTITUTE OF NEUROLOGY': 'Nicosia',
+    # Ayia Napa / Protaras / Famagusta district
+    'WATERWORLD': 'Ayia Napa',
+    'NISSI BEACH': 'Ayia Napa', 'MAKRONISOS': 'Ayia Napa', 'GRECIAN': 'Ayia Napa',
+    'CAPE GRECO': 'Ayia Napa', 'KONNOS': 'Ayia Napa',
+    'CHALKIES': 'Ayia Napa', 'SANDY-BEACH': 'Ayia Napa', 'SANDY BEACH': 'Ayia Napa',
+    'CLUB ICE': 'Ayia Napa',
+    'AGIA TRIADA': 'Protaras', 'ΑΓΙΑ ΤΡΙΑΔΑ': 'Protaras',
+    'KAPPARIS': 'Protaras', 'NAVA SEASIDE': 'Protaras',
+    'DERYNEIA': 'Protaras', 'ΠΑΡΑΛΙΜΝΙ': 'Protaras',
 }
 
+
+def _strip_greek_accents(text: str) -> str:
+    """Greek in the wild appears with and without tonos (ά vs α, ό vs ο, …).
+    Flatten both sides before comparing so 'ΠΆΦΟΣ' and 'ΠΑΦΟΣ' both match."""
+    subs = str.maketrans({
+        'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ώ': 'Ω',
+        'Ϊ': 'Ι', 'Ϋ': 'Υ', 'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι',
+        'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω', 'ϊ': 'ι', 'ϋ': 'υ', 'ΐ': 'ι', 'ΰ': 'υ',
+    })
+    return text.translate(subs)
+
+
 def extract_city(venue_text):
-    upper = venue_text.upper()
-    for city in CITY_KEYWORDS:
-        if city in upper:
-            return city.capitalize()
-    for greek, english in GREEK_CITY_MAP.items():
-        if greek in upper:
-            return english
+    upper = _strip_greek_accents((venue_text or '').upper())
+    for key, city in CITY_KEYWORDS.items():
+        if _strip_greek_accents(key.upper()) in upper:
+            return city
     return ''
 
 def clean_date(date_str):
@@ -239,7 +309,12 @@ async def scrape_event(page, url):
         # Prefer the first city encountered in the Event Dates tour (tour order
         # = canonical start). extract_city(joined-list) returns whichever city
         # matches CITY_KEYWORDS first, which is alphabetical-ish, not chronological.
-        city = all_cities[0] if all_cities else extract_city(venue)
+        # Fall back to title + desc when venue keyword lookup fails — many rows
+        # had "MILTOS PASCHALIDIS LIVE (LARNACA)" style titles that name the city
+        # in parentheses while the venue field is just the theatre name.
+        city = (all_cities[0]
+                if all_cities
+                else extract_city(venue) or extract_city(title) or extract_city(desc))
 
         # Category
         category = ''
