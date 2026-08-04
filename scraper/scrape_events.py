@@ -312,13 +312,10 @@ async def scrape_event(page, url):
         # matches CITY_KEYWORDS first, which is alphabetical-ish, not chronological.
         # Fall back to title + desc when venue keyword lookup fails — many rows
         # had "MILTOS PASCHALIDIS LIVE (LARNACA)" style titles that name the city
-        # in parentheses while the venue field is just the theatre name. Last-
-        # resort fallback to 'Cyprus' so we never drop a legit event just
-        # because its venue name is unfamiliar.
+        # in parentheses while the venue field is just the theatre name.
         city = (all_cities[0]
                 if all_cities
-                else extract_city(venue) or extract_city(title)
-                     or extract_city(desc) or 'Cyprus')
+                else extract_city(venue) or extract_city(title) or extract_city(desc))
 
         # Category
         category = ''

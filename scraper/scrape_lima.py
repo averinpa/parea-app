@@ -240,13 +240,8 @@ def scrape_event(url: str):
         # addressLocality is often blank or a country code (e.g. "CY") — treat
         # both as "no city" and fall through to venue/title/description keyword
         # lookup (description sometimes says "Come to our event in Larnaca!").
-        # If everything comes back empty, fall back to 'Cyprus' — better to
-        # store a generic bucket than lose an event because its venue is
-        # something we don't recognise (a lesson from deleting DOG FEST 2026
-        # by accident during the first city cleanup pass).
         if city.strip().upper() in ('', 'CY', 'CYPRUS'):
-            city = (extract_city(venue) or extract_city(title)
-                    or extract_city(description) or 'Cyprus')
+            city = extract_city(venue) or extract_city(title) or extract_city(description)
 
         image = event_obj.get('image', '')
         if isinstance(image, list):
@@ -296,6 +291,7 @@ def main():
         print(f'Found {len(links)} events on lima.events\n')
 
     inserted = updated = skipped = 0
+    skipped_no_city = []  # collect for a summary at the end so Daria can decide
     for url in links:
         canon = normalize_url(url)
         print(f'Scraping: {canon}')
@@ -307,6 +303,14 @@ def main():
             continue
         if not event or not event['title'] or not event['date_label']:
             print(f'  Skipped (no JSON-LD or missing fields)')
+            skipped += 1
+            time.sleep(0.3)
+            continue
+        # Skip events whose venue we can't tie to a Cyprus district — Daria
+        # prefers to curate these by hand rather than accept a generic bucket.
+        if not (event.get('city') or '').strip():
+            print(f'  Skipped (no city): "{event["title"]}" @ "{event["location"]}"')
+            skipped_no_city.append((event['title'], event['location'], canon))
             skipped += 1
             time.sleep(0.3)
             continue
@@ -365,6 +369,13 @@ def main():
         time.sleep(0.3)  # be gentle
 
     print(f'\nDone. Inserted: {inserted}, Updated: {updated}, Skipped: {skipped}')
+    if skipped_no_city:
+        print(f'\n--- {len(skipped_no_city)} events skipped for unknown city ---')
+        print('If any look worth keeping, add the venue to CITY_KEYWORDS')
+        print('and rerun `python scraper/scrape_lima.py "<url>"` for that one.\n')
+        for title, venue, url in skipped_no_city:
+            print(f'  · {title!r} @ {venue!r}')
+            print(f'    {url}')
 
 
 if __name__ == '__main__':
