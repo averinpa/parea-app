@@ -52,3 +52,4 @@ chats.md
 
 # Firebase config — client key, kept out of git (supplied to EAS via env file)
 google-services.json
+scraper/_debug/
