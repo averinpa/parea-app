@@ -91,6 +91,7 @@ CITY_KEYWORDS = {
     'ENGOMI': 'Nicosia', 'EGKOMI': 'Nicosia', 'MAKEDONITISSA': 'Nicosia',
     'DASOUPOLIS': 'Nicosia', 'KAIMAKLI': 'Nicosia',
     'FOREST MARKET CYPRUS': 'Nicosia',
+    'EXPO CYPRUS': 'Nicosia', 'STATE FAIR': 'Nicosia',
     'ΠΥΛΗ ΑΜΜΟΧΩΣΤ': 'Nicosia', 'FAMAGUSTA GATE': 'Nicosia',
     'UCY': 'Nicosia', 'UNIVERSITY OF CYPRUS': 'Nicosia',
     # Ayia Napa / Protaras venues
@@ -239,8 +240,13 @@ def scrape_event(url: str):
         # addressLocality is often blank or a country code (e.g. "CY") — treat
         # both as "no city" and fall through to venue/title/description keyword
         # lookup (description sometimes says "Come to our event in Larnaca!").
+        # If everything comes back empty, fall back to 'Cyprus' — better to
+        # store a generic bucket than lose an event because its venue is
+        # something we don't recognise (a lesson from deleting DOG FEST 2026
+        # by accident during the first city cleanup pass).
         if city.strip().upper() in ('', 'CY', 'CYPRUS'):
-            city = extract_city(venue) or extract_city(title) or extract_city(description)
+            city = (extract_city(venue) or extract_city(title)
+                    or extract_city(description) or 'Cyprus')
 
         image = event_obj.get('image', '')
         if isinstance(image, list):
