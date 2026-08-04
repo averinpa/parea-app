@@ -39,24 +39,102 @@ UA = {
                   '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 }
 
+# Venue → city map. Built up over the first full scrape when many lima
+# venues came back with an empty city because addressLocality was blank
+# and the venue name alone didn't say "Limassol". Anything added here
+# survives the next `python scraper/scrape_lima.py` refresh.
 CITY_KEYWORDS = {
+    # Direct city names
     'NICOSIA': 'Nicosia', 'ЛЕВКОСИЯ': 'Nicosia', 'НИКОСИЯ': 'Nicosia',
+    'LEFKOSIA': 'Nicosia', 'ΛΕΥΚΩΣΙΑ': 'Nicosia',
     'LIMASSOL': 'Limassol', 'ЛИМАССОЛ': 'Limassol',
-    'PAPHOS': 'Paphos', 'ПАФОС': 'Paphos',
-    'LARNACA': 'Larnaca', 'ЛАРНАКА': 'Larnaca',
-    'FAMAGUSTA': 'Famagusta', 'ФАМАГУСТА': 'Famagusta',
+    'LEMESOS': 'Limassol', 'ΛΕΜΕΣΟΣ': 'Limassol', 'ΛΕΜΕΣΟΥ': 'Limassol',
+    'PAPHOS': 'Paphos', 'ПАФОС': 'Paphos', 'PAFOS': 'Paphos',
+    'ΠΑΦΟΣ': 'Paphos', 'ΠΑΦΟΥ': 'Paphos',
+    'LARNACA': 'Larnaca', 'ЛАРНАКА': 'Larnaca', 'ΛΑΡΝΑΚΑ': 'Larnaca',
+    'FAMAGUSTA': 'Famagusta', 'ФАМАГУСТА': 'Famagusta', 'ΑΜΜΟΧΩΣΤΟΣ': 'Famagusta',
     'AYIA NAPA': 'Ayia Napa', 'АЙЯ НАПА': 'Ayia Napa', 'АЙЯ-НАПА': 'Ayia Napa',
     'PROTARAS': 'Protaras', 'ПРОТАРАС': 'Protaras',
-    'ETKO': 'Limassol',  # BEONIX venue
+    # Limassol venues + suburbs
+    'ETKO': 'Limassol', 'CASTLE CLUB': 'Limassol', 'GUABA': 'Limassol',
+    'PLATRES': 'Limassol', 'TSIRION': 'Limassol', 'CURIUM': 'Limassol',
+    'EPISKOPI': 'Limassol', 'GOVERNOR': 'Limassol', 'PISSOURI': 'Limassol',
+    'KOLOSSI': 'Limassol', 'MOUTTAGIAKA': 'Limassol', 'MAZE VENUE': 'Limassol',
+    'VASILEOS KONSTANTINOU': 'Limassol', 'KTIMA CAMELOT': 'Limassol',
+    'PANO AMIANTOS': 'Limassol', 'AMIANTOS': 'Limassol',
+    'WAREHOUSE BY IT': 'Limassol', 'IT QUARTER': 'Limassol',
+    'LYSITHEA': 'Limassol', 'OLD MARKET ST': 'Limassol', 'MASON BAR': 'Limassol',
+    'SELINE': 'Limassol', 'BAD ZEBRA': 'Limassol',
+    'ENAERIOS': 'Limassol', 'DASOUDI': 'Limassol', 'AKROTIRI': 'Limassol',
+    'COLUMBIA SUN': 'Limassol', 'MUNICIPAL GARDEN THEATRE': 'Limassol',
+    # Paphos venues + suburbs
+    'CHLORAKA': 'Paphos', 'KISSONERGA': 'Paphos', 'CORAL BAY': 'Paphos',
+    'PEYIA': 'Paphos', 'EMBA': 'Paphos', 'GEROSKIPOU': 'Paphos',
+    'TECHNOPOLIS 20': 'Paphos', 'AKAMAS': 'Paphos',
+    'ΛΙΜΑΝΑΚΙ': 'Paphos', 'ΛΙΜΑΝΆΚΙ': 'Paphos',
+    'MINTHIS': 'Paphos', 'LATCHI': 'Paphos', 'POLIS': 'Paphos',
+    'PORTO LATSI': 'Paphos', 'ΛΑΤΣΙ': 'Paphos',
+    'ARODES': 'Paphos', 'ΑΡΟΔΕΣ': 'Paphos',
+    'SAILAWAY': 'Paphos', 'CATAMARAN': 'Paphos',
+    'AGIA MARINA CHRYSOCHOUS': 'Paphos', 'CHRYSOCHOUS': 'Paphos',
+    # Larnaca venues + suburbs
+    'MACKENZIE': 'Larnaca', 'OCEANIA BEACH': 'Larnaca', 'HAVANA BEACH': 'Larnaca',
+    'FINIKOUDES': 'Larnaca', 'DHEKELIA': 'Larnaca',
+    'OROKLINI': 'Larnaca', 'PYLA': 'Larnaca', 'ZYGI': 'Larnaca',
+    'PLAGE DU SOLEIL': 'Larnaca', 'PLAGEDUSOLEIL': 'Larnaca', 'AKAKIA': 'Larnaca',
+    # Nicosia venues + suburbs
+    'LAKATAMIA': 'Nicosia', 'ΛΑΚΑΤΑΜ': 'Nicosia',
+    'PALLAS THEAT': 'Nicosia', 'ΘΕΑΤΡΟ ΠΑΛΛΑΣ': 'Nicosia', 'ΠΑΛΛΆΣ': 'Nicosia',
+    'LEA WOMEN': 'Nicosia', 'SUNMOON': 'Nicosia',
+    'SATIRIKO': 'Nicosia', 'ATHALASSA': 'Nicosia', 'STROVOLOS': 'Nicosia',
+    'DEFTERA': 'Nicosia', 'LATSIA': 'Nicosia', 'AGLANTZIA': 'Nicosia',
+    'ENGOMI': 'Nicosia', 'EGKOMI': 'Nicosia', 'MAKEDONITISSA': 'Nicosia',
+    'DASOUPOLIS': 'Nicosia', 'KAIMAKLI': 'Nicosia',
+    'FOREST MARKET CYPRUS': 'Nicosia',
+    'ΠΥΛΗ ΑΜΜΟΧΩΣΤ': 'Nicosia', 'FAMAGUSTA GATE': 'Nicosia',
+    'UCY': 'Nicosia', 'UNIVERSITY OF CYPRUS': 'Nicosia',
+    # Ayia Napa / Protaras venues
+    'NISSI BEACH': 'Ayia Napa', 'MAKRONISOS': 'Ayia Napa', 'GRECIAN': 'Ayia Napa',
+    'CAPE GRECO': 'Ayia Napa', 'KONNOS': 'Ayia Napa',
+    'CHALKIES': 'Ayia Napa', 'SANDY-BEACH': 'Ayia Napa', 'SANDY BEACH': 'Ayia Napa',
+    'AGIA TRIADA': 'Protaras', 'ΑΓΊΑ ΤΡΙΆΔΑ': 'Protaras', 'KAPPARIS': 'Protaras',
 }
 
 
+def _strip_greek_accents(text: str) -> str:
+    """Greek text in the wild appears with and without tonos (ά vs α, ό vs ο, …).
+    ILIKE-style matching that hard-codes accented chars misses the un-accented
+    form and vice-versa, so we compare both sides in an accent-flattened form."""
+    subs = str.maketrans({
+        'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ώ': 'Ω',
+        'Ϊ': 'Ι', 'Ϋ': 'Υ', 'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι',
+        'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω', 'ϊ': 'ι', 'ϋ': 'υ', 'ΐ': 'ι', 'ΰ': 'υ',
+    })
+    return text.translate(subs)
+
+
 def extract_city(text: str) -> str:
-    upper = (text or '').upper()
+    upper = _strip_greek_accents((text or '').upper())
     for key, city in CITY_KEYWORDS.items():
-        if key in upper:
+        if _strip_greek_accents(key.upper()) in upper:
             return city
     return ''
+
+
+# Lima aggregates non-Cyprus events too (student fairs in Nuremberg, etc.).
+# If venue or title clearly names another country's city, skip the event —
+# the app is Cyprus-scoped and non-Cyprus rows just clutter the feed.
+NON_CYPRUS_KEYWORDS = (
+    'ERLANGEN', 'NUREMBERG', 'NÜRNBERG', 'NURNBERG', 'LUITPOLDHAIN',
+    'BERLIN', 'MUNICH', 'MÜNCHEN', 'HAMBURG', 'FRANKFURT', 'GERMANY',
+    'ATHENS', 'ΑΘΗΝΑ', 'THESSALONIKI', 'ΘΕΣΣΑΛΟΝΙΚΗ',
+    'LONDON', 'PARIS', 'ROME', 'MADRID',
+)
+
+
+def is_non_cyprus(*texts) -> bool:
+    joined = ' '.join((t or '') for t in texts).upper()
+    return any(k in joined for k in NON_CYPRUS_KEYWORDS)
 
 
 def parse_iso(iso_str: str):
@@ -135,26 +213,38 @@ def scrape_event(url: str):
         start = event_obj.get('startDate', '')
         date_label, time_str = parse_iso(start)
 
+        # Bail early on non-Cyprus events (student fairs in Nuremberg, etc.).
+        # Uses venue name from JSON-LD and title — description is checked later.
+        _loc_probe = event_obj.get('location') or {}
+        if isinstance(_loc_probe, list):
+            _loc_probe = _loc_probe[0] if _loc_probe else {}
+        _venue_probe = _loc_probe.get('name', '') if isinstance(_loc_probe, dict) else ''
+        if is_non_cyprus(title, _venue_probe):
+            return {'_non_cyprus': True, 'title': title}
+
         loc = event_obj.get('location') or {}
         if isinstance(loc, list):
             loc = loc[0] if loc else {}
         venue = loc.get('name', '') if isinstance(loc, dict) else ''
+
+        description = (event_obj.get('description') or '').strip()
+        if len(description) > 600:
+            description = description[:597] + '...'
 
         city = ''
         if isinstance(loc, dict):
             addr = loc.get('address') or {}
             if isinstance(addr, dict):
                 city = addr.get('addressLocality') or ''
-        if not city:
-            city = extract_city(venue) or extract_city(title)
+        # addressLocality is often blank or a country code (e.g. "CY") — treat
+        # both as "no city" and fall through to venue/title/description keyword
+        # lookup (description sometimes says "Come to our event in Larnaca!").
+        if city.strip().upper() in ('', 'CY', 'CYPRUS'):
+            city = extract_city(venue) or extract_city(title) or extract_city(description)
 
         image = event_obj.get('image', '')
         if isinstance(image, list):
             image = image[0] if image else ''
-
-        description = (event_obj.get('description') or '').strip()
-        if len(description) > 600:
-            description = description[:597] + '...'
 
         offers = event_obj.get('offers') or {}
         if isinstance(offers, list):
@@ -204,6 +294,11 @@ def main():
         canon = normalize_url(url)
         print(f'Scraping: {canon}')
         event = scrape_event(canon)
+        if event and event.get('_non_cyprus'):
+            print(f'  Skipped (non-Cyprus): {event.get("title", "")}')
+            skipped += 1
+            time.sleep(0.3)
+            continue
         if not event or not event['title'] or not event['date_label']:
             print(f'  Skipped (no JSON-LD or missing fields)')
             skipped += 1
