@@ -936,15 +936,40 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                         always lands at the same Y across all three cards in the row
                         — otherwise the card without crew info shows the button
                         higher and the row looks ragged. */}
-                    <View style={{ height: 16, marginTop: 8, justifyContent: 'center' }}>
+                    <View style={{ minHeight: 26, marginTop: 8 }}>
                       {(() => {
                         const st = crewStats[ev.id]
                         if (!st || st.crews === 0) return null
-                        const spotsTxt = st.spotsLeft === 0 ? 'crew full' : `${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'} left`
+                        let label: string, dotColor: string
+                        let LabelIcon: any = Sparkle
+                        if (st.spotsLeft === 0) {
+                          label = 'Crews full'; dotColor = '#94A3B8'; LabelIcon = PhCheckCircle
+                        } else if (st.crews >= 3 || st.members >= 5) {
+                          label = 'Filling fast'; dotColor = '#F97316'; LabelIcon = Fire
+                        } else if (st.crews >= 2) {
+                          label = 'Multiple crews'; dotColor = '#8B5CF6'; LabelIcon = Sparkle
+                        } else {
+                          label = 'Crew forming'; dotColor = '#8B5CF6'; LabelIcon = Sparkle
+                        }
+                        const dotCount = Math.min(st.crews, 5)
+                        const spotsTxt = st.spotsLeft === 0 ? '' : ` · ${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'}`
                         return (
-                          <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>
-                            {st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}
-                          </Text>
+                          <View style={{ gap: 4 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              {Array.from({ length: dotCount }).map((_, i) => (
+                                <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />
+                              ))}
+                              {st.crews > 5 && (
+                                <Text style={{ fontSize: 9, fontWeight: '800', color: dotColor, marginLeft: 2 }}>+{st.crews - 5}</Text>
+                              )}
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                              <LabelIcon size={10} color={dotColor} weight="fill" />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: dotColor, letterSpacing: 0.2 }} numberOfLines={1}>
+                                {st.crews} crew{st.crews === 1 ? '' : 's'}{spotsTxt}
+                              </Text>
+                            </View>
+                          </View>
                         )
                       })()}
                     </View>
@@ -1025,16 +1050,35 @@ function HomeTab({ city, setCityOpen, feedFilter, setFeedFilter, onEventPress, j
                           {(() => {
                             const st = crewStats[ev.id]
                             if (!st || st.crews === 0) return null
-                            const spotsTxt = st.spotsLeft === 0 ? 'crew full' : `${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'} left`
+                            let label: string, dotColor: string
+                            let LabelIcon: any = Sparkle
+                            if (st.spotsLeft === 0) {
+                              label = 'Crews full'; dotColor = '#94A3B8'; LabelIcon = PhCheckCircle
+                            } else if (st.crews >= 3 || st.members >= 5) {
+                              label = 'Filling fast'; dotColor = '#F97316'; LabelIcon = Fire
+                            } else if (st.crews >= 2) {
+                              label = 'Multiple crews'; dotColor = '#8B5CF6'; LabelIcon = Sparkle
+                            } else {
+                              label = 'Crew forming'; dotColor = '#8B5CF6'; LabelIcon = Sparkle
+                            }
+                            const dotCount = Math.min(st.crews, 5)
+                            const spotsTxt = st.spotsLeft === 0 ? '' : ` · ${st.spotsLeft} spot${st.spotsLeft === 1 ? '' : 's'}`
                             return (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2, flexWrap: 'wrap' }}>
-                                <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>{st.crews} crew{st.crews === 1 ? '' : 's'} · {spotsTxt}</Text>
-                                {st.members >= 3 && (
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99, backgroundColor: '#FFEDD5' }}>
-                                    <Fire size={9} color="#EA580C" weight="fill" />
-                                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#9A3412' }}>POPULAR</Text>
-                                  </View>
-                                )}
+                              <View style={{ marginTop: 4, gap: 4 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  {Array.from({ length: dotCount }).map((_, i) => (
+                                    <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />
+                                  ))}
+                                  {st.crews > 5 && (
+                                    <Text style={{ fontSize: 9, fontWeight: '800', color: dotColor, marginLeft: 2 }}>+{st.crews - 5}</Text>
+                                  )}
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                  <LabelIcon size={10} color={dotColor} weight="fill" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: dotColor, letterSpacing: 0.2 }} numberOfLines={1}>
+                                    {st.crews} crew{st.crews === 1 ? '' : 's'}{spotsTxt}
+                                  </Text>
+                                </View>
                               </View>
                             )
                           })()}
