@@ -1,6 +1,6 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/event/(.*)", "destination": "/index.html" }
+    { "source": "/event/:path*", "destination": "/" }
   ]
 }
