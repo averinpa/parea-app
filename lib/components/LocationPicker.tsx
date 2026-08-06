@@ -48,7 +48,10 @@ export function LocationPicker({ apiKey, initialCity, initialLocation, initialCo
     if (text.length < 2) { setResults([]); return }
     debounceRef.current = setTimeout(async () => {
       try {
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en`
+        // Restrict to Cyprus (components=country:cy) — Parea only operates on
+        // the island, so surfacing global results in the venue picker just
+        // means broken pins for events users can't actually attend.
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&components=country:cy`
         const res = await fetch(url)
         const json = await res.json()
         if (json.status === 'OK') setResults(json.predictions); else setResults([])
