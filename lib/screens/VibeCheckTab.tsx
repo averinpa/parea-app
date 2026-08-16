@@ -1131,11 +1131,12 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                           }
                           if (myCrew || isOptimisticallyInCrew) {
                             const memberCount = myCrew?.members.length ?? 1
-                            // Chat only exists once someone else joined the crew — a solo
-                            // "crew of 1" has no chat yet, so tapping Open Chat used to
-                            // just bounce the user to an empty Chats tab. Show a waiting
-                            // state instead until the crew hits 2+ members.
-                            const chatReady = memberCount >= 2
+                            // Chat isn't guaranteed to exist just because the user is "in a
+                            // crew" — a solo attendee who hasn't hosted yet has no
+                            // chats row, so Open Chat used to redirect to an empty
+                            // Chats tab. Gate the button on the actual chat existing
+                            // in officialEventChatMap; otherwise show a waiting pill.
+                            const chatReady = !!officialEventChatMap?.[ev.id]
                             return (
                               <View style={{ gap: 10 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
