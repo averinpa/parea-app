@@ -275,13 +275,15 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
 
   const subtitle = (() => {
     if (hasHostActivity) return 'You have join requests'
-    // Count actual crew members across active crew chats — NOT everyone who
-    // ever opted-in on an event. Previous version summed eventAttendeesMap
-    // which showed 'N people in your crew' when N was really 'N candidates
-    // across all events I'm on' (misleading, since a candidate ≠ crewmate).
+    // Count OTHER crewmates across the user's own crews — a solo "crew of
+    // 1" (just the user) shouldn't render as "1 person in your crew"
+    // because that reads like a matched crewmate rather than the user
+    // themselves. Filter to crews the user is actually a member of, then
+    // subtract 1 for the user.
     const realCrewMembers = myEvents.reduce((sum: number, e: any) => {
       const crews = crewsByEvent[e.id] || []
-      return sum + crews.reduce((s: number, c: any) => s + (c.members?.length || 0), 0)
+      const myCrews = crews.filter((c: any) => (c.members || []).some((m: any) => m.id === userData?.dbId))
+      return sum + myCrews.reduce((s: number, c: any) => s + Math.max(0, (c.members?.length || 0) - 1), 0)
     }, 0)
     if (realCrewMembers > 0) return `${realCrewMembers} ${realCrewMembers === 1 ? 'person' : 'people'} in your crew`
     const lookingCount = myEvents.length + visibleHosted.length

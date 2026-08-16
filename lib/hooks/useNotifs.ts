@@ -84,7 +84,13 @@ export function useNotifs({ persistLoadedRef }: {
     // default Warning haptic is barely perceptible on Android and users
     // reported not feeling it when a third person joined an existing crew.
     // Triple-pulse (Success + Medium + Heavy) reads as a clear "tada!".
-    const MATCH_TYPES = new Set(['match', 'group_chat', 'confirmed', 'member_joined', 'crew_match'])
+    const MATCH_TYPES = new Set([
+      'match', 'group_chat', 'confirmed', 'member_joined', 'crew_match',
+      'crew_invite',    // someone invited you into their crew — strong pull-back moment
+      'crew_accepted',  // someone accepted your invite — match confirmed
+      'join_request',   // community: someone wants to join your hosted social
+      'crew_ready',     // community: host approved your join request
+    ])
     if (MATCH_TYPES.has(n.type)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 140)
