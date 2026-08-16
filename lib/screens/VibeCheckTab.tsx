@@ -1131,6 +1131,11 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                           }
                           if (myCrew || isOptimisticallyInCrew) {
                             const memberCount = myCrew?.members.length ?? 1
+                            // Chat only exists once someone else joined the crew — a solo
+                            // "crew of 1" has no chat yet, so tapping Open Chat used to
+                            // just bounce the user to an empty Chats tab. Show a waiting
+                            // state instead until the crew hits 2+ members.
+                            const chatReady = memberCount >= 2
                             return (
                               <View style={{ gap: 10 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(67,233,123,0.07)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: 'rgba(67,233,123,0.22)' }}>
@@ -1144,13 +1149,19 @@ export function VibeCheckTab({ joinedEvents, allEvents, userEventFormat, userEve
                                     </Text>
                                   </View>
                                 </View>
-                                <TouchableOpacity
-                                  activeOpacity={0.85}
-                                  onPress={() => onGoToMessages?.(ev)}
-                                  style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
-                                  <MessageCircle size={16} color="#fff" />
-                                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>Open Chat</Text>
-                                </TouchableOpacity>
+                                {chatReady ? (
+                                  <TouchableOpacity
+                                    activeOpacity={0.85}
+                                    onPress={() => onGoToMessages?.(ev)}
+                                    style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: '#6366F1', shadowColor: '#6366F1', shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 }}>
+                                    <MessageCircle size={16} color="#fff" />
+                                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>Open Chat</Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <View style={{ borderRadius: 99, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.55)' }}>Waiting for crew…</Text>
+                                  </View>
+                                )}
                               </View>
                             )
                           }
