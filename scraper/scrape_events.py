@@ -158,11 +158,12 @@ async def get_event_links(page):
     sources = [
         f'{BASE_URL}/en/calendar',
         f'{BASE_URL}/en/events/on-sale-now',
-        # Category pages — cat_ids observed on the site nav menu
-        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/2/',  # THEATRE
-        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/3/',  # MUSIC
-        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/4/',  # DANCE
-        f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/8/',  # KIDS
+        # Category pages — sweep cat_ids 1..12 to catch categories we don't
+        # know the label of. Comedy/standup pages (e.g. Bogdan Lisevsky)
+        # were living on an unlisted cat_id and got missed by the narrow
+        # hard-coded 2/3/4/8 set. Bad cat_ids just 404 and fall through
+        # the try/except below.
+        *[f'{BASE_URL}/easyconsole.cfm/page/category/cat_id/{i}/' for i in range(1, 13)],
     ]
 
     for url in sources:
