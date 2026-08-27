@@ -322,9 +322,12 @@ async def scrape_event(page, url):
         category = ''
         cat_map = {
             'MUSIC': 'music', 'THEATRE': 'theatre', 'THEATER': 'theatre',
-            'DANCE': 'dance', 'CHILDREN': 'children', 'COMEDY': 'comedy',
+            'DANCE': 'dance', 'COMEDY': 'comedy',
             'STAND UP': 'comedy', 'ART': 'art', 'FESTIVAL': 'festival',
             'CONCERT': 'music', 'OPERA': 'theatre', 'BALLET': 'dance',
+            # KIDS SHOWS must match before KIDS/CHILDREN so it doesn't get
+            # tagged 'shows' or 'children' when the parent phrase says kids.
+            'KIDS SHOWS': 'kids', 'CHILDREN': 'kids', 'KIDS': 'kids',
         }
         cat_el = soup.find('a', {'class': 'h3Style'})
         if cat_el:
