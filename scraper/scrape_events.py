@@ -63,6 +63,7 @@ CITY_KEYWORDS = {
     'CHLORAKA': 'Paphos', 'KISSONERGA': 'Paphos', 'CORAL BAY': 'Paphos',
     'PEYIA': 'Paphos', 'EMBA': 'Paphos', 'GEROSKIPOU': 'Paphos',
     'TECHNOPOLIS 20': 'Paphos', 'AKAMAS': 'Paphos',
+    'TIMI': 'Paphos', 'BONAMARE': 'Paphos',
     'ΛΙΜΑΝΑΚΙ': 'Paphos', 'MINTHIS': 'Paphos', 'LATCHI': 'Paphos',
     'POLIS': 'Paphos', 'PORTO LATSI': 'Paphos', 'ΛΑΤΣΙ': 'Paphos',
     'ARODES': 'Paphos', 'ΑΡΟΔΕΣ': 'Paphos',
