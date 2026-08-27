@@ -330,28 +330,51 @@ def main():
             updated += 1
         else:
             # Cross-source dedup:
-            #   Same date_label + at least one shared "significant" word (len >= 5,
-            #   not a stopword and not a city name). Catches "STING 3.0 WORLD TOUR..."
-            #   vs "STING in CYPRUS - 04.08.2026" as same event.
+            #   Same date_label AND same city AND either
+            #     (a) at least one shared "significant" word (len >= 4, not a
+            #         stopword / city name), OR
+            #     (b) a shared trigram of the normalized title (fallback for
+            #         short-word titles like "Moto Expo" vs "Moto Expo Cyprus"
+            #         where every word is either 4-letters and treated as too
+            #         short or a stop-word).
             STOPWORDS = {
                 'WORLD', 'TOUR', 'LIVE', 'PARTY', 'NIGHT', 'CONCERT', 'FESTIVAL',
-                'SHOW', 'PRESENTS', 'EVENT', 'INTERNATIONAL', 'CYPRUS',
+                'SHOW', 'SHOWS', 'PRESENTS', 'EVENT', 'INTERNATIONAL', 'CYPRUS',
                 'LIMASSOL', 'NICOSIA', 'PAPHOS', 'LARNACA', 'FAMAGUSTA',
                 'AYIA', 'PROTARAS', 'LEFKOSIA', 'LEMESOS',
                 'GLOBAL', 'PLAYERS', 'BEACH', 'CLUB', 'HOUSE',
+                # 4-letter noise words that would otherwise pass the min-len gate
+                'WITH', 'FROM', 'THIS', 'THAT', 'FEST', 'BAND', 'ROCK',
             }
             def sig_words(t):
-                words = re.findall(r'[A-Za-zА-Яа-я0-9]{5,}', (t or '').upper())
+                # Lowered to 4 chars: MOTO / EXPO / BOAT / KIDS need to count.
+                words = re.findall(r'[A-Za-zА-Яа-я0-9]{4,}', (t or '').upper())
                 return {w for w in words if w not in STOPWORDS}
 
+            def norm_title(t):
+                return re.sub(r'[^a-zа-я0-9]', '', (t or '').lower())
+
             new_words = sig_words(event['title'])
-            same_date = supabase.table('official_events').select('id, title, source, date_label').eq(
+            new_norm = norm_title(event['title'])
+            same_date = supabase.table('official_events').select('id, title, source, date_label, city').eq(
                 'date_label', event['date_label']
             ).execute()
             cross_match = None
             for row in (same_date.data or []):
+                # City must match too — otherwise same-name shows on tour in
+                # different cities would collapse into one row.
+                if (row.get('city') or '') != (event.get('city') or ''):
+                    continue
                 existing_words = sig_words(row.get('title') or '')
-                if new_words & existing_words:  # any shared significant word
+                existing_norm = norm_title(row.get('title') or '')
+                shared_words = bool(new_words & existing_words)
+                # Substring fallback catches "2nd MOTO EXPO CYPRUS" vs
+                # "Moto Expo Cyprus 2026: Motorcycle Exhibition in Limassol"
+                # once the noise around the shared MOTOEXPOCYPRUS core is
+                # stripped by norm_title.
+                shared_norm = (new_norm and existing_norm
+                               and (new_norm in existing_norm or existing_norm in new_norm))
+                if shared_words or shared_norm:
                     cross_match = row
                     break
             if cross_match:
