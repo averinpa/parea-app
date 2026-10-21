@@ -352,12 +352,30 @@ def main():
                 words = re.findall(r'[A-Za-zА-Яа-я0-9]{4,}', (t or '').upper())
                 return {w for w in words if w not in STOPWORDS}
 
+            # Lima's /en pages sometimes keep the Russian title ("Би-2") while
+            # soldout lists the same show in Latin ("Bi-2") — transliterate
+            # Cyrillic before comparing so the substring check can match them.
+            CYR2LAT = str.maketrans({
+                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+            })
+
             def norm_title(t):
-                return re.sub(r'[^a-zа-я0-9]', '', (t or '').lower())
+                # Drop lima's trailing " in <City>" suffix ("Би-2 in Λεμεσός")
+                # so only the show name takes part in the substring check.
+                t = re.sub(r'\s+in\s+[^:•]*$', '', (t or ''), flags=re.IGNORECASE)
+                return re.sub(r'[^a-z0-9]', '', t.lower().translate(CYR2LAT))
+
+            def norm_desc(d):
+                return re.sub(r'\W', '', (d or '').lower())[:150]
 
             new_words = sig_words(event['title'])
             new_norm = norm_title(event['title'])
-            same_date = supabase.table('official_events').select('id, title, source, date_label, city').eq(
+            new_desc = norm_desc(event.get('description'))
+            same_date = supabase.table('official_events').select('id, title, source, date_label, city, description').eq(
                 'date_label', event['date_label']
             ).execute()
             cross_match = None
@@ -375,7 +393,11 @@ def main():
                 # stripped by norm_title.
                 shared_norm = (new_norm and existing_norm
                                and (new_norm in existing_norm or existing_norm in new_norm))
-                if shared_words or shared_norm:
+                # Lima itself sometimes lists one night twice under different
+                # titles ("Nicholas Van Orton" / "Ritual Halloween Edition")
+                # with the same description — same date + city + text = same event.
+                shared_desc = len(new_desc) >= 60 and new_desc == norm_desc(row.get('description'))
+                if shared_words or shared_norm or shared_desc:
                     cross_match = row
                     break
             if cross_match:
