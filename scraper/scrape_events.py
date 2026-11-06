@@ -240,10 +240,13 @@ async def scrape_event(page, url):
             if direct.startswith('When:') and not date and len(direct) < 150:
                 raw = direct.replace('When:', '').strip()
                 cleaned = clean_date(raw)
-                # Split date and time if together
-                parts = cleaned.split(' ')
-                date = parts[0] if parts else cleaned
-                time_str = parts[1] if len(parts) > 1 else ''
+                # Pull the date/time out by pattern — "When: NEW DATE 12/12/2026
+                # 20:30" or "When: POSTPONED" broke the old first-token split.
+                # No date here → leave empty so the Event Dates table fallback runs.
+                d_match = re.search(r'\d{1,2}/\d{1,2}/\d{4}', cleaned)
+                date = d_match.group(0) if d_match else ''
+                t_match = re.search(r'\b\d{1,2}:\d{2}\b', cleaned[d_match.end():] if d_match else '')
+                time_str = t_match.group(0) if t_match else ''
             elif direct.startswith('Where:') and not venue and len(direct) < 120:
                 venue = direct.replace('Where:', '').strip()
             elif direct.startswith('Language:') and not language and len(direct) < 80:
@@ -401,6 +404,13 @@ async def main():
             if not event or not event['title']:
                 skipped += 1
                 continue
+            # Postponed shows come back with "When: POSTPONED" / "NEW" instead
+            # of a date — nothing to show in the feed, so drop them like cancelled.
+            if not re.search(r'\d{1,2}/\d{1,2}/\d{4}', event.get('date_label') or ''):
+                deleted = supabase.table('official_events').delete().eq('ticket_link', url).execute()
+                print(f'  {"Removed" if deleted.data else "Skipped"} (no date: {event.get("date_label")!r})')
+                skipped += 1
+                continue
 
             # Update if exists, insert if not
             existing = supabase.table('official_events').select('id').eq('ticket_link', url).execute()
@@ -424,14 +434,19 @@ async def main():
         # Only runs on a full scrape (skip in single-URL test mode).
         purged = 0
         if len(sys.argv) <= 1:
-            all_rows = supabase.table('official_events').select('id, date_label').execute()
+            all_rows = supabase.table('official_events').select('id, date_label, source').execute()
             cutoff = datetime.now() - timedelta(days=2)
             date_pat = re.compile(r'(\d{1,2})/(\d{1,2})/(\d{4})')
             expired_ids = []
             for r in (all_rows.data or []):
                 matches = date_pat.findall(r.get('date_label') or '')
                 if not matches:
-                    continue  # unparseable date — leave the row alone
+                    # Soldout rows without a date are postponed shows that
+                    # dropped off the site before getting a new date — purge.
+                    # Other sources (manual rows) are left alone.
+                    if r.get('source') == 'soldout':
+                        expired_ids.append(r['id'])
+                    continue
                 d, m, y = matches[-1]  # last date = end of a multi-day range
                 try:
                     ev_date = datetime(int(y), int(m), int(d))
